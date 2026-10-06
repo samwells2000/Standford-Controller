@@ -24,12 +24,12 @@
                             <Run Text="{Binding Status.LastPollText, Mode=OneWay}" Foreground="{StaticResource TextMutedBrush}" />
                         </TextBlock>
                         <ItemsControl ItemsSource="{Binding Status.InstrumentBits}" ItemTemplate="{StaticResource StatusBitRow}" Focusable="False" />
-                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                            <Button Command="{Binding Status.ReadStatusCommand}" Content="Read now" />
-                            <Button Command="{Binding Status.ClearIndicatorsCommand}" Content="Clear indicators" Margin="8,0,0,0" />
-                            <Button Command="{Binding Status.ApplyEnableMasksCommand}" Content="Apply enable masks" Margin="8,0,0,0"
+                        <WrapPanel Margin="0,8,0,0">
+                            <Button Command="{Binding Status.ReadStatusCommand}" Content="Read now" Margin="0,0,8,8" />
+                            <Button Command="{Binding Status.ClearIndicatorsCommand}" Content="Clear indicators" Margin="0,0,8,8" />
+                            <Button Command="{Binding Status.ApplyEnableMasksCommand}" Content="Apply enable masks" Margin="0,0,8,8"
                                     ToolTip="Write the Enable check boxes on this page to INSE, *ESE and *SRE" />
-                        </StackPanel>
+                        </WrapPanel>
                     </StackPanel>
                 </Border>
 
@@ -86,11 +86,11 @@
                                 </TextBlock>
                             </Grid>
                         </Border>
-                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                            <Button Command="{Binding Status.ReadErrorsCommand}" Content="Read error queue" ToolTip="Read LERR? until the queue is empty" />
-                            <Button Command="{Binding Status.ClearStatusCommand}" Content="Clear status (*CLS)" Margin="8,0,0,0" />
-                            <Button Command="{Binding Status.ClearErrorListCommand}" Content="Clear list" Margin="8,0,0,0" Style="{StaticResource GhostButton}" />
-                        </StackPanel>
+                        <WrapPanel Margin="0,10,0,0">
+                            <Button Command="{Binding Status.ReadErrorsCommand}" Content="Read error queue" ToolTip="Read LERR? until the queue is empty" Margin="0,0,8,8" />
+                            <Button Command="{Binding Status.ClearStatusCommand}" Content="Clear status (*CLS)" Margin="0,0,8,8" />
+                            <Button Command="{Binding Status.ClearErrorListCommand}" Content="Clear list" Margin="0,0,8,8" Style="{StaticResource GhostButton}" />
+                        </WrapPanel>
                     </StackPanel>
                 </Border>
 
@@ -100,7 +100,7 @@
                         <TextBlock Style="{StaticResource CardSubtitle}" Text="Built-in self test and calibration." />
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="170" />
+                                <ColumnDefinition Width="130" />
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
@@ -137,7 +137,7 @@
                         <HeaderedContentControl Style="{StaticResource FormRow}" Header="Channel / output">
                             <ComboBox ItemsSource="{Binding Status.DisplayChannelOptions}" SelectedItem="{Binding Status.DisplayChannel}" DisplayMemberPath="Label" />
                         </HeaderedContentControl>
-                        <Button Command="{Binding Status.ApplyDisplayCommand}" Content="Show on instrument" HorizontalAlignment="Left" Margin="170,0,0,0" />
+                        <Button Command="{Binding Status.ApplyDisplayCommand}" Content="Show on instrument" HorizontalAlignment="Left" Margin="150,0,0,0" />
                     </StackPanel>
                 </Border>
 

@@ -6,9 +6,9 @@
 
     <Grid Margin="24,20,24,16" DataContext="{Binding Terminal}">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="3*" MinWidth="360" />
             <ColumnDefinition Width="16" />
-            <ColumnDefinition Width="400" />
+            <ColumnDefinition Width="2*" MinWidth="280" MaxWidth="460" />
         </Grid.ColumnDefinitions>
 
         <!-- ============================== Console ============================== -->
@@ -34,7 +34,7 @@
                     </DockPanel>
                 </Border>
                 <CheckBox DockPanel.Dock="Bottom" IsChecked="{Binding CheckErrors}" Margin="14,0,0,8" Foreground="#94A3B8" FontSize="12"
-                          Content="Check the error queue (LERR?) after each command" />
+                          Content="Check for errors (LERR?) after each command" />
                 <ListBox ItemsSource="{Binding Lines}" Background="Transparent" BorderThickness="0" Margin="8,10,8,8"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled" inf:AutoScrollBehavior.IsEnabled="True">
                     <ListBox.ItemContainerStyle>

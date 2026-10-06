@@ -73,7 +73,7 @@
         </TabControl>
 
         <!-- ============================== Log ============================== -->
-        <Border Grid.Row="2" Height="170" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0"
+        <Border Grid.Row="2" Height="150" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0"
                 Visibility="{Binding Log.IsPanelVisible, Converter={StaticResource BoolToVisibility}}">
             <DockPanel>
                 <DockPanel DockPanel.Dock="Top" Margin="24,8,18,4">

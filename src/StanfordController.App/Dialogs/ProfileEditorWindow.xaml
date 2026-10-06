@@ -8,7 +8,8 @@
         Background="{StaticResource SurfaceBrush}"
         FocusManager.FocusedElement="{Binding ElementName=NameBox}">
 
-    <StackPanel Margin="28,24,28,22">
+    <Border Background="{StaticResource SurfaceBrush}" Padding="28,24,28,22">
+    <StackPanel>
         <TextBlock Text="{Binding Title}" Style="{StaticResource PageTitle}" FontSize="19" />
         <TextBlock Style="{StaticResource CardSubtitle}" Margin="0,4,0,20"
                    Text="Give the instrument a name you will recognise. The name is all you need to pick it next time." />
@@ -82,4 +83,5 @@
             <Button Content="Save" IsDefault="True" Style="{StaticResource PrimaryButton}" MinWidth="90" Margin="10,0,0,0" Click="OnSave" />
         </StackPanel>
     </StackPanel>
+    </Border>
 </Window>

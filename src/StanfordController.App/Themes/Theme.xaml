@@ -182,7 +182,7 @@
                 <ControlTemplate TargetType="HeaderedContentControl">
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="170" />
+                            <ColumnDefinition Width="150" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <TextBlock Style="{StaticResource FieldLabel}" Text="{TemplateBinding Header}" VerticalAlignment="Top" Margin="0,7,12,0" />

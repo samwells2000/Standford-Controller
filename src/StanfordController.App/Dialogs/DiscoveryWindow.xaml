@@ -9,7 +9,8 @@
         Background="{StaticResource SurfaceBrush}"
         Closing="OnClosing">
 
-    <DockPanel Margin="28,24,28,22">
+    <Border Background="{StaticResource SurfaceBrush}" Padding="28,24,28,22">
+    <DockPanel>
         <StackPanel DockPanel.Dock="Top">
             <TextBlock Text="Find instruments on the network" Style="{StaticResource PageTitle}" FontSize="19" />
             <TextBlock Style="{StaticResource CardSubtitle}" Margin="0,4,0,14"
@@ -86,4 +87,5 @@
             </ListBox>
         </Border>
     </DockPanel>
+    </Border>
 </Window>

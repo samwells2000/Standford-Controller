@@ -80,6 +80,16 @@ internal sealed class SmokeTest(MainWindow window, MainViewModel viewModel, stri
                 await IdleAsync();
                 var header = (tabs.Items[i] as TabItem)?.Header?.ToString() ?? $"tab{i}";
                 Capture(window, $"{i + 3:00}-{Slug(header)}");
+
+                // Also capture the bottom of pages that scroll.
+                if ((tabs.Items[i] as TabItem)?.Content is DependencyObject page
+                    && AutoScrollBehavior.FindChild<ScrollViewer>(page) is { ScrollableHeight: > 0 } viewer)
+                {
+                    viewer.ScrollToEnd();
+                    await IdleAsync();
+                    Capture(window, $"{i + 3:00}-{Slug(header)}-end");
+                    viewer.ScrollToHome();
+                }
             }
 
             var editor = new ProfileEditorWindow { DataContext = new ProfileEditorViewModel(item.Profile, [], isNew: false), Owner = window };
@@ -137,10 +147,6 @@ internal sealed class SmokeTest(MainWindow window, MainViewModel viewModel, stri
         await Application.Current.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
     }
 
-    /// <summary>
-    /// Saves a PNG of the window's content. The main window is also laid out off-screen at 1440×900,
-    /// because CI runners have small screens that clamp the real window to its minimum size.
-    /// </summary>
     private void Capture(Window target, string name)
     {
         if (target.Content is not FrameworkElement root || root.ActualWidth < 1 || root.ActualHeight < 1)
@@ -150,17 +156,6 @@ internal sealed class SmokeTest(MainWindow window, MainViewModel viewModel, stri
         }
 
         Save(root, name, new Size(root.ActualWidth, root.ActualHeight), VisualTreeHelper.GetDpi(target));
-        if (target == window)
-        {
-            var large = new Size(1440, 900);
-            root.Measure(large);
-            root.Arrange(new Rect(large));
-            root.UpdateLayout();
-            Save(root, name + "-1440", large, VisualTreeHelper.GetDpi(target));
-            root.InvalidateMeasure();
-            root.InvalidateArrange();
-            root.UpdateLayout();
-        }
     }
 
     private void Save(FrameworkElement root, string name, Size size, DpiScale dpi)

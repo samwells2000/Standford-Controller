@@ -18,20 +18,20 @@
                     <!-- Column headers -->
                     <Grid Margin="0,0,0,6">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition SharedSizeGroup="Name" Width="64" />
-                            <ColumnDefinition SharedSizeGroup="Ref" Width="96" />
-                            <ColumnDefinition SharedSizeGroup="Plus" Width="28" />
-                            <ColumnDefinition SharedSizeGroup="Delay" Width="200" />
-                            <ColumnDefinition SharedSizeGroup="Steps" Width="80" />
-                            <ColumnDefinition SharedSizeGroup="Abs" Width="190" />
-                            <ColumnDefinition SharedSizeGroup="StepSize" Width="150" />
+                            <ColumnDefinition SharedSizeGroup="Name" Width="56" />
+                            <ColumnDefinition SharedSizeGroup="Ref" Width="84" />
+                            <ColumnDefinition SharedSizeGroup="Plus" Width="22" />
+                            <ColumnDefinition SharedSizeGroup="Delay" Width="160" />
+                            <ColumnDefinition SharedSizeGroup="Steps" Width="78" />
+                            <ColumnDefinition SharedSizeGroup="Abs" Width="150" />
+                            <ColumnDefinition SharedSizeGroup="StepSize" Width="120" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <TextBlock Style="{StaticResource ColumnHeader}" Text="CHANNEL" />
                         <TextBlock Grid.Column="1" Style="{StaticResource ColumnHeader}" Text="REFERENCE" />
                         <TextBlock Grid.Column="3" Style="{StaticResource ColumnHeader}" Text="DELAY" />
                         <TextBlock Grid.Column="4" Style="{StaticResource ColumnHeader}" Text="STEP" Margin="6,0,0,0" />
-                        <TextBlock Grid.Column="5" Style="{StaticResource ColumnHeader}" Text="TIME FROM T0" Margin="14,0,0,0" />
+                        <TextBlock Grid.Column="5" Style="{StaticResource ColumnHeader}" Text="FROM T0" Margin="12,0,0,0" />
                         <TextBlock Grid.Column="6" Style="{StaticResource ColumnHeader}" Text="STEP SIZE" />
                     </Grid>
 
@@ -79,7 +79,7 @@
                                     </StackPanel>
 
                                     <TextBlock Grid.Column="5" Text="{Binding AbsoluteText}" Style="{StaticResource MonoText}"
-                                               Foreground="{StaticResource TextSecondaryBrush}" Margin="14,0,8,0" />
+                                               Foreground="{StaticResource TextSecondaryBrush}" Margin="12,0,8,0" />
 
                                     <ContentControl Grid.Column="6" Content="{Binding StepSize}" ContentTemplate="{StaticResource TextField}" Focusable="False" />
 
