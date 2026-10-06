@@ -1,91 +1,84 @@
 using System.Collections.Specialized;
-using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Media;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 
 namespace StanfordController.App.Infrastructure;
 
 /// <summary>
-/// Text box behaviours for instrument fields: Enter or leaving the field runs <c>CommitCommand</c>,
-/// Escape runs <c>RevertCommand</c>, and the text is selected when the field gains keyboard focus.
+/// Value fields: Enter (or leaving the field) applies the edit, Esc puts the instrument's value back,
+/// and focusing a field selects its text so a new value can simply be typed over it.
 /// </summary>
 public static class FieldBehavior
 {
-    public static readonly DependencyProperty CommitCommandProperty = DependencyProperty.RegisterAttached(
-        "CommitCommand", typeof(ICommand), typeof(FieldBehavior), new PropertyMetadata(null, OnCommitCommandChanged));
+    public static readonly AttachedProperty<ICommand?> CommitCommandProperty =
+        AvaloniaProperty.RegisterAttached<TextBox, ICommand?>("CommitCommand", typeof(FieldBehavior));
 
-    public static readonly DependencyProperty RevertCommandProperty = DependencyProperty.RegisterAttached(
-        "RevertCommand", typeof(ICommand), typeof(FieldBehavior), new PropertyMetadata(null));
+    public static readonly AttachedProperty<ICommand?> RevertCommandProperty =
+        AvaloniaProperty.RegisterAttached<TextBox, ICommand?>("RevertCommand", typeof(FieldBehavior));
 
-    public static ICommand? GetCommitCommand(DependencyObject element) => (ICommand?)element.GetValue(CommitCommandProperty);
+    private static readonly AttachedProperty<bool> AttachedProperty =
+        AvaloniaProperty.RegisterAttached<TextBox, bool>("Attached", typeof(FieldBehavior));
 
-    public static void SetCommitCommand(DependencyObject element, ICommand? value) => element.SetValue(CommitCommandProperty, value);
-
-    public static ICommand? GetRevertCommand(DependencyObject element) => (ICommand?)element.GetValue(RevertCommandProperty);
-
-    public static void SetRevertCommand(DependencyObject element, ICommand? value) => element.SetValue(RevertCommandProperty, value);
-
-    private static void OnCommitCommandChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    static FieldBehavior()
     {
-        if (d is not TextBox box)
+        CommitCommandProperty.Changed.AddClassHandler<TextBox>((box, _) => Attach(box));
+        RevertCommandProperty.Changed.AddClassHandler<TextBox>((box, _) => Attach(box));
+    }
+
+    public static ICommand? GetCommitCommand(TextBox box) => box.GetValue(CommitCommandProperty);
+
+    public static void SetCommitCommand(TextBox box, ICommand? value) => box.SetValue(CommitCommandProperty, value);
+
+    public static ICommand? GetRevertCommand(TextBox box) => box.GetValue(RevertCommandProperty);
+
+    public static void SetRevertCommand(TextBox box, ICommand? value) => box.SetValue(RevertCommandProperty, value);
+
+    private static void Attach(TextBox box)
+    {
+        if (box.GetValue(AttachedProperty))
         {
             return;
         }
 
-        box.PreviewKeyDown -= OnPreviewKeyDown;
-        box.LostKeyboardFocus -= OnLostKeyboardFocus;
-        box.GotKeyboardFocus -= OnGotKeyboardFocus;
-        box.PreviewMouseLeftButtonDown -= OnPreviewMouseLeftButtonDown;
-        if (e.NewValue is not null)
+        box.SetValue(AttachedProperty, true);
+        box.AddHandler(InputElement.KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
+        box.LostFocus += (_, _) => Execute(GetCommitCommand(box));
+        box.GotFocus += (_, e) =>
         {
-            box.PreviewKeyDown += OnPreviewKeyDown;
-            box.LostKeyboardFocus += OnLostKeyboardFocus;
-            box.GotKeyboardFocus += OnGotKeyboardFocus;
-            box.PreviewMouseLeftButtonDown += OnPreviewMouseLeftButtonDown;
+            if (e.NavigationMethod is NavigationMethod.Tab or NavigationMethod.Directional)
+            {
+                Dispatcher.UIThread.Post(box.SelectAll);
+            }
+        };
+    }
+
+    private static void OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (sender is not TextBox box)
+        {
+            return;
         }
-    }
 
-    private static void OnPreviewKeyDown(object sender, KeyEventArgs e)
-    {
-        var box = (TextBox)sender;
-        switch (e.Key)
+        if (e.Key == Key.Enter && !box.AcceptsReturn)
         {
-            case Key.Enter:
-                box.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
-                Run(GetCommitCommand(box));
-                box.SelectAll();
-                e.Handled = true;
-                break;
-            case Key.Escape:
-                Run(GetRevertCommand(box));
-                box.SelectAll();
-                e.Handled = true;
-                break;
+            Execute(GetCommitCommand(box));
+            box.SelectAll();
+            e.Handled = true;
         }
-    }
-
-    private static void OnLostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
-    {
-        var box = (TextBox)sender;
-        box.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
-        Run(GetCommitCommand(box));
-    }
-
-    private static void OnGotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e) => ((TextBox)sender).SelectAll();
-
-    // Without this, the click that focuses the box would immediately clear the selection.
-    private static void OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-        var box = (TextBox)sender;
-        if (!box.IsKeyboardFocusWithin)
+        else if (e.Key == Key.Escape)
         {
-            box.Focus();
+            Execute(GetRevertCommand(box));
+            box.SelectAll();
             e.Handled = true;
         }
     }
 
-    private static void Run(ICommand? command)
+    private static void Execute(ICommand? command)
     {
         if (command?.CanExecute(null) == true)
         {
@@ -94,114 +87,81 @@ public static class FieldBehavior
     }
 }
 
-/// <summary>Keeps a list scrolled to its newest item while the user is already at the bottom.</summary>
-public static class AutoScrollBehavior
+/// <summary>List helpers: keep the newest item in view, and run a command on double-click.</summary>
+public static class ListBehavior
 {
-    public static readonly DependencyProperty IsEnabledProperty = DependencyProperty.RegisterAttached(
-        "IsEnabled", typeof(bool), typeof(AutoScrollBehavior), new PropertyMetadata(false, OnIsEnabledChanged));
+    public static readonly AttachedProperty<bool> AutoScrollProperty =
+        AvaloniaProperty.RegisterAttached<ListBox, bool>("AutoScroll", typeof(ListBehavior));
 
-    public static bool GetIsEnabled(DependencyObject element) => (bool)element.GetValue(IsEnabledProperty);
+    public static readonly AttachedProperty<ICommand?> DoubleTapCommandProperty =
+        AvaloniaProperty.RegisterAttached<ListBox, ICommand?>("DoubleTapCommand", typeof(ListBehavior));
 
-    public static void SetIsEnabled(DependencyObject element, bool value) => element.SetValue(IsEnabledProperty, value);
-
-    private static void OnIsEnabledChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    static ListBehavior()
     {
-        if (d is not ListBox list || e.NewValue is not true)
+        AutoScrollProperty.Changed.AddClassHandler<ListBox>((list, e) =>
         {
-            return;
-        }
-
-        void Attach()
-        {
-            if (list.Items is INotifyCollectionChanged items)
+            if (e.NewValue is true)
             {
-                items.CollectionChanged += (_, args) =>
+                list.PropertyChanged += (_, args) =>
                 {
-                    if (args.Action != NotifyCollectionChangedAction.Add || list.Items.Count == 0)
+                    if (args.Property == ItemsControl.ItemsSourceProperty)
                     {
-                        return;
-                    }
-
-                    var viewer = FindChild<ScrollViewer>(list);
-                    var atBottom = viewer is null || viewer.VerticalOffset >= viewer.ScrollableHeight - 2;
-                    if (atBottom)
-                    {
-                        list.ScrollIntoView(list.Items[^1]);
+                        Subscribe(list);
                     }
                 };
+                Subscribe(list);
             }
-        }
+        });
+        DoubleTapCommandProperty.Changed.AddClassHandler<ListBox>((list, _) =>
+        {
+            list.DoubleTapped -= OnDoubleTapped;
+            list.DoubleTapped += OnDoubleTapped;
+        });
+    }
 
-        if (list.IsLoaded)
+    public static bool GetAutoScroll(ListBox list) => list.GetValue(AutoScrollProperty);
+
+    public static void SetAutoScroll(ListBox list, bool value) => list.SetValue(AutoScrollProperty, value);
+
+    public static ICommand? GetDoubleTapCommand(ListBox list) => list.GetValue(DoubleTapCommandProperty);
+
+    public static void SetDoubleTapCommand(ListBox list, ICommand? value) => list.SetValue(DoubleTapCommandProperty, value);
+
+    private static void Subscribe(ListBox list)
+    {
+        if (list.ItemsSource is INotifyCollectionChanged items)
         {
-            Attach();
-        }
-        else
-        {
-            list.Loaded += (_, _) => Attach();
+            items.CollectionChanged += (_, e) =>
+            {
+                if (e.Action == NotifyCollectionChangedAction.Add && list.ItemCount > 0)
+                {
+                    Dispatcher.UIThread.Post(() => list.ScrollIntoView(list.ItemCount - 1), DispatcherPriority.Background);
+                }
+            };
         }
     }
 
-    internal static T? FindChild<T>(DependencyObject parent)
-        where T : DependencyObject
+    private static void OnDoubleTapped(object? sender, TappedEventArgs e)
     {
-        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        if (sender is ListBox { SelectedItem: { } item } list
+            && (e.Source as Visual)?.FindAncestorOfType<ListBoxItem>() is not null
+            && GetDoubleTapCommand(list) is { } command && command.CanExecute(item))
         {
-            var child = VisualTreeHelper.GetChild(parent, i);
-            if (child is T match)
-            {
-                return match;
-            }
-
-            if (FindChild<T>(child) is { } nested)
-            {
-                return nested;
-            }
+            command.Execute(item);
         }
-
-        return null;
     }
 }
 
-/// <summary>Runs a command with the clicked item when a list item is double-clicked.</summary>
-public static class DoubleClickBehavior
+/// <summary>
+/// The user guide heading for a part of the window. Inherited, so F1 anywhere inside a page opens the
+/// guide at that page's section.
+/// </summary>
+public static class HelpContext
 {
-    public static readonly DependencyProperty CommandProperty = DependencyProperty.RegisterAttached(
-        "Command", typeof(ICommand), typeof(DoubleClickBehavior), new PropertyMetadata(null, OnCommandChanged));
+    public static readonly AttachedProperty<string?> TopicProperty =
+        AvaloniaProperty.RegisterAttached<Control, string?>("Topic", typeof(HelpContext), inherits: true);
 
-    public static ICommand? GetCommand(DependencyObject element) => (ICommand?)element.GetValue(CommandProperty);
+    public static string? GetTopic(Control control) => control.GetValue(TopicProperty);
 
-    public static void SetCommand(DependencyObject element, ICommand? value) => element.SetValue(CommandProperty, value);
-
-    private static void OnCommandChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        if (d is not ItemsControl list)
-        {
-            return;
-        }
-
-        list.MouseDoubleClick -= OnDoubleClick;
-        if (e.NewValue is not null)
-        {
-            list.MouseDoubleClick += OnDoubleClick;
-        }
-    }
-
-    private static void OnDoubleClick(object sender, MouseButtonEventArgs e)
-    {
-        var list = (ItemsControl)sender;
-        var container = ItemsControl.ContainerFromElement(list, (DependencyObject)e.OriginalSource);
-        if (container is null)
-        {
-            return;
-        }
-
-        var item = list.ItemContainerGenerator.ItemFromContainer(container);
-        var command = GetCommand(list);
-        if (command?.CanExecute(item) == true)
-        {
-            command.Execute(item);
-            e.Handled = true;
-        }
-    }
+    public static void SetTopic(Control control, string? value) => control.SetValue(TopicProperty, value);
 }

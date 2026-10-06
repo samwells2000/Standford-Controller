@@ -1,7 +1,14 @@
 name: Build and release
 
-# Every push and pull request is built, tested and smoke-tested on Windows.
-# Every push to main also publishes a new GitHub Release with the single-file StanfordController.exe.
+# Every push and pull request is built, tested and smoke-tested on Windows and Linux.
+# Every push to main also publishes a GitHub Release with:
+#   Strobe.exe                       Windows 10/11, keeps its files in %APPDATA%\Strobe
+#   Strobe-Portable.exe              Windows, keeps its files in a Strobe-data folder beside it
+#   Strobe-linux-x64                 Linux (Debian, Ubuntu, Arch, ...), keeps its files in ~/.config/Strobe
+#   Strobe-Portable-linux-x64        Linux, keeps its files beside it
+#   Strobe-<version>-linux-x64.tar.gz  the Linux program with a desktop entry, icon and install script
+#   strobe_<version>_amd64.deb       Debian / Ubuntu package
+#   PKGBUILD                         Arch Linux package recipe (makepkg -si)
 on:
   push:
     branches: ['**']
@@ -20,14 +27,13 @@ env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  VERSION: 1.0.${{ github.run_number }}
 
 jobs:
-  build:
-    name: Build, test and package
+  windows:
+    name: Windows
     runs-on: windows-latest
     timeout-minutes: 30
-    outputs:
-      version: ${{ steps.version.outputs.version }}
 
     steps:
       - name: Check out
@@ -38,91 +44,184 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Work out version
-        id: version
-        shell: pwsh
-        run: |
-          $version = "1.0.${{ github.run_number }}"
-          "version=$version" >> $env:GITHUB_OUTPUT
-          Write-Host "Version $version"
-
-      - name: Restore
-        run: dotnet restore StanfordController.sln
-
       - name: Build
-        run: dotnet build StanfordController.sln --configuration Release --no-restore -p:Version=${{ steps.version.outputs.version }}
+        run: dotnet build StanfordController.sln --configuration Release -p:Version=${{ env.VERSION }}
 
       - name: Test
         run: dotnet test tests/StanfordController.Tests --configuration Release --no-build --logger "console;verbosity=normal"
 
-      - name: Publish single-file exe
-        run: dotnet publish src/StanfordController.App --configuration Release --output publish -p:Version=${{ steps.version.outputs.version }}
-
-      - name: Check the package is a single file
+      - name: Publish
         shell: pwsh
         run: |
-          $files = Get-ChildItem publish
-          $files | Format-Table Name, Length
-          if ($files.Count -ne 1 -or $files[0].Name -ne 'StanfordController.exe') { throw 'Expected publish/ to contain only StanfordController.exe' }
+          dotnet publish src/StanfordController.App --configuration Release --runtime win-x64 --output publish/standard -p:Version=$env:VERSION
+          dotnet publish src/StanfordController.App --configuration Release --runtime win-x64 --output publish/portable -p:Version=$env:VERSION -p:PortableBuild=true
+          foreach ($folder in 'publish/standard', 'publish/portable') {
+            $files = Get-ChildItem $folder
+            $files | Format-Table Name, Length
+            if ($files.Count -ne 1 -or $files[0].Name -ne 'Strobe.exe') { throw "Expected $folder to contain only Strobe.exe" }
+          }
+          New-Item -ItemType Directory dist | Out-Null
+          Copy-Item publish/standard/Strobe.exe dist/Strobe.exe
+          Copy-Item publish/portable/Strobe.exe dist/Strobe-Portable.exe
 
-      # Starts the real app against its built-in simulated DG645, opens every page and dialog,
-      # and fails on any exception or WPF data-binding error.
+      # Starts the real program against its built-in simulated DG645, opens every page and dialog in both
+      # themes, saves a setup to a configuration, and fails on any exception or data-binding error.
       - name: UI smoke test
         shell: pwsh
         run: |
-          $dir = Join-Path $env:RUNNER_TEMP 'smoke-test'
-          $process = Start-Process -FilePath (Resolve-Path publish/StanfordController.exe) -ArgumentList '--smoke-test', "`"$dir`"" -PassThru
-          $null = $process.Handle  # cache the handle so ExitCode is available after exit
-          if (-not $process.WaitForExit(240000)) {
-            $process.Kill()
-            throw 'The smoke test did not finish within 4 minutes.'
+          function Invoke-SmokeTest($exe, $dir, [string[]] $extra) {
+            $arguments = @('--smoke-test', "`"$dir`"") + $extra
+            $process = Start-Process -FilePath (Resolve-Path $exe) -ArgumentList $arguments -PassThru
+            $null = $process.Handle  # cache the handle so ExitCode is available after exit
+            if (-not $process.WaitForExit(240000)) {
+              $process.Kill()
+              throw "The smoke test of $exe did not finish within 4 minutes."
+            }
+            $log = Join-Path $dir 'smoke-test.log'
+            if (Test-Path $log) { Get-Content $log } else { Write-Warning 'No smoke test log was written.' }
+            if ($process.ExitCode -ne 0) { throw "The smoke test of $exe failed with exit code $($process.ExitCode)." }
+            return $log
           }
-          $log = Join-Path $dir 'smoke-test.log'
-          if (Test-Path $log) { Get-Content $log } else { Write-Warning 'No smoke test log was written.' }
-          if ($process.ExitCode -ne 0) { throw "The smoke test failed with exit code $($process.ExitCode)." }
+          Invoke-SmokeTest dist/Strobe.exe (Join-Path $env:RUNNER_TEMP 'smoke-test') @() | Out-Null
+          $portableLog = Invoke-SmokeTest dist/Strobe-Portable.exe (Join-Path $env:RUNNER_TEMP 'smoke-test-portable') @('--headless')
+          if (-not (Select-String -Path $portableLog -Pattern 'portable build: True' -Quiet)) { throw 'Strobe-Portable.exe does not run as the portable build.' }
 
       - name: Upload smoke test screenshots
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: smoke-test-screenshots
+          name: smoke-test-windows
           path: ${{ runner.temp }}/smoke-test
           if-no-files-found: ignore
           retention-days: 14
 
-      - name: Upload exe
+      - name: Upload programs
         uses: actions/upload-artifact@v7
         with:
-          path: publish/StanfordController.exe
-          archive: false
+          name: windows
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30
+
+  linux:
+    name: Linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Install a virtual display for the smoke test
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends xvfb xauth libice6 libsm6 libfontconfig1
+
+      - name: Build
+        run: dotnet build StanfordController.sln --configuration Release -p:Version=${VERSION}
+
+      - name: Test
+        run: dotnet test tests/StanfordController.Tests --configuration Release --no-build --logger "console;verbosity=normal"
+
+      - name: Publish
+        run: |
+          set -euo pipefail
+          dotnet publish src/StanfordController.App --configuration Release --runtime linux-x64 --output publish/standard -p:Version=${VERSION}
+          dotnet publish src/StanfordController.App --configuration Release --runtime linux-x64 --output publish/portable -p:Version=${VERSION} -p:PortableBuild=true
+          for folder in publish/standard publish/portable; do
+            ls -la "$folder"
+            [ "$(ls "$folder")" = "Strobe" ] || { echo "Expected $folder to contain only Strobe"; exit 1; }
+          done
+          mkdir dist
+          install -m755 publish/standard/Strobe dist/Strobe-linux-x64
+          install -m755 publish/portable/Strobe dist/Strobe-Portable-linux-x64
+
+      - name: UI smoke test
+        run: |
+          set -euo pipefail
+          status=0
+          timeout 300 xvfb-run -a -s "-screen 0 1600x1000x24" dist/Strobe-linux-x64 --smoke-test "$RUNNER_TEMP/smoke-test" || status=$?
+          cat "$RUNNER_TEMP/smoke-test/smoke-test.log" || true
+          [ "$status" -eq 0 ] || { echo "The smoke test failed with exit code $status"; exit 1; }
+          timeout 300 dist/Strobe-Portable-linux-x64 --smoke-test "$RUNNER_TEMP/smoke-test-portable" --headless
+          grep -q 'portable build: True' "$RUNNER_TEMP/smoke-test-portable/smoke-test.log" || { echo "The portable binary does not run as the portable build"; exit 1; }
+
+      - name: Build Debian package, tarball and Arch PKGBUILD
+        run: |
+          set -euo pipefail
+          packaging/linux/build-packages.sh "${VERSION}" publish/standard/Strobe dist
+          dpkg-deb --info "dist/strobe_${VERSION}_amd64.deb"
+          dpkg-deb --contents "dist/strobe_${VERSION}_amd64.deb"
+
+      - name: Upload smoke test screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: smoke-test-linux
+          path: ${{ runner.temp }}/smoke-test
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload programs and packages
+        uses: actions/upload-artifact@v7
+        with:
+          name: linux
+          path: dist/
           if-no-files-found: error
           retention-days: 30
 
   release:
     name: Publish GitHub Release
-    needs: build
+    needs: [windows, linux]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
-      - name: Download exe
+      - name: Download the Windows programs
         uses: actions/download-artifact@v8
         with:
-          name: StanfordController.exe
+          name: windows
+          path: dist
+
+      - name: Download the Linux programs and packages
+        uses: actions/download-artifact@v8
+        with:
+          name: linux
+          path: dist
 
       - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ needs.build.outputs.version }}
         run: |
           set -euo pipefail
-          sha256sum StanfordController.exe > SHA256SUMS.txt
+          cd dist
+          chmod +x Strobe-linux-x64 Strobe-Portable-linux-x64
+          sha256sum Strobe* strobe_* PKGBUILD > SHA256SUMS.txt
           cat SHA256SUMS.txt
-          gh release create "v${VERSION}" StanfordController.exe SHA256SUMS.txt \
+          cat > notes.md <<NOTES
+          | Download | For |
+          | --- | --- |
+          | **Strobe.exe** | Windows 10 and 11. Keeps instruments and setups in %APPDATA%\\Strobe. |
+          | **Strobe-Portable.exe** | Windows, from a USB stick or shared folder. Keeps everything in a Strobe-data folder beside it. |
+          | **strobe_${VERSION}_amd64.deb** | Debian and Ubuntu: \`sudo apt install ./strobe_${VERSION}_amd64.deb\` |
+          | **PKGBUILD** | Arch Linux: put it in an empty folder and run \`makepkg -si\` |
+          | **Strobe-${VERSION}-linux-x64.tar.gz** | Any x86-64 Linux desktop: unpack, then \`./install.sh\` or run \`./strobe\` |
+          | **Strobe-linux-x64** / **Strobe-Portable-linux-x64** | The bare Linux program (\`chmod +x\` after downloading). |
+
+          SHA256SUMS.txt lists the checksum of every file.
+          NOTES
+          gh release create "v${VERSION}" Strobe.exe Strobe-Portable.exe Strobe-linux-x64 Strobe-Portable-linux-x64 \
+            "Strobe-${VERSION}-linux-x64.tar.gz" "strobe_${VERSION}_amd64.deb" PKGBUILD SHA256SUMS.txt \
             --repo "${GITHUB_REPOSITORY}" \
             --target "${GITHUB_SHA}" \
-            --title "Stanford DG645 Controller ${VERSION}" \
+            --title "Strobe ${VERSION}" \
+            --notes "$(cat notes.md)" \
             --generate-notes \
             --latest

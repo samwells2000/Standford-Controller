@@ -1,0 +1,122 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:StanfordController.Presentation.ViewModels;assembly=StanfordController.Presentation"
+             xmlns:help="clr-namespace:StanfordController.Presentation.Help;assembly=StanfordController.Presentation"
+             xmlns:views="clr-namespace:StanfordController.App.Views"
+             xmlns:inf="clr-namespace:StanfordController.App.Infrastructure"
+             x:Class="StanfordController.App.Views.InstrumentPage"
+             x:DataType="vm:InstrumentItemViewModel">
+    <DockPanel>
+        <!-- ============================== Header ============================== -->
+        <Border DockPanel.Dock="Top" Classes="chrome" BorderThickness="0,0,0,1" Padding="16,7,14,7">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                    <Ellipse Classes="state" Classes.connected="{Binding IsConnected}" Classes.connecting="{Binding IsConnecting}" Classes.failed="{Binding IsFailed}" />
+                    <TextBlock Text="{Binding StateText}" Classes="secondary" VerticalAlignment="Center" />
+                </StackPanel>
+                <StackPanel>
+                    <TextBlock Text="{Binding Name}" Classes="title" FontSize="15" />
+                    <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis">
+                        <Run Text="{Binding Address}" />
+                        <Run Text="  ·  " />
+                        <Run Text="{Binding Details}" />
+                    </TextBlock>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- ============================== Command bar ============================== -->
+        <Border DockPanel.Dock="Top" Classes="chrome" BorderThickness="0,0,0,1" Padding="8,3">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                    <Button Classes="tool" Content="Connect" Command="{Binding ConnectCommand}" IsVisible="{Binding !IsConnected}"
+                            ToolTip.Tip="Connect and read the instrument's settings (Ctrl+K)" />
+                    <Button Classes="tool" Content="Disconnect" Command="{Binding DisconnectCommand}" IsVisible="{Binding IsConnected}"
+                            ToolTip.Tip="Close the connection (Ctrl+Shift+K)" />
+                    <Button Classes="tool" Content="Edit…" Command="{ReflectionBinding $parent[Window].DataContext.EditInstrumentCommand}"
+                            ToolTip.Tip="Name, address and connection options (F2)" />
+                    <Border Classes="vrule" />
+                    <Button Classes="tool" Content="Refresh" Command="{Binding Session?.RefreshAllCommand, FallbackValue={x:Null}}" IsEnabled="{Binding IsConnected}"
+                            ToolTip.Tip="Read every setting from the instrument again (F5)" />
+                    <Button Classes="tool" Content="Trigger" Command="{Binding Session?.TriggerCommand, FallbackValue={x:Null}}" IsEnabled="{Binding IsConnected}"
+                            ToolTip.Tip="Start one delay cycle (*TRG, Ctrl+T). Available when the trigger source is a single-shot mode." />
+                    <Border Classes="vrule" />
+                    <Button Classes="tool" Content="Save setup" Command="{Binding SaveSetupCommand}"
+                            ToolTip.Tip="Store this instrument's complete setup in the configuration on this computer" />
+                    <Button Classes="tool" Content="Restore saved…" Command="{Binding RestoreSetupCommand}"
+                            ToolTip.Tip="{Binding StoredSetupText, StringFormat='Put the setup saved in the configuration back on the instrument ({0}). Ctrl+R'}" />
+                    <Border Classes="vrule" />
+                    <CheckBox Content="Live status" IsChecked="{Binding Session?.IsPolling, FallbackValue=False}" IsEnabled="{Binding IsConnected}" Margin="4,0,10,0"
+                              ToolTip.Tip="Read the instrument's status register every second (Status page)" />
+                    <CheckBox Content="Log" IsChecked="{Binding Log.IsPanelVisible}" ToolTip.Tip="Show every command sent and reply received (Ctrl+L)" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+                    <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding Session?.IsBusy, FallbackValue=False, TargetNullValue=False}">
+                        <ProgressBar IsIndeterminate="True" Width="90" MinWidth="0" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding Session?.BusyText, FallbackValue=''}" Classes="caption" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <Button Classes="tool" Command="{Binding Session?.RefreshAllCommand, FallbackValue={x:Null}}"
+                            IsVisible="{Binding Session?.SettingsMayBeStale, FallbackValue=False, TargetNullValue=False}"
+                            ToolTip.Tip="Commands sent from the Terminal may have changed settings shown on other pages. Click to read everything again (F5).">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Path Classes="glyph warning" Data="{StaticResource GlyphWarning}" />
+                            <TextBlock Text="Pages may be out of date" Foreground="{DynamicResource WarningTextBrush}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- ============================== Body ============================== -->
+        <Panel>
+            <ContentControl Content="{Binding Session}">
+                <ContentControl.DataTemplates>
+                    <DataTemplate DataType="vm:InstrumentSessionViewModel">
+                        <views:SessionView />
+                    </DataTemplate>
+                </ContentControl.DataTemplates>
+            </ContentControl>
+
+            <!-- Not connected -->
+            <ScrollViewer IsVisible="{Binding Session, Converter={x:Static ObjectConverters.IsNull}}"
+                          inf:HelpContext.Topic="{x:Static help:HelpTopics.Connecting}">
+                <StackPanel Margin="20,16" MaxWidth="640" HorizontalAlignment="Left">
+                    <ProgressBar IsIndeterminate="True" Margin="0,0,0,14" IsVisible="{Binding IsConnecting}" />
+
+                    <Border Classes="infobar error" Margin="0,0,0,16" IsVisible="{Binding LastError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                        <Grid ColumnDefinitions="Auto,*">
+                            <Path Classes="glyph error" Data="{StaticResource GlyphError}" VerticalAlignment="Top" Margin="0,1,10,0" />
+                            <SelectableTextBlock Grid.Column="1" Text="{Binding LastError}" TextWrapping="Wrap" Foreground="{DynamicResource DangerStrongTextBrush}" />
+                        </Grid>
+                    </Border>
+
+                    <HeaderedContentControl Theme="{StaticResource Section}" Header="Instrument">
+                        <StackPanel>
+                            <HeaderedContentControl Theme="{StaticResource DialogRow}" Header="Address">
+                                <SelectableTextBlock Text="{Binding Address}" Classes.mono="{Binding !IsSimulator}" Margin="0,5,0,0" />
+                            </HeaderedContentControl>
+                            <HeaderedContentControl Theme="{StaticResource DialogRow}" Header="Location">
+                                <TextBlock Text="{Binding Location, TargetNullValue='—'}" Margin="0,5,0,0" TextWrapping="Wrap" />
+                            </HeaderedContentControl>
+                            <HeaderedContentControl Theme="{StaticResource DialogRow}" Header="Notes">
+                                <TextBlock Text="{Binding Notes, TargetNullValue='—'}" Margin="0,5,0,0" TextWrapping="Wrap" />
+                            </HeaderedContentControl>
+                            <HeaderedContentControl Theme="{StaticResource DialogRow}" Header="Last connected">
+                                <TextBlock Text="{Binding LastSeen}" Margin="0,5,0,0" TextWrapping="Wrap" />
+                            </HeaderedContentControl>
+                            <HeaderedContentControl Theme="{StaticResource DialogRow}" Header="Saved setup">
+                                <TextBlock Text="{Binding StoredSetupText}" Margin="0,5,0,0" />
+                            </HeaderedContentControl>
+                        </StackPanel>
+                    </HeaderedContentControl>
+
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Button Classes="accent" Content="Connect" Command="{Binding ConnectCommand}" MinWidth="96" />
+                        <TextBlock Classes="caption" VerticalAlignment="Center" Text="or double-click the instrument in the list." />
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </Panel>
+    </DockPanel>
+</UserControl>

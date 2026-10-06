@@ -45,6 +45,66 @@ public sealed class Dg645Settings
 
     public static async Task<Dg645Settings> LoadAsync(string path, CancellationToken cancellationToken = default) =>
         FromJson(await File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false));
+
+    /// <summary>
+    /// Names the settings that differ between this setup and <paramref name="other"/>, e.g. "Delay C" or
+    /// "AB amplitude". Values within the instrument's resolution count as equal. Empty when the setups match.
+    /// </summary>
+    public IReadOnlyList<string> DescribeDifferences(Dg645Settings other)
+    {
+        var differences = new List<string>();
+        void Check(bool same, string name)
+        {
+            if (!same)
+            {
+                differences.Add(name);
+            }
+        }
+
+        static bool SameTime(double a, double b) => Math.Abs(a - b) <= 0.5e-12 + 1e-12 * Math.Max(Math.Abs(a), Math.Abs(b));
+        static bool SameFrequency(double a, double b) => Math.Abs(a - b) <= 0.5e-6 + 1e-9 * Math.Max(Math.Abs(a), Math.Abs(b));
+        static bool SameVolts(double a, double b) => Math.Abs(a - b) < 0.005;
+
+        Check(Trigger.Source == other.Trigger.Source, "Trigger source");
+        Check(SameFrequency(Trigger.RateHz, other.Trigger.RateHz), "Trigger rate");
+        Check(SameVolts(Trigger.LevelVolts, other.Trigger.LevelVolts), "Trigger threshold");
+        Check(SameTime(Trigger.HoldoffSeconds, other.Trigger.HoldoffSeconds), "Holdoff");
+        Check(Trigger.Inhibit == other.Trigger.Inhibit, "Inhibit");
+        Check(Trigger.AdvancedTriggering == other.Trigger.AdvancedTriggering, "Advanced triggering");
+        Check(Trigger.PrescaleFactors.SequenceEqual(other.Trigger.PrescaleFactors), "Prescale factors");
+        Check(Trigger.PrescalePhases.SequenceEqual(other.Trigger.PrescalePhases), "Prescale phases");
+
+        Check(Burst.Enabled == other.Burst.Enabled, "Burst mode");
+        Check(Burst.Count == other.Burst.Count, "Burst count");
+        Check(SameTime(Burst.DelaySeconds, other.Burst.DelaySeconds), "Burst delay");
+        Check(SameTime(Burst.PeriodSeconds, other.Burst.PeriodSeconds), "Burst period");
+        Check(Burst.T0Mode == other.Burst.T0Mode, "Burst T0 output");
+
+        foreach (var channel in Delays.Select(d => d.Channel).Union(other.Delays.Select(d => d.Channel)).Order())
+        {
+            var mine = Delays.FirstOrDefault(d => d.Channel == channel);
+            var theirs = other.Delays.FirstOrDefault(d => d.Channel == channel);
+            Check(mine is not null && theirs is not null && mine.Reference == theirs.Reference && SameTime(mine.DelaySeconds, theirs.DelaySeconds),
+                $"Delay {channel}");
+        }
+
+        foreach (var output in Outputs.Select(o => o.Output).Union(other.Outputs.Select(o => o.Output)).Order())
+        {
+            var mine = Outputs.FirstOrDefault(o => o.Output == output);
+            var theirs = other.Outputs.FirstOrDefault(o => o.Output == output);
+            if (mine is null || theirs is null)
+            {
+                differences.Add($"{output} output");
+                continue;
+            }
+
+            Check(SameVolts(mine.AmplitudeVolts, theirs.AmplitudeVolts), $"{output} amplitude");
+            Check(SameVolts(mine.OffsetVolts, theirs.OffsetVolts), $"{output} offset");
+            Check(mine.Polarity == theirs.Polarity, $"{output} polarity");
+        }
+
+        return differences;
+    }
 }
 
 public sealed class TriggerSettings

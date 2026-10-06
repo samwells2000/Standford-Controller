@@ -1,7 +1,9 @@
 using System.Globalization;
-using System.Windows;
-using System.Windows.Input;
-using System.Windows.Media;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using StanfordController.Core.Units;
 using StanfordController.Presentation.ViewModels;
 
@@ -9,106 +11,122 @@ namespace StanfordController.App.Controls;
 
 /// <summary>
 /// Draws T0 and the AB/CD/EF/GH output pulses on a common time axis. Hovering shows a crosshair with
-/// the time under the pointer and the exact edges of the row under it. Colours are dependency
-/// properties so the diagram follows the theme through DynamicResource.
+/// the time under the pointer and the exact edges of the row under it. Colours are styled properties,
+/// set from DynamicResource, so the diagram follows the theme.
 /// </summary>
-public sealed class TimingDiagram : FrameworkElement
+public sealed class TimingDiagram : Control
 {
-    public static readonly DependencyProperty PulsesProperty = Register<IReadOnlyList<PulseTiming>?>(nameof(Pulses), null);
-    public static readonly DependencyProperty TextBrushProperty = Register<Brush>(nameof(TextBrush), Brushes.Black);
-    public static readonly DependencyProperty MutedBrushProperty = Register<Brush>(nameof(MutedBrush), Brushes.Gray);
-    public static readonly DependencyProperty GridBrushProperty = Register<Brush>(nameof(GridBrush), Brushes.LightGray);
-    public static readonly DependencyProperty AxisBrushProperty = Register<Brush>(nameof(AxisBrush), Brushes.Gray);
-    public static readonly DependencyProperty WarningBrushProperty = Register<Brush>(nameof(WarningBrush), Brushes.DarkOrange);
-    public static readonly DependencyProperty PanelBrushProperty = Register<Brush>(nameof(PanelBrush), Brushes.White);
-    public static readonly DependencyProperty T0BrushProperty = Register<Brush>(nameof(T0Brush), Brushes.SlateGray);
-    public static readonly DependencyProperty ABBrushProperty = Register<Brush>(nameof(ABBrush), Brushes.RoyalBlue);
-    public static readonly DependencyProperty CDBrushProperty = Register<Brush>(nameof(CDBrush), Brushes.OrangeRed);
-    public static readonly DependencyProperty EFBrushProperty = Register<Brush>(nameof(EFBrush), Brushes.SeaGreen);
-    public static readonly DependencyProperty GHBrushProperty = Register<Brush>(nameof(GHBrush), Brushes.Goldenrod);
+    public static readonly StyledProperty<IReadOnlyList<PulseTiming>?> PulsesProperty =
+        AvaloniaProperty.Register<TimingDiagram, IReadOnlyList<PulseTiming>?>(nameof(Pulses));
+    public static readonly StyledProperty<IBrush?> TextBrushProperty =
+        AvaloniaProperty.Register<TimingDiagram, IBrush?>(nameof(TextBrush));
+    public static readonly StyledProperty<IBrush?> MutedBrushProperty =
+        AvaloniaProperty.Register<TimingDiagram, IBrush?>(nameof(MutedBrush));
+    public static readonly StyledProperty<IBrush?> GridBrushProperty =
+        AvaloniaProperty.Register<TimingDiagram, IBrush?>(nameof(GridBrush));
+    public static readonly StyledProperty<IBrush?> AxisBrushProperty =
+        AvaloniaProperty.Register<TimingDiagram, IBrush?>(nameof(AxisBrush));
+    public static readonly StyledProperty<IBrush?> WarningBrushProperty =
+        AvaloniaProperty.Register<TimingDiagram, IBrush?>(nameof(WarningBrush));
+    public static readonly StyledProperty<IBrush?> PanelBrushProperty =
+        AvaloniaProperty.Register<TimingDiagram, IBrush?>(nameof(PanelBrush));
+    public static readonly StyledProperty<IBrush?> T0BrushProperty =
+        AvaloniaProperty.Register<TimingDiagram, IBrush?>(nameof(T0Brush));
+    public static readonly StyledProperty<IBrush?> ABBrushProperty =
+        AvaloniaProperty.Register<TimingDiagram, IBrush?>(nameof(ABBrush));
+    public static readonly StyledProperty<IBrush?> CDBrushProperty =
+        AvaloniaProperty.Register<TimingDiagram, IBrush?>(nameof(CDBrush));
+    public static readonly StyledProperty<IBrush?> EFBrushProperty =
+        AvaloniaProperty.Register<TimingDiagram, IBrush?>(nameof(EFBrush));
+    public static readonly StyledProperty<IBrush?> GHBrushProperty =
+        AvaloniaProperty.Register<TimingDiagram, IBrush?>(nameof(GHBrush));
 
-    private const double LabelWidth = 72;
-    private const double AxisHeight = 30;
-    private const double TopPadding = 12;
+    private const double LabelWidth = 64;
+    private const double AxisHeight = 28;
+    private const double TopPadding = 10;
     private const double RightPadding = 24;
 
-    private static readonly Typeface LabelFace = new(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
-    private static readonly Typeface SmallFace = new(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
+    private static readonly Typeface LabelFace = new(new FontFamily(Program.FontFamilyUri), FontStyle.Normal, FontWeight.SemiBold);
+    private static readonly Typeface SmallFace = new(new FontFamily(Program.FontFamilyUri), FontStyle.Normal, FontWeight.Normal);
 
-    private Point? _mouse;
+    private Point? _pointer;
+
+    static TimingDiagram()
+    {
+        AffectsRender<TimingDiagram>(PulsesProperty, TextBrushProperty, MutedBrushProperty, GridBrushProperty, AxisBrushProperty,
+            WarningBrushProperty, PanelBrushProperty, T0BrushProperty, ABBrushProperty, CDBrushProperty, EFBrushProperty, GHBrushProperty);
+    }
 
     public TimingDiagram()
     {
-        Cursor = Cursors.Cross;
+        Cursor = new Cursor(StandardCursorType.Cross);
+        ClipToBounds = true;
     }
 
-    public IReadOnlyList<PulseTiming>? Pulses
+    public IReadOnlyList<PulseTiming>? Pulses { get => GetValue(PulsesProperty); set => SetValue(PulsesProperty, value); }
+
+    public IBrush? TextBrush { get => GetValue(TextBrushProperty); set => SetValue(TextBrushProperty, value); }
+
+    public IBrush? MutedBrush { get => GetValue(MutedBrushProperty); set => SetValue(MutedBrushProperty, value); }
+
+    public IBrush? GridBrush { get => GetValue(GridBrushProperty); set => SetValue(GridBrushProperty, value); }
+
+    public IBrush? AxisBrush { get => GetValue(AxisBrushProperty); set => SetValue(AxisBrushProperty, value); }
+
+    public IBrush? WarningBrush { get => GetValue(WarningBrushProperty); set => SetValue(WarningBrushProperty, value); }
+
+    /// <summary>Background of the plot and the hover read-out.</summary>
+    public IBrush? PanelBrush { get => GetValue(PanelBrushProperty); set => SetValue(PanelBrushProperty, value); }
+
+    public IBrush? T0Brush { get => GetValue(T0BrushProperty); set => SetValue(T0BrushProperty, value); }
+
+    public IBrush? ABBrush { get => GetValue(ABBrushProperty); set => SetValue(ABBrushProperty, value); }
+
+    public IBrush? CDBrush { get => GetValue(CDBrushProperty); set => SetValue(CDBrushProperty, value); }
+
+    public IBrush? EFBrush { get => GetValue(EFBrushProperty); set => SetValue(EFBrushProperty, value); }
+
+    public IBrush? GHBrush { get => GetValue(GHBrushProperty); set => SetValue(GHBrushProperty, value); }
+
+    /// <summary>Shows the hover read-out at a point without a pointer (used by the smoke test).</summary>
+    internal void SimulateHover(Point? point)
     {
-        get => (IReadOnlyList<PulseTiming>?)GetValue(PulsesProperty);
-        set => SetValue(PulsesProperty, value);
+        _pointer = point;
+        InvalidateVisual();
     }
-
-    public Brush TextBrush { get => (Brush)GetValue(TextBrushProperty); set => SetValue(TextBrushProperty, value); }
-
-    public Brush MutedBrush { get => (Brush)GetValue(MutedBrushProperty); set => SetValue(MutedBrushProperty, value); }
-
-    public Brush GridBrush { get => (Brush)GetValue(GridBrushProperty); set => SetValue(GridBrushProperty, value); }
-
-    public Brush AxisBrush { get => (Brush)GetValue(AxisBrushProperty); set => SetValue(AxisBrushProperty, value); }
-
-    public Brush WarningBrush { get => (Brush)GetValue(WarningBrushProperty); set => SetValue(WarningBrushProperty, value); }
-
-    /// <summary>Background of the hover read-out box.</summary>
-    public Brush PanelBrush { get => (Brush)GetValue(PanelBrushProperty); set => SetValue(PanelBrushProperty, value); }
-
-    public Brush T0Brush { get => (Brush)GetValue(T0BrushProperty); set => SetValue(T0BrushProperty, value); }
-
-    public Brush ABBrush { get => (Brush)GetValue(ABBrushProperty); set => SetValue(ABBrushProperty, value); }
-
-    public Brush CDBrush { get => (Brush)GetValue(CDBrushProperty); set => SetValue(CDBrushProperty, value); }
-
-    public Brush EFBrush { get => (Brush)GetValue(EFBrushProperty); set => SetValue(EFBrushProperty, value); }
-
-    public Brush GHBrush { get => (Brush)GetValue(GHBrushProperty); set => SetValue(GHBrushProperty, value); }
 
     protected override Size MeasureOverride(Size availableSize) =>
         new(double.IsInfinity(availableSize.Width) ? 600 : availableSize.Width, double.IsInfinity(availableSize.Height) ? 240 : availableSize.Height);
 
-    /// <summary>Shows the hover read-out at a point without a mouse (used by the smoke test).</summary>
-    internal void SimulateHover(Point? point)
+    protected override void OnPointerMoved(PointerEventArgs e)
     {
-        _mouse = point;
+        base.OnPointerMoved(e);
+        _pointer = e.GetPosition(this);
         InvalidateVisual();
     }
 
-    protected override void OnMouseMove(MouseEventArgs e)
+    protected override void OnPointerExited(PointerEventArgs e)
     {
-        base.OnMouseMove(e);
-        _mouse = e.GetPosition(this);
+        base.OnPointerExited(e);
+        _pointer = null;
         InvalidateVisual();
     }
 
-    protected override void OnMouseLeave(MouseEventArgs e)
+    public override void Render(DrawingContext dc)
     {
-        base.OnMouseLeave(e);
-        _mouse = null;
-        InvalidateVisual();
-    }
-
-    protected override void OnRender(DrawingContext dc)
-    {
-        var width = ActualWidth;
-        var height = ActualHeight;
+        var width = Bounds.Width;
+        var height = Bounds.Height;
         if (width < LabelWidth + 80 || height < AxisHeight + 60)
         {
             return;
         }
 
-        // Transparent background so the whole area receives mouse moves.
-        dc.DrawRectangle(Brushes.Transparent, null, new Rect(0, 0, width, height));
+        // Fill the whole area so it receives pointer moves.
+        dc.DrawRectangle(PanelBrush ?? Brushes.Transparent, null, new Rect(0, 0, width, height));
 
+        var text = TextBrush ?? Brushes.Black;
+        var muted = MutedBrush ?? Brushes.Gray;
         var pulses = Pulses ?? [];
-        var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
         var plotLeft = LabelWidth;
         var plotRight = width - RightPadding;
         var plotWidth = plotRight - plotLeft;
@@ -116,8 +134,8 @@ public sealed class TimingDiagram : FrameworkElement
         var rowsBottom = height - AxisHeight;
         var rows = 1 + pulses.Count;
         var rowHeight = (rowsBottom - rowsTop) / rows;
-        var gridPen = Pen(GridBrush, 1);
-        var axisPen = Pen(AxisBrush, 1);
+        var gridPen = new Pen(GridBrush ?? Brushes.LightGray, 1);
+        var axisPen = new Pen(AxisBrush ?? Brushes.Gray, 1);
 
         // Time range: from T0 to a little past the latest edge, rounded to whole ticks.
         var latest = pulses.SelectMany(p => new[] { p.Start, p.End }).Where(t => t is not null).Select(t => t!.Value).DefaultIfEmpty(0).Max();
@@ -131,15 +149,15 @@ public sealed class TimingDiagram : FrameworkElement
         {
             var x = Math.Round(X(t)) + 0.5;
             dc.DrawLine(gridPen, new Point(x, rowsTop), new Point(x, rowsBottom));
-            var label = Text(EngineeringUnits.Format(t, Quantity.Time), SmallFace, 11, MutedBrush, dpi);
-            dc.DrawText(label, new Point(Math.Min(x - label.Width / 2, width - label.Width - 2), rowsBottom + 8));
+            var label = Text(EngineeringUnits.Format(t, Quantity.Time), SmallFace, 11, muted);
+            dc.DrawText(label, new Point(Math.Min(x - label.Width / 2, width - label.Width - 2), rowsBottom + 7));
         }
 
         dc.DrawLine(axisPen, new Point(plotLeft, rowsBottom + 0.5), new Point(plotRight, rowsBottom + 0.5));
 
         // Rows: T0 is a short marker at time zero; AB…GH are the output pulses.
-        var hoveredRow = _mouse is { } m && m.Y >= rowsTop && m.Y < rowsBottom ? (int)((m.Y - rowsTop) / Math.Max(rowHeight, 1)) : -1;
-        DrawRow(0, "T0", T0Brush, positive: true, start: 0, end: span * 0.012, startLabel: null, endLabel: null, note: null, showWidth: false);
+        var hoveredRow = _pointer is { } m && m.Y >= rowsTop && m.Y < rowsBottom ? (int)((m.Y - rowsTop) / Math.Max(rowHeight, 1)) : -1;
+        DrawRow(0, "T0", T0Brush ?? Brushes.Gray, positive: true, start: 0, end: span * 0.012, startLabel: null, endLabel: null, note: null, showWidth: false);
         for (var i = 0; i < pulses.Count; i++)
         {
             var pulse = pulses[i];
@@ -158,30 +176,29 @@ public sealed class TimingDiagram : FrameworkElement
                 pulse.StartChannel, pulse.EndChannel, note, showWidth: true);
         }
 
-        if (_mouse is { } mouse && mouse.X >= plotLeft && mouse.X <= plotRight && mouse.Y >= rowsTop && mouse.Y <= rowsBottom)
+        if (_pointer is { } pointer && pointer.X >= plotLeft && pointer.X <= plotRight && pointer.Y >= rowsTop && pointer.Y <= rowsBottom)
         {
-            DrawHover(mouse, TimeAt(mouse.X));
+            DrawHover(pointer, TimeAt(pointer.X));
         }
 
-        void DrawRow(int row, string name, Brush color, bool positive, double? start, double? end, string? startLabel, string? endLabel, string? note, bool showWidth)
+        void DrawRow(int row, string name, IBrush color, bool positive, double? start, double? end, string? startLabel, string? endLabel, string? note, bool showWidth)
         {
             var top = rowsTop + row * rowHeight;
             var high = top + rowHeight * 0.28;
             var low = top + rowHeight * 0.72;
             var idle = positive ? low : high;
             var active = positive ? high : low;
-            var pen = Pen(color, 2);
+            var pen = new Pen(color, 2, lineJoin: PenLineJoin.Round);
 
             // Identity: colour swatch + name in the text colour.
             var middle = (high + low) / 2;
-            dc.DrawRoundedRectangle(color, null, new Rect(10, middle - 5, 10, 10), 2, 2);
-            var nameText = Text(name, LabelFace, 12.5, TextBrush, dpi);
-            dc.DrawText(nameText, new Point(26, middle - nameText.Height / 2));
+            dc.DrawRectangle(color, null, new Rect(8, middle - 5, 10, 10), 2, 2);
+            var nameText = Text(name, LabelFace, 12.5, text);
+            dc.DrawText(nameText, new Point(24, middle - nameText.Height / 2));
 
             if (row == hoveredRow)
             {
-                var band = Tint(color, 0x14);
-                dc.DrawRectangle(band, null, new Rect(plotLeft, top, plotWidth, rowHeight));
+                dc.DrawRectangle(Tint(color, 0x14), null, new Rect(plotLeft, top, plotWidth, rowHeight));
             }
 
             if (start is not { } s || end is not { } e)
@@ -189,7 +206,7 @@ public sealed class TimingDiagram : FrameworkElement
                 dc.DrawLine(pen, new Point(plotLeft, idle), new Point(plotRight, idle));
                 if (note is not null)
                 {
-                    var noteText = Text(note, SmallFace, 11, WarningBrush, dpi);
+                    var noteText = Text(note, SmallFace, 11, WarningBrush ?? muted);
                     dc.DrawText(noteText, new Point(plotLeft + 8, middle - noteText.Height / 2));
                 }
 
@@ -199,86 +216,81 @@ public sealed class TimingDiagram : FrameworkElement
             var x1 = X(s);
             var x2 = Math.Max(X(e), x1 + 1.5);
             dc.DrawRectangle(Tint(color, 0x2E), null, new Rect(new Point(x1, high), new Point(x2, low)));
-
-            var figure = new PathFigure { StartPoint = new Point(plotLeft, idle) };
-            figure.Segments.Add(new PolyLineSegment(
+            dc.DrawGeometry(null, pen, new PolylineGeometry(
             [
-                new Point(x1, idle), new Point(x1, active), new Point(x2, active), new Point(x2, idle), new Point(plotRight, idle),
-            ], true));
-            var geometry = new PathGeometry([figure]);
-            geometry.Freeze();
-            dc.DrawGeometry(null, pen, geometry);
+                new Point(plotLeft, idle), new Point(x1, idle), new Point(x1, active), new Point(x2, active), new Point(x2, idle), new Point(plotRight, idle),
+            ], isFilled: false));
 
             // Edge names above the pulse.
             if (startLabel is not null)
             {
-                var a = Text(startLabel, SmallFace, 10.5, MutedBrush, dpi);
-                dc.DrawText(a, new Point(x1 - a.Width / 2, top + 1));
+                var a = Text(startLabel, SmallFace, 10.5, muted);
+                dc.DrawText(a, new Point(x1 - a.Width / 2, top));
             }
 
             if (endLabel is not null)
             {
-                var b = Text(endLabel, SmallFace, 10.5, MutedBrush, dpi);
-                dc.DrawText(b, new Point(Math.Max(x2 - b.Width / 2, x1 + 8), top + 1));
+                var b = Text(endLabel, SmallFace, 10.5, muted);
+                dc.DrawText(b, new Point(Math.Max(x2 - b.Width / 2, x1 + 8), top));
             }
 
             // Width beside the pulse: inside if it fits, otherwise just after the trailing edge.
             if (showWidth)
             {
-                var widthText = Text(EngineeringUnits.Format(e - s, Quantity.Time), SmallFace, 10.5, MutedBrush, dpi);
+                var widthText = Text(EngineeringUnits.Format(e - s, Quantity.Time), SmallFace, 10.5, muted);
                 var inside = x2 - x1 > widthText.Width + 10;
                 var tx = inside ? (x1 + x2 - widthText.Width) / 2 : x2 + 6;
                 if (tx + widthText.Width <= plotRight + RightPadding - 2)
                 {
-                    dc.DrawText(widthText, new Point(tx, low + 2));
+                    dc.DrawText(widthText, new Point(tx, low + 1));
                 }
             }
         }
 
-        void DrawHover(Point mouse, double time)
+        void DrawHover(Point at, double time)
         {
-            var x = Math.Round(mouse.X) + 0.5;
-            dc.DrawLine(Pen(TextBrush, 1, dashed: true), new Point(x, rowsTop), new Point(x, rowsBottom));
+            var x = Math.Round(at.X) + 0.5;
+            dc.DrawLine(new Pen(text, 1, dashStyle: DashStyle.Dash), new Point(x, rowsTop), new Point(x, rowsBottom));
 
             // Round the cursor time to what one pixel can resolve, so the read-out doesn't show false precision.
             var perPixel = span / plotWidth;
             var resolution = Math.Pow(10, Math.Ceiling(Math.Log10(perPixel)));
             var rounded = Math.Round(Math.Max(0, time) / resolution) * resolution;
-            var lines = new List<(string Text, Brush Brush)> { ($"t ≈ T0 + {EngineeringUnits.Format(rounded, Quantity.Time)}", TextBrush) };
+            var lines = new List<(string Text, IBrush Brush)> { ($"t ≈ T0 + {EngineeringUnits.Format(rounded, Quantity.Time)}", text) };
             if (hoveredRow >= 1 && hoveredRow <= pulses.Count)
             {
                 var pulse = pulses[hoveredRow - 1];
                 if (pulse.IsValid)
                 {
-                    lines.Add(($"{pulse.Output}: {pulse.StartChannel} = T0 + {EngineeringUnits.Format(pulse.Start!.Value, Quantity.Time)}", TextBrush));
-                    lines.Add(($"{pulse.EndChannel} = T0 + {EngineeringUnits.Format(pulse.End!.Value, Quantity.Time)}", TextBrush));
-                    lines.Add(($"width {EngineeringUnits.Format(pulse.Width, Quantity.Time)} · {(pulse.Positive ? "positive" : "negative")}", MutedBrush));
+                    lines.Add(($"{pulse.Output}: {pulse.StartChannel} = T0 + {EngineeringUnits.Format(pulse.Start!.Value, Quantity.Time)}", text));
+                    lines.Add(($"{pulse.EndChannel} = T0 + {EngineeringUnits.Format(pulse.End!.Value, Quantity.Time)}", text));
+                    lines.Add(($"width {EngineeringUnits.Format(pulse.Width, Quantity.Time)} · {(pulse.Positive ? "positive" : "negative")}", muted));
                 }
             }
 
-            var texts = lines.Select(l => Text(l.Text, SmallFace, 11.5, l.Brush, dpi)).ToList();
+            var texts = lines.Select(l => Text(l.Text, SmallFace, 11.5, l.Brush)).ToList();
             var boxWidth = texts.Max(t => t.Width) + 16;
             var boxHeight = texts.Sum(t => t.Height) + 10;
             var bx = x + 10 + boxWidth > width ? x - 10 - boxWidth : x + 10;
-            var by = Math.Clamp(mouse.Y - boxHeight / 2, 2, height - boxHeight - 2);
-            dc.DrawRoundedRectangle(PanelBrush, Pen(GridBrush, 1), new Rect(bx, by, boxWidth, boxHeight), 6, 6);
+            var by = Math.Clamp(at.Y - boxHeight / 2, 2, height - boxHeight - 2);
+            dc.DrawRectangle(PanelBrush ?? Brushes.White, new Pen(AxisBrush ?? Brushes.Gray, 1), new Rect(bx, by, boxWidth, boxHeight), 3, 3);
             var y = by + 5;
-            foreach (var text in texts)
+            foreach (var line in texts)
             {
-                dc.DrawText(text, new Point(bx + 8, y));
-                y += text.Height;
+                dc.DrawText(line, new Point(bx + 8, y));
+                y += line.Height;
             }
         }
     }
 
-    private Brush BrushFor(string output) => output switch
+    private IBrush BrushFor(string output) => output switch
     {
         "AB" => ABBrush,
         "CD" => CDBrush,
         "EF" => EFBrush,
         "GH" => GHBrush,
         _ => T0Brush,
-    };
+    } ?? Brushes.Gray;
 
     /// <summary>1, 2 or 5 × 10^n, close to <paramref name="rough"/>.</summary>
     internal static double NiceStep(double rough)
@@ -295,34 +307,12 @@ public sealed class TimingDiagram : FrameworkElement
         return nice * magnitude;
     }
 
-    private static DependencyProperty Register<T>(string name, T defaultValue) =>
-        DependencyProperty.Register(name, typeof(T), typeof(TimingDiagram),
-            new FrameworkPropertyMetadata(defaultValue, FrameworkPropertyMetadataOptions.AffectsRender));
+    private static FormattedText Text(string value, Typeface face, double size, IBrush brush) =>
+        new(value, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, face, size, brush);
 
-    private static FormattedText Text(string text, Typeface face, double size, Brush brush, double pixelsPerDip) =>
-        new(text, CultureInfo.CurrentUICulture, FlowDirection.LeftToRight, face, size, brush, pixelsPerDip);
-
-    private static Brush Tint(Brush brush, byte alpha)
+    private static IBrush Tint(IBrush brush, byte alpha)
     {
-        var color = brush is SolidColorBrush solid ? solid.Color : Colors.Gray;
-        var tint = new SolidColorBrush(Color.FromArgb(alpha, color.R, color.G, color.B));
-        tint.Freeze();
-        return tint;
-    }
-
-    private static Pen Pen(Brush brush, double thickness, bool dashed = false)
-    {
-        var pen = new Pen(brush, thickness) { LineJoin = PenLineJoin.Round };
-        if (dashed)
-        {
-            pen.DashStyle = DashStyles.Dash;
-        }
-
-        if (pen.CanFreeze)
-        {
-            pen.Freeze();
-        }
-
-        return pen;
+        var color = brush is ISolidColorBrush solid ? solid.Color : Colors.Gray;
+        return new ImmutableSolidColorBrush(Color.FromArgb(alpha, color.R, color.G, color.B));
     }
 }

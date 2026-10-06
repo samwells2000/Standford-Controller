@@ -1,0 +1,59 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:StanfordController.Presentation.ViewModels;assembly=StanfordController.Presentation"
+             xmlns:inf="clr-namespace:StanfordController.App.Infrastructure"
+             x:Class="StanfordController.App.App"
+             Name="Strobe"
+             RequestedThemeVariant="Default">
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="/Themes/Colors.axaml" />
+                <ResourceInclude Source="/Themes/Controls.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+
+    <!-- How each kind of instrument setting is shown wherever it appears as content. -->
+    <Application.DataTemplates>
+        <!-- A value typed in: applied on Enter or when leaving the field, Esc reverts. -->
+        <DataTemplate DataType="vm:TextParameterViewModel">
+            <StackPanel>
+                <TextBox Classes="param" Classes.dirty="{Binding IsDirty}" Classes.rejected="{Binding HasError}"
+                         Text="{Binding Text}" IsReadOnly="{Binding IsReadOnly}" ToolTip.Tip="{Binding Hint}"
+                         AutomationProperties.Name="{Binding Label}"
+                         inf:FieldBehavior.CommitCommand="{Binding CommitCommand}"
+                         inf:FieldBehavior.RevertCommand="{Binding RevertCommand}" />
+                <TextBlock Classes="error" Text="{Binding Error}" IsVisible="{Binding HasError}" />
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- A fixed list of options: applied as soon as one is chosen. -->
+        <DataTemplate DataType="vm:ChoiceParameterViewModel">
+            <StackPanel>
+                <ComboBox ItemsSource="{Binding Options}" SelectedItem="{Binding Selected}" ToolTip.Tip="{Binding Hint}"
+                          AutomationProperties.Name="{Binding Label}" />
+                <TextBlock Classes="error" Text="{Binding Error}" IsVisible="{Binding HasError}" />
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- On/off: applied when ticked. The label is beside the check box. -->
+        <DataTemplate DataType="vm:ToggleParameterViewModel">
+            <StackPanel>
+                <CheckBox IsChecked="{Binding IsChecked}" Content="{Binding Label}" ToolTip.Tip="{Binding Hint}" />
+                <TextBlock Classes="error" Text="{Binding Error}" IsVisible="{Binding HasError}" />
+            </StackPanel>
+        </DataTemplate>
+    </Application.DataTemplates>
+
+    <Application.Styles>
+        <FluentTheme DensityStyle="Compact">
+            <FluentTheme.Palettes>
+                <ColorPaletteResources x:Key="Light" Accent="#005FB8" RegionColor="#FFFFFF" ErrorText="#C42B1C" />
+                <ColorPaletteResources x:Key="Dark" Accent="#60CDFF" RegionColor="#272727" ErrorText="#FF99A4" />
+            </FluentTheme.Palettes>
+        </FluentTheme>
+        <StyleInclude Source="/Themes/Styles.axaml" />
+    </Application.Styles>
+</Application>

@@ -12,33 +12,50 @@ internal sealed class FakeDialogs : IDialogService
 {
     public bool ConfirmResult { get; set; } = true;
 
+    /// <summary>The answer to every Yes/No/Cancel question.</summary>
+    public DialogAnswer AskAnswer { get; set; } = new(DialogChoice.Cancel);
+
     public List<string> Errors { get; } = [];
+
+    public List<string> Questions { get; } = [];
+
+    public List<string?> HelpTopicsShown { get; } = [];
+
+    public string? SaveFilePath { get; set; }
+
+    public string? OpenFilePath { get; set; }
 
     public Func<ProfileEditorViewModel, bool>? OnEditProfile { get; set; }
 
-    public bool EditProfile(ProfileEditorViewModel editor) => OnEditProfile?.Invoke(editor) ?? false;
+    public Task<bool> EditProfileAsync(ProfileEditorViewModel editor) => Task.FromResult(OnEditProfile?.Invoke(editor) ?? false);
 
-    public bool ShowDiscovery(DiscoveryViewModel discovery) => false;
+    public Task<bool> ShowDiscoveryAsync(DiscoveryViewModel discovery) => Task.FromResult(false);
 
-    public bool Confirm(string title, string message) => ConfirmResult;
+    public Task<bool> ConfirmAsync(string title, string message, string confirmText = "OK") => Task.FromResult(ConfirmResult);
 
-    public void ShowError(string title, string message) => Errors.Add(message);
-
-    public void ShowInfo(string title, string message)
+    public Task<DialogAnswer> AskAsync(string title, string message, string yesText, string noText, string? rememberText = null, bool showCancel = true)
     {
+        Questions.Add(message);
+        return Task.FromResult(AskAnswer);
     }
 
-    public string? PickSaveFile(string title, string filter, string defaultFileName) => null;
-
-    public string? PickOpenFile(string title, string filter) => null;
-
-    public void CopyToClipboard(string text)
+    public Task ShowErrorAsync(string title, string message)
     {
+        Errors.Add(message);
+        return Task.CompletedTask;
     }
 
-    public void ShowAbout()
-    {
-    }
+    public Task ShowInfoAsync(string title, string message) => Task.CompletedTask;
+
+    public Task<string?> PickSaveFileAsync(string title, string defaultFileName, params FileFilter[] filters) => Task.FromResult(SaveFilePath);
+
+    public Task<string?> PickOpenFileAsync(string title, params FileFilter[] filters) => Task.FromResult(OpenFilePath);
+
+    public Task CopyToClipboardAsync(string text) => Task.CompletedTask;
+
+    public Task ShowAboutAsync() => Task.CompletedTask;
+
+    public void ShowHelp(string? topic = null) => HelpTopicsShown.Add(topic);
 }
 
 public class ViewModelTests
@@ -212,11 +229,11 @@ public class ViewModelTests
     [Fact]
     public async Task MainViewModelConnectsToTheDemoInstrumentAndRemembersIt()
     {
-        var path = Path.Combine(Path.GetTempPath(), "sc-tests-" + Guid.NewGuid().ToString("N"), "instruments.json");
+        var path = Path.Combine(Path.GetTempPath(), "sc-tests-" + Guid.NewGuid().ToString("N"), "Default.strobe");
         try
         {
-            var main = new MainViewModel(new ProfileStore(path), new FakeDialogs());
-            main.Load();
+            var main = new MainViewModel(path, new FakeDialogs());
+            await main.LoadAsync();
             Assert.False(main.HasInstruments);
 
             main.AddDemoInstrumentCommand.Execute(null);
@@ -232,8 +249,8 @@ public class ViewModelTests
             Assert.False(item.IsConnected);
             Assert.Null(item.Session);
 
-            var reloaded = new MainViewModel(new ProfileStore(path), new FakeDialogs());
-            reloaded.Load();
+            var reloaded = new MainViewModel(path, new FakeDialogs());
+            await reloaded.LoadAsync();
             var saved = Assert.Single(reloaded.Instruments);
             Assert.Equal("Demo DG645 (simulated)", saved.Name);
             Assert.NotNull(saved.Profile.LastConnectedUtc);

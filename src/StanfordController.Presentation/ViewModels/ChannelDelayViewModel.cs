@@ -33,7 +33,7 @@ public sealed class ChannelDelayViewModel : ParameterViewModel
             (v, ct) => Client.SetDelayStepAsync(channel, v, ct),
             min: 0,
             max: 2000,
-            hint: $"Amount the ▲/▼ buttons change the delay (SSDL {(int)channel},t).");
+            hint: $"Amount the up/down buttons change the delay (SSDL {(int)channel},t).");
 
         CommitCommand = new AsyncRelayCommand(CommitAsync);
         RevertCommand = new RelayCommand(Revert);
@@ -57,6 +57,9 @@ public sealed class ChannelDelayViewModel : ParameterViewModel
     public bool StartsPulse => (int)Channel % 2 == 0;
 
     public string Role => StartsPulse ? $"Start of {Output} pulse" : $"End of {Output} pulse";
+
+    /// <summary>e.g. "AB start" for the table column.</summary>
+    public string RoleShort => StartsPulse ? $"{Output} start" : $"{Output} end";
 
     public IReadOnlyList<ChoiceOption> ReferenceOptions { get; }
 

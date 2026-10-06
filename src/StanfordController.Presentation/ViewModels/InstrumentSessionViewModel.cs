@@ -21,7 +21,7 @@ public sealed record PulseTiming(string Output, string StartChannel, string EndC
 /// <summary>Everything shown for a connected instrument.</summary>
 public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentContext
 {
-    private const string SettingsFilter = "DG645 settings (*.dg645.json)|*.dg645.json|All files (*.*)|*.*";
+    private static readonly FileFilter SetupFilter = new("DG645 setup", "*" + Dg645Settings.FileExtension);
 
     private readonly LogViewModel _log;
     private CancellationTokenSource? _pollCancellation;
@@ -37,6 +37,7 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
     private IReadOnlyList<PulseTiming> _timing = [];
     private bool _disconnectRequested;
     private bool _settingsMayBeStale;
+    private bool _hasUnsavedChanges;
 
     public InstrumentSessionViewModel(InstrumentProfile profile, Dg645Client client, IDialogService dialogs, LogViewModel log)
     {
@@ -72,11 +73,21 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         ExportSettingsCommand = new AsyncRelayCommand(ExportSettingsAsync, () => !IsBusy);
         ImportSettingsCommand = new AsyncRelayCommand(ImportSettingsAsync, () => !IsBusy);
         ResetCommand = new AsyncRelayCommand(ResetAsync, () => !IsBusy);
-        CopyLogCommand = new RelayCommand(() => Dialogs.CopyToClipboard(_log.ExportText()));
-        SaveLogCommand = new RelayCommand(SaveLog);
+        CopyLogCommand = new AsyncRelayCommand(() => Dialogs.CopyToClipboardAsync(_log.ExportText()));
+        SaveLogCommand = new AsyncRelayCommand(SaveLogAsync);
+
+        // The status bar summarises the trigger and burst settings, like the instrument's own display.
+        Trigger.Source.ValueChanged += (_, _) => OnPropertyChanged(nameof(TriggerSummary));
+        Trigger.Rate.ValueChanged += (_, _) => OnPropertyChanged(nameof(TriggerSummary));
+        Burst.Enabled.ValueChanged += (_, _) => OnPropertyChanged(nameof(BurstSummary));
+        Burst.Count.ValueChanged += (_, _) => OnPropertyChanged(nameof(BurstSummary));
+        Burst.Period.ValueChanged += (_, _) => OnPropertyChanged(nameof(BurstSummary));
     }
 
     public event EventHandler<string>? DisconnectRequested;
+
+    /// <summary>The saved instrument this session belongs to (its saved setup and connection settings).</summary>
+    public InstrumentItemViewModel? Owner { get; internal set; }
 
     public InstrumentProfile Profile { get; }
 
@@ -147,6 +158,25 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         get => _settingsMayBeStale;
         private set => SetProperty(ref _settingsMayBeStale, value);
     }
+
+    /// <summary>True once a setting has been changed since the setup was last saved to (or restored from) the configuration.</summary>
+    public bool HasUnsavedChanges
+    {
+        get => _hasUnsavedChanges;
+        private set => SetProperty(ref _hasUnsavedChanges, value);
+    }
+
+    /// <summary>e.g. "Internal, 10 kHz" or "Single shot".</summary>
+    public string TriggerSummary => Trigger.Source.Selected is not { } source
+        ? "—"
+        : Trigger.Source.SelectedValue == (int)TriggerSource.Internal && Trigger.Rate.HasValue
+            ? $"{source.Label}, {Trigger.Rate.Text}"
+            : source.Label;
+
+    /// <summary>e.g. "Off" or "10 × 1 µs".</summary>
+    public string BurstSummary => !Burst.Enabled.IsChecked
+        ? "Off"
+        : Burst.Count.HasValue && Burst.Period.HasValue ? $"{Burst.Count.Text} × {Burst.Period.Text}" : "On";
 
     public bool StatusIsError
     {
@@ -302,10 +332,63 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
     public void NotifySettingsChanged()
     {
         RecomputeTiming();
+        HasUnsavedChanges = true;
         SetStatus($"Change applied at {DateTime.Now:HH:mm:ss}.");
     }
 
-    public void NotifyExternalChange() => SettingsMayBeStale = true;
+    public void NotifyExternalChange()
+    {
+        SettingsMayBeStale = true;
+        HasUnsavedChanges = true;
+    }
+
+    // ---- Saved setups ----
+
+    /// <summary>Reads the instrument's complete setup, or returns null (with the error reported) if it could not be read.</summary>
+    public async Task<Dg645Settings?> CaptureSetupAsync()
+    {
+        Dg645Settings? captured = null;
+        await BusyAsync("Reading setup…", async () =>
+        {
+            captured = await Client.ReadSettingsAsync();
+            captured.Description = $"Saved from {Profile.Name}";
+        });
+        return captured;
+    }
+
+    /// <summary>Writes a complete setup to the instrument and reads every page back. Returns true if it was applied.</summary>
+    public async Task<bool> ApplySetupAsync(Dg645Settings settings, string description)
+    {
+        var applied = false;
+        await BusyAsync("Applying setup…", async () =>
+        {
+            await Client.ApplySettingsAsync(settings, new Progress<string>(step => BusyText = $"Applying {step.ToLowerInvariant()}…"));
+            applied = true;
+        });
+
+        await RefreshAllAsync();
+        if (applied)
+        {
+            HasUnsavedChanges = false;
+            SetStatus($"Applied {description}.");
+        }
+
+        return applied;
+    }
+
+    /// <summary>Called when the instrument keeps settings that differ from the setup stored in the configuration.</summary>
+    public void MarkInstrumentDiffers()
+    {
+        HasUnsavedChanges = true;
+        SetStatus("Using the settings on the instrument, which differ from the setup saved in Strobe.");
+    }
+
+    /// <summary>Called once the current setup has been stored in the configuration.</summary>
+    public void MarkSetupSaved(string message)
+    {
+        HasUnsavedChanges = false;
+        SetStatus(message);
+    }
 
     public void RequestDisconnect(string reason)
     {
@@ -376,7 +459,7 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
     private async Task SaveToSlotAsync()
     {
         var slot = SaveSlot;
-        if (!Dialogs.Confirm("Save to instrument memory", $"Overwrite location {slot} in the DG645's memory with the current settings?"))
+        if (!await Dialogs.ConfirmAsync("Save to instrument memory", $"Overwrite location {slot} in the DG645's memory with the current settings?", "Save"))
         {
             return;
         }
@@ -398,7 +481,7 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         var question = slot.Value == 0
             ? "Recall the factory default settings? All current settings will be replaced."
             : $"Recall settings from location {slot.Value}? All current settings will be replaced.";
-        if (!Dialogs.Confirm("Recall settings", question))
+        if (!await Dialogs.ConfirmAsync("Recall settings", question, "Recall"))
         {
             return;
         }
@@ -406,13 +489,14 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         if (await RunAsync($"Recall location {slot.Value}", () => Client.RecallSettingsAsync(slot.Value)))
         {
             await RefreshAllAsync();
+            HasUnsavedChanges = true;
             SetStatus($"Recalled {slot.Label.ToLowerInvariant()}.");
         }
     }
 
     private async Task ResetAsync()
     {
-        if (!Dialogs.Confirm("Reset instrument", "Reset the DG645 to its default settings (*RST)? All current delays, levels and trigger settings will be lost."))
+        if (!await Dialogs.ConfirmAsync("Reset instrument", "Reset the DG645 to its default settings (*RST)? All current delays, levels and trigger settings will be lost.", "Reset"))
         {
             return;
         }
@@ -420,6 +504,7 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         if (await RunAsync("Reset", () => Client.ResetAsync()))
         {
             await RefreshAllAsync();
+            HasUnsavedChanges = true;
             SetStatus("Instrument reset to default settings.");
         }
     }
@@ -427,7 +512,7 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
     private async Task ExportSettingsAsync()
     {
         var safeName = string.Concat(Profile.Name.Split(Path.GetInvalidFileNameChars()));
-        var path = Dialogs.PickSaveFile("Save DG645 settings", SettingsFilter, $"{safeName} {DateTime.Now:yyyy-MM-dd HHmm}{Dg645Settings.FileExtension}");
+        var path = await Dialogs.PickSaveFileAsync("Export setup", $"{safeName} {DateTime.Now:yyyy-MM-dd HHmm}{Dg645Settings.FileExtension}", SetupFilter);
         if (path is null)
         {
             return;
@@ -438,13 +523,13 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
             var settings = await Client.ReadSettingsAsync();
             settings.Description = $"Saved from {Profile.Name}";
             await settings.SaveAsync(path);
-            SetStatus($"Settings saved to {Path.GetFileName(path)}.");
+            SetStatus($"Setup exported to {Path.GetFileName(path)}.");
         });
     }
 
     private async Task ImportSettingsAsync()
     {
-        var path = Dialogs.PickOpenFile("Load DG645 settings", SettingsFilter);
+        var path = await Dialogs.PickOpenFileAsync("Import setup", SetupFilter, FileFilter.AllFiles);
         if (path is null)
         {
             return;
@@ -457,33 +542,26 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         }
         catch (Exception ex)
         {
-            Dialogs.ShowError("Load settings", $"Could not read {Path.GetFileName(path)}:\n{ex.Message}");
+            await Dialogs.ShowErrorAsync("Import setup", $"Could not read {Path.GetFileName(path)}:\n{ex.Message}");
             return;
         }
 
-        var source = settings.SourceIdentity is null ? string.Empty : $"\n\nSaved from: {settings.SourceIdentity}\nSaved: {settings.SavedUtc.ToLocalTime():g}";
-        if (!Dialogs.Confirm("Load settings", $"Apply the settings in {Path.GetFileName(path)} to {Profile.Name}? Current delays, levels, trigger and burst settings will be replaced.{source}"))
+        var source = settings.SourceIdentity is null ? string.Empty : $"\n\nSaved from: {settings.SourceIdentity}\nSaved: {settings.SavedUtc.ToLocalTime():yyyy-MM-dd HH:mm}";
+        if (!await Dialogs.ConfirmAsync("Import setup", $"Apply the setup in {Path.GetFileName(path)} to {Profile.Name}? Current delays, levels, trigger and burst settings will be replaced.{source}", "Apply"))
         {
             return;
         }
 
-        var applied = false;
-        await BusyAsync("Applying settings…", async () =>
+        if (await ApplySetupAsync(settings, Path.GetFileName(path)))
         {
-            await Client.ApplySettingsAsync(settings, new Progress<string>(step => BusyText = $"Applying {step.ToLowerInvariant()}…"));
-            applied = true;
-        });
-
-        await RefreshAllAsync();
-        if (applied)
-        {
-            SetStatus($"Applied {Path.GetFileName(path)}.");
+            // The imported setup is not yet the one stored in the configuration.
+            HasUnsavedChanges = true;
         }
     }
 
-    private void SaveLog()
+    private async Task SaveLogAsync()
     {
-        var path = Dialogs.PickSaveFile("Save communication log", "Text files (*.txt)|*.txt", $"{Profile.Name} log {DateTime.Now:yyyy-MM-dd HHmm}.txt");
+        var path = await Dialogs.PickSaveFileAsync("Save communication log", $"{Profile.Name} log {DateTime.Now:yyyy-MM-dd HHmm}.txt", new FileFilter("Text files", "*.txt"));
         if (path is null)
         {
             return;
@@ -495,7 +573,7 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         }
         catch (Exception ex)
         {
-            Dialogs.ShowError("Save log", ex.Message);
+            await Dialogs.ShowErrorAsync("Save log", ex.Message);
         }
     }
 

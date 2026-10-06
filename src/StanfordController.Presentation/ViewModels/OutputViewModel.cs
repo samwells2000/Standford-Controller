@@ -38,10 +38,10 @@ public sealed class OutputViewModel : ParameterViewModel
         };
         AmplitudeStep = Param.Number(context, $"{output} amplitude step", Quantity.Voltage,
             ct => Client.GetAmplitudeStepAsync(output, ct), (v, ct) => Client.SetAmplitudeStepAsync(output, v, ct),
-            min: 0, hint: $"Amount the amplitude ▲/▼ buttons change it (SSLA {b},v).");
+            min: 0, hint: $"Amount the amplitude up/down buttons change it (SSLA {b},v).");
         OffsetStep = Param.Number(context, $"{output} offset step", Quantity.Voltage,
             ct => Client.GetOffsetStepAsync(output, ct), (v, ct) => Client.SetOffsetStepAsync(output, v, ct),
-            min: 0, hint: $"Amount the offset ▲/▼ buttons change it (SSLO {b},v).");
+            min: 0, hint: $"Amount the offset up/down buttons change it (SSLO {b},v).");
 
         Amplitude.ValueChanged += (_, _) => OnLevelsChanged();
         Offset.ValueChanged += (_, _) => OnLevelsChanged();

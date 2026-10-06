@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Strobe
+GenericName=Delay generator control
+Comment=Control Stanford Research Systems DG645 delay generators over Ethernet
+Exec=strobe
+Icon=strobe
+Terminal=false
+Categories=Science;Engineering;Electronics;
+Keywords=DG645;delay;pulse;generator;SRS;Stanford;timing;
+StartupWMClass=Strobe

@@ -1,6 +1,8 @@
-using System.Windows;
-using Microsoft.Win32;
+using Avalonia.Controls;
+using Avalonia.Input.Platform;
+using Avalonia.Platform.Storage;
 using StanfordController.App.Dialogs;
+using StanfordController.Presentation.Help;
 using StanfordController.Presentation.Services;
 using StanfordController.Presentation.ViewModels;
 
@@ -8,51 +10,126 @@ namespace StanfordController.App.Services;
 
 public sealed class DialogService : IDialogService
 {
+    private readonly AppPaths _paths;
+    private HelpWindow? _help;
+
+    public DialogService(AppPaths paths)
+    {
+        _paths = paths;
+        Current = this;
+    }
+
+    /// <summary>The service used by the main window (for reporting unexpected errors).</summary>
+    public static DialogService? Current { get; private set; }
+
     public Window? Owner { get; set; }
 
-    public bool EditProfile(ProfileEditorViewModel editor) =>
-        new ProfileEditorWindow { DataContext = editor, Owner = Owner }.ShowDialog() == true;
+    /// <summary>The help window, if it is open.</summary>
+    public HelpWindow? Help => _help;
 
-    public bool ShowDiscovery(DiscoveryViewModel discovery) =>
-        new DiscoveryWindow { DataContext = discovery, Owner = Owner }.ShowDialog() == true;
+    public async Task<bool> EditProfileAsync(ProfileEditorViewModel editor) =>
+        Owner is null ? false : await new ProfileEditorWindow { DataContext = editor }.ShowDialog<bool>(Owner);
 
-    public bool Confirm(string title, string message) =>
-        Show(message, title, MessageBoxButton.OKCancel, MessageBoxImage.Question) == MessageBoxResult.OK;
+    public async Task<bool> ShowDiscoveryAsync(DiscoveryViewModel discovery) =>
+        Owner is null ? false : await new DiscoveryWindow { DataContext = discovery }.ShowDialog<bool>(Owner);
 
-    public void ShowError(string title, string message) =>
-        Show(message, title, MessageBoxButton.OK, MessageBoxImage.Error);
+    public async Task<bool> ConfirmAsync(string title, string message, string confirmText = "OK") =>
+        (await MessageDialog.ShowAsync(Owner, MessageKind.Question, title, message, confirmText, showCancel: true)).Choice == DialogChoice.Yes;
 
-    public void ShowInfo(string title, string message) =>
-        Show(message, title, MessageBoxButton.OK, MessageBoxImage.Information);
+    public Task<DialogAnswer> AskAsync(string title, string message, string yesText, string noText, string? rememberText = null, bool showCancel = true) =>
+        MessageDialog.ShowAsync(Owner, MessageKind.Question, title, message, yesText, noText, showCancel, rememberText);
 
-    public string? PickSaveFile(string title, string filter, string defaultFileName)
+    public Task ShowErrorAsync(string title, string message) =>
+        MessageDialog.ShowAsync(Owner, MessageKind.Error, title, message, "OK");
+
+    public Task ShowInfoAsync(string title, string message) =>
+        MessageDialog.ShowAsync(Owner, MessageKind.Information, title, message, "OK");
+
+    public async Task<string?> PickSaveFileAsync(string title, string defaultFileName, params FileFilter[] filters)
     {
-        var dialog = new SaveFileDialog { Title = title, Filter = filter, FileName = defaultFileName, AddExtension = true };
-        return dialog.ShowDialog(Owner) == true ? dialog.FileName : null;
+        if (Owner?.StorageProvider is not { CanSave: true } storage)
+        {
+            await ReportNoFileDialogAsync(title);
+            return null;
+        }
+
+        var file = await storage.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = title,
+            SuggestedFileName = defaultFileName,
+            FileTypeChoices = ToFileTypes(filters),
+            ShowOverwritePrompt = true,
+        });
+        return file?.TryGetLocalPath();
     }
 
-    public string? PickOpenFile(string title, string filter)
+    public async Task<string?> PickOpenFileAsync(string title, params FileFilter[] filters)
     {
-        var dialog = new OpenFileDialog { Title = title, Filter = filter, CheckFileExists = true };
-        return dialog.ShowDialog(Owner) == true ? dialog.FileName : null;
+        if (Owner?.StorageProvider is not { CanOpen: true } storage)
+        {
+            await ReportNoFileDialogAsync(title);
+            return null;
+        }
+
+        var files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = title,
+            AllowMultiple = false,
+            FileTypeFilter = ToFileTypes(filters),
+        });
+        return files.Count > 0 ? files[0].TryGetLocalPath() : null;
     }
 
-    public void ShowAbout() => new AboutWindow { Owner = Owner }.ShowDialog();
-
-    public void CopyToClipboard(string text)
+    public async Task CopyToClipboardAsync(string text)
     {
         try
         {
-            Clipboard.SetText(text);
+            if (Owner?.Clipboard is { } clipboard)
+            {
+                await clipboard.SetTextAsync(text);
+            }
         }
         catch (Exception ex)
         {
-            ShowError("Copy", $"Could not copy to the clipboard: {ex.Message}");
+            await ShowErrorAsync("Copy", $"Could not copy to the clipboard: {ex.Message}");
         }
     }
 
-    private MessageBoxResult Show(string message, string title, MessageBoxButton buttons, MessageBoxImage image) =>
-        Owner is { IsVisible: true }
-            ? MessageBox.Show(Owner, message, title, buttons, image)
-            : MessageBox.Show(message, title, buttons, image);
+    public async Task ShowAboutAsync()
+    {
+        if (Owner is not null)
+        {
+            await new AboutWindow(_paths).ShowDialog(Owner);
+        }
+    }
+
+    public void ShowHelp(string? topic = null)
+    {
+        if (_help is null)
+        {
+            _help = new HelpWindow();
+            _help.Closed += (_, _) => _help = null;
+            if (Owner is not null)
+            {
+                _help.Show(Owner);
+            }
+            else
+            {
+                _help.Show();
+            }
+        }
+        else
+        {
+            _help.Activate();
+        }
+
+        _help.Navigate(topic ?? HelpTopics.GettingStarted);
+    }
+
+    // On Linux the file dialogs come from the desktop's portal service or GTK; a bare window manager may have neither.
+    private Task ReportNoFileDialogAsync(string title) => ShowErrorAsync(title,
+        "This system has no file dialog available. On Linux, install xdg-desktop-portal (with the portal for your desktop) or GTK 3, then try again.");
+
+    private static List<FilePickerFileType> ToFileTypes(FileFilter[] filters) =>
+        filters.Select(f => new FilePickerFileType(f.Name) { Patterns = f.Patterns }).ToList();
 }

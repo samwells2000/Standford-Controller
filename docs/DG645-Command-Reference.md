@@ -261,15 +261,15 @@ BURM 1;BURC 5;BURP 1e-6   burst of 5 cycles, 1 µs apart, per trigger
 LERR?                     → 0
 ```
 
-## Where each command appears in the program
+## Where each command appears in Strobe
 
 | Page | Commands |
 | --- | --- |
-| Delays & timing | `DLAY`, `SSDL`, `SPDL` (references are set through `DLAY`) |
+| Delays | `DLAY`, `SSDL`, `SPDL` (references are set through `DLAY`) |
 | Outputs | `LAMP`, `LOFF`, `LPOL`, `SSLA`, `SSLO`, `SPLA`, `SPLO` |
 | Trigger | `TSRC`, `TRAT`, `TLVL`, `INHB`, `ADVT`, `HOLD`, `PRES`, `PHAS`, `*TRG` |
 | Burst | `BURM`, `BURC`, `BURP`, `BURD`, `BURT` |
-| Setups | `*SAV`, `*RCL`, `*RST`, and whole-instrument save/load to `.dg645.json` files |
-| Status & diagnostics | `INSR?`, `INSE`, `*ESR?`, `*ESE`, `*STB?`, `*SRE`, `*PSC`, `LERR?`, `*CLS`, `*TST?`, `*CAL?`, `TIMB?`, `DISP`, `*IDN?` |
+| Setups | `*SAV`, `*RCL`, `*RST`; saved setups in the configuration and `.dg645.json` setup files (every delay, output, trigger and burst command) |
+| Status | `INSR?`, `INSE`, `*ESR?`, `*ESE`, `*STB?`, `*SRE`, `*PSC`, `LERR?`, `*CLS`, `*TST?`, `*CAL?`, `TIMB?`, `DISP`, `*IDN?` |
 | Interfaces | `IFCF` (all 14 settings), `IFRS`, `EMAC?`, `LCAL`, `REMT`, `LOCK?`, `UNLK?` |
 | Terminal | Anything, typed by hand (including `LINK`, `*OPC?` and `*WAI`) |

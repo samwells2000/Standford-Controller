@@ -2,28 +2,54 @@ using StanfordController.Presentation.ViewModels;
 
 namespace StanfordController.Presentation.Services;
 
-/// <summary>Windows, message boxes and file pickers, implemented by the WPF application.</summary>
+/// <summary>A file type for open/save pickers, e.g. ("Strobe configuration", "*.strobe").</summary>
+public sealed record FileFilter(string Name, params string[] Patterns)
+{
+    public static FileFilter AllFiles { get; } = new("All files", "*");
+}
+
+/// <summary>The answer to a three-way question such as "Save before closing?".</summary>
+public enum DialogChoice
+{
+    Cancel,
+    Yes,
+    No,
+}
+
+/// <param name="Remember">Whether the "remember my choice" box was ticked (false if there was none).</param>
+public sealed record DialogAnswer(DialogChoice Choice, bool Remember = false);
+
+/// <summary>Windows, message boxes, file pickers and the clipboard, implemented by the desktop application.</summary>
 public interface IDialogService
 {
     /// <summary>Shows the add/edit instrument dialog. Returns true if the user saved.</summary>
-    bool EditProfile(ProfileEditorViewModel editor);
+    Task<bool> EditProfileAsync(ProfileEditorViewModel editor);
 
     /// <summary>Shows the network scan dialog. Returns true if the user chose an instrument to add.</summary>
-    bool ShowDiscovery(DiscoveryViewModel discovery);
+    Task<bool> ShowDiscoveryAsync(DiscoveryViewModel discovery);
 
-    bool Confirm(string title, string message);
+    /// <summary>Asks an OK/Cancel question. <paramref name="confirmText"/> labels the OK button.</summary>
+    Task<bool> ConfirmAsync(string title, string message, string confirmText = "OK");
 
-    void ShowError(string title, string message);
+    /// <summary>
+    /// Asks a two-way question with custom button labels, plus a Cancel button when <paramref name="showCancel"/>.
+    /// Closing the window answers Cancel. <paramref name="rememberText"/>, when given, adds a "remember my choice" check box.
+    /// </summary>
+    Task<DialogAnswer> AskAsync(string title, string message, string yesText, string noText, string? rememberText = null, bool showCancel = true);
 
-    void ShowInfo(string title, string message);
+    Task ShowErrorAsync(string title, string message);
 
-    /// <param name="filter">A file dialog filter such as "DG645 settings (*.dg645.json)|*.dg645.json".</param>
-    string? PickSaveFile(string title, string filter, string defaultFileName);
+    Task ShowInfoAsync(string title, string message);
 
-    string? PickOpenFile(string title, string filter);
+    Task<string?> PickSaveFileAsync(string title, string defaultFileName, params FileFilter[] filters);
 
-    void CopyToClipboard(string text);
+    Task<string?> PickOpenFileAsync(string title, params FileFilter[] filters);
 
-    /// <summary>Shows the About window (version, documentation links, data folder).</summary>
-    void ShowAbout();
+    Task CopyToClipboardAsync(string text);
+
+    /// <summary>Shows the About window (version, data folder, links).</summary>
+    Task ShowAboutAsync();
+
+    /// <summary>Opens the user guide, at <paramref name="topic"/> (a heading anchor) if given.</summary>
+    void ShowHelp(string? topic = null);
 }

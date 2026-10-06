@@ -59,24 +59,24 @@ public sealed class ImprovementTests : IDisposable
     }
 
     [Fact]
-    public void MainViewModelRemembersThemeSelectionAndLogVisibility()
+    public async Task MainViewModelRemembersThemeSelectionAndLogVisibility()
     {
-        var profiles = new ProfileStore(Path.Combine(_directory, "instruments.json"));
+        var configuration = Path.Combine(_directory, "Default.strobe");
         var settings = new AppSettingsStore(Path.Combine(_directory, "settings.json"));
 
-        var first = new MainViewModel(profiles, new FakeDialogs(), settings);
-        first.Load();
+        var first = new MainViewModel(configuration, new FakeDialogs(), settings);
+        await first.LoadAsync();
         first.AddDemoInstrumentCommand.Execute(null);
         first.AddDemoInstrumentCommand.Execute(null);
         var second = first.Instruments[1];
         first.SelectedInstrument = second;
-        first.IsDarkTheme = true;
+        first.SetThemeCommand.Execute("Dark");
         first.ShowLog = false;
         Assert.All(first.Instruments, i => Assert.False(i.Log.IsPanelVisible));
-        Assert.Equal($"{second.Name} — {MainViewModel.AppName}", first.WindowTitle);
+        Assert.Equal("Default — Strobe", first.WindowTitle);
 
-        var reopened = new MainViewModel(profiles, new FakeDialogs(), settings);
-        reopened.Load();
+        var reopened = new MainViewModel(configuration, new FakeDialogs(), settings);
+        await reopened.LoadAsync();
         Assert.Equal(AppTheme.Dark, reopened.Theme);
         Assert.True(reopened.IsDarkTheme);
         Assert.False(reopened.IsLightTheme);
@@ -160,15 +160,15 @@ public sealed class ImprovementTests : IDisposable
     [Fact]
     public async Task InstrumentsMarkedForStartupConnectAutomatically()
     {
-        var profiles = new ProfileStore(Path.Combine(_directory, "instruments.json"));
-        profiles.Save(
+        var store = new ConfigurationStore(Path.Combine(_directory, "Default.strobe"));
+        store.Save(
         [
             new InstrumentProfile { Name = "Auto", IsSimulator = true, ConnectOnStartup = true },
             new InstrumentProfile { Name = "Manual", IsSimulator = true },
         ]);
 
-        var main = new MainViewModel(profiles, new FakeDialogs());
-        main.Load();
+        var main = new MainViewModel(store.FilePath, new FakeDialogs());
+        await main.LoadAsync();
         await main.ConnectStartupInstrumentsAsync();
 
         Assert.True(main.Instruments.Single(i => i.Name == "Auto").IsConnected);

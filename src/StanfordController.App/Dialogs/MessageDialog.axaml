@@ -1,0 +1,22 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="StanfordController.App.Dialogs.MessageDialog"
+        Width="480" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+    <DockPanel>
+        <Border DockPanel.Dock="Bottom" Classes="chrome" BorderThickness="0,1,0,0" Padding="16,10">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                <Button x:Name="YesButton" Classes="accent" IsDefault="True" MinWidth="88" Click="OnYes" />
+                <Button x:Name="NoButton" MinWidth="88" Click="OnNo" />
+                <Button x:Name="CancelButton" Content="Cancel" IsCancel="True" MinWidth="88" Click="OnCancel" />
+            </StackPanel>
+        </Border>
+        <Grid ColumnDefinitions="Auto,*" Margin="20,18,22,16">
+            <Path x:Name="IconPath" Classes="glyph" VerticalAlignment="Top" Margin="0,1,12,0" />
+            <StackPanel Grid.Column="1" Spacing="12">
+                <SelectableTextBlock x:Name="MessageText" TextWrapping="Wrap" />
+                <CheckBox x:Name="RememberBox" IsVisible="False" />
+            </StackPanel>
+        </Grid>
+    </DockPanel>
+</Window>

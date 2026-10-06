@@ -10,6 +10,12 @@ public sealed record LogEntry(DateTime Timestamp, CommunicationDirection Directi
 {
     public string TimeText => Timestamp.ToString("HH:mm:ss.fff");
 
+    public bool IsSent => Direction == CommunicationDirection.Sent;
+
+    public bool IsReceived => Direction == CommunicationDirection.Received;
+
+    public bool IsError => Direction == CommunicationDirection.Error;
+
     public string Marker => Direction switch
     {
         CommunicationDirection.Sent => "→",
@@ -36,6 +42,7 @@ public sealed class LogViewModel : ObservableObject
     public LogViewModel()
     {
         ClearCommand = new RelayCommand(Entries.Clear);
+        HideCommand = new RelayCommand(() => IsPanelVisible = false);
     }
 
     public ObservableCollection<LogEntry> Entries { get; } = [];
@@ -55,6 +62,8 @@ public sealed class LogViewModel : ObservableObject
     }
 
     public ICommand ClearCommand { get; }
+
+    public ICommand HideCommand { get; }
 
     public event EventHandler<LogEntry>? EntryAdded;
 

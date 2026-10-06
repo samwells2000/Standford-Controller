@@ -18,6 +18,7 @@ public sealed class ProfileEditorViewModel : ObservableObject
     private string _notes;
     private bool _returnToLocal;
     private bool _connectOnStartup;
+    private ChoiceOption _setupOnConnect;
     private IReadOnlyList<string> _problems = [];
     private bool _showProblems;
     private string? _testResult;
@@ -36,6 +37,7 @@ public sealed class ProfileEditorViewModel : ObservableObject
         _notes = profile.Notes ?? string.Empty;
         _returnToLocal = profile.ReturnToLocalOnDisconnect;
         _connectOnStartup = profile.ConnectOnStartup;
+        _setupOnConnect = SetupOnConnectOptions.First(o => o.Value == (int)profile.SetupOnConnect);
         TestConnectionCommand = new AsyncRelayCommand(TestConnectionAsync, () => IsSimulator || !string.IsNullOrWhiteSpace(_host));
     }
 
@@ -92,6 +94,24 @@ public sealed class ProfileEditorViewModel : ObservableObject
         get => _connectOnStartup;
         set => Set(ref _connectOnStartup, value);
     }
+
+    public static IReadOnlyList<ChoiceOption> SetupOnConnectOptions { get; } =
+    [
+        new((int)Core.Profiles.SetupOnConnect.Ask, "Ask which settings to use"),
+        new((int)Core.Profiles.SetupOnConnect.Restore, "Load the setup saved in Strobe"),
+        new((int)Core.Profiles.SetupOnConnect.KeepInstrument, "Keep the settings on the instrument"),
+    ];
+
+    /// <summary>What happens on connect when the instrument's settings differ from the saved setup.</summary>
+    public ChoiceOption SetupOnConnectChoice
+    {
+        get => _setupOnConnect;
+        set => Set(ref _setupOnConnect, value ?? SetupOnConnectOptions[0]);
+    }
+
+    public string StoredSetupText => _original.StoredSetup is { } setup
+        ? $"Setup saved {setup.SavedUtc.ToLocalTime():yyyy-MM-dd HH:mm}."
+        : "No setup saved yet. Connect, then use Save setup (Ctrl+S).";
 
     public bool ReturnToLocalOnDisconnect
     {
@@ -161,6 +181,7 @@ public sealed class ProfileEditorViewModel : ObservableObject
         profile.Notes = string.IsNullOrWhiteSpace(_notes) ? null : _notes.Trim();
         profile.ReturnToLocalOnDisconnect = _returnToLocal;
         profile.ConnectOnStartup = _connectOnStartup;
+        profile.SetupOnConnect = (SetupOnConnect)_setupOnConnect.Value;
         return profile;
     }
 

@@ -275,7 +275,7 @@ public sealed class StatusViewModel : ParameterViewModel
 
         if (codes.Count == 0)
         {
-            Context.Dialogs.ShowInfo("Error queue", "The instrument's error queue is empty.");
+            await Context.Dialogs.ShowInfoAsync("Error queue", "The instrument's error queue is empty.");
         }
     }
 
@@ -288,8 +288,8 @@ public sealed class StatusViewModel : ParameterViewModel
 
     private async Task AutoCalibrateAsync()
     {
-        if (!Context.Dialogs.Confirm("Auto calibration",
-                "Run the DG645's auto calibration now? Outputs may be disturbed while it runs, which can take some time."))
+        if (!await Context.Dialogs.ConfirmAsync("Auto calibration",
+                "Run the DG645's auto calibration now? Outputs may be disturbed while it runs, which can take some time.", "Calibrate"))
         {
             return;
         }

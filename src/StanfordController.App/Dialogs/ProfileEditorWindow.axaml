@@ -1,0 +1,91 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:StanfordController.Presentation.ViewModels;assembly=StanfordController.Presentation"
+        x:Class="StanfordController.App.Dialogs.ProfileEditorWindow"
+        x:DataType="vm:ProfileEditorViewModel"
+        Title="{Binding Title}"
+        Width="580" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+    <DockPanel>
+        <Border DockPanel.Dock="Bottom" Classes="chrome" BorderThickness="0,1,0,0" Padding="16,10">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                <Button Content="Save" Classes="accent" IsDefault="True" MinWidth="88" Click="OnSave" />
+                <Button Content="Cancel" IsCancel="True" MinWidth="88" Click="OnCancel" />
+            </StackPanel>
+        </Border>
+
+        <StackPanel Margin="20,16,20,14">
+            <TextBlock Classes="caption" Margin="0,0,0,14"
+                       Text="Give the instrument a name you will recognise; the name is all you need to pick it next time." />
+
+            <HeaderedContentControl Theme="{StaticResource DialogRow}" Header="Name">
+                <TextBox x:Name="NameBox" Text="{Binding Name}" />
+            </HeaderedContentControl>
+            <HeaderedContentControl Theme="{StaticResource DialogRow}" Header="Address" IsVisible="{Binding !IsSimulator}">
+                <TextBox Text="{Binding Host}" Classes="param" PlaceholderText="e.g. 192.168.1.30 or dg645-lab2"
+                         ToolTip.Tip="The IP address shown in the instrument's network settings, or a host name. Use Find on network if you don't know it." />
+            </HeaderedContentControl>
+            <HeaderedContentControl Theme="{StaticResource DialogRow}" Header="TCP port" IsVisible="{Binding !IsSimulator}">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <TextBox Text="{Binding PortText}" Width="90" Classes="param" />
+                    <TextBlock Classes="caption" VerticalAlignment="Center" Text="5025 is the DG645's bare-socket port." />
+                </StackPanel>
+            </HeaderedContentControl>
+            <HeaderedContentControl Theme="{StaticResource DialogRow}" Header="Reply timeout">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <TextBox Text="{Binding TimeoutText}" Width="90" Classes="param" />
+                    <TextBlock Classes="caption" VerticalAlignment="Center" Text="milliseconds" />
+                </StackPanel>
+            </HeaderedContentControl>
+            <HeaderedContentControl Theme="{StaticResource DialogRow}" Header="Location">
+                <TextBox Text="{Binding Location}" PlaceholderText="Optional, e.g. Lab 2.14, laser table" />
+            </HeaderedContentControl>
+            <HeaderedContentControl Theme="{StaticResource DialogRow}" Header="Notes">
+                <TextBox Text="{Binding Notes}" Classes="multiline" />
+            </HeaderedContentControl>
+
+            <HeaderedContentControl Theme="{StaticResource Section}" Header="Connection" Margin="0,8,0,4">
+                <StackPanel>
+                    <HeaderedContentControl Theme="{StaticResource DialogRow}" Header="On opening">
+                        <CheckBox IsChecked="{Binding ConnectOnStartup}" Content="Connect when this configuration opens (and when Strobe starts)" />
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Theme="{StaticResource DialogRow}" Header="Saved setup">
+                        <StackPanel Spacing="4">
+                            <ComboBox ItemsSource="{x:Static vm:ProfileEditorViewModel.SetupOnConnectOptions}" SelectedItem="{Binding SetupOnConnectChoice}"
+                                      ToolTip.Tip="What to do on connecting when the instrument's settings differ from the setup saved in Strobe" />
+                            <TextBlock Classes="caption" Text="{Binding StoredSetupText}" />
+                        </StackPanel>
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Theme="{StaticResource DialogRow}" Header="On disconnecting">
+                        <CheckBox IsChecked="{Binding ReturnToLocalOnDisconnect}" Content="Return the front panel to local control" />
+                    </HeaderedContentControl>
+                </StackPanel>
+            </HeaderedContentControl>
+
+            <!-- Connection test -->
+            <Border Classes="infobar" Margin="0,4,0,0">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Command="{Binding TestConnectionCommand}" Content="Test connection" VerticalAlignment="Top" />
+                    <TextBlock VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,12,0" Classes="secondary"
+                               Classes.ok="{Binding TestSucceeded, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:True}}"
+                               Classes.bad="{Binding TestSucceeded, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:False}}"
+                               Text="{Binding TestResult, TargetNullValue='Check the instrument answers before saving.'}">
+                        <TextBlock.Styles>
+                            <Style Selector="TextBlock.ok">
+                                <Setter Property="Foreground" Value="{DynamicResource SuccessTextBrush}" />
+                            </Style>
+                            <Style Selector="TextBlock.bad">
+                                <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
+                            </Style>
+                        </TextBlock.Styles>
+                    </TextBlock>
+                </DockPanel>
+            </Border>
+
+            <!-- Validation -->
+            <Border Classes="infobar error" Margin="0,10,0,0" IsVisible="{Binding HasVisibleProblems}">
+                <TextBlock Text="{Binding ProblemsText}" Foreground="{DynamicResource DangerStrongTextBrush}" TextWrapping="Wrap" />
+            </Border>
+        </StackPanel>
+    </DockPanel>
+</Window>

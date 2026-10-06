@@ -1,0 +1,255 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:StanfordController.Presentation.ViewModels;assembly=StanfordController.Presentation"
+        xmlns:help="clr-namespace:StanfordController.Presentation.Help;assembly=StanfordController.Presentation"
+        xmlns:views="clr-namespace:StanfordController.App.Views"
+        xmlns:inf="clr-namespace:StanfordController.App.Infrastructure"
+        x:Class="StanfordController.App.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Title="{Binding WindowTitle}"
+        Width="1360" Height="880" MinWidth="1080" MinHeight="680"
+        WindowStartupLocation="CenterScreen"
+        Icon="/Assets/app.ico">
+
+    <Window.KeyBindings>
+        <KeyBinding Gesture="Ctrl+N" Command="{Binding AddInstrumentCommand}" />
+        <KeyBinding Gesture="Ctrl+F" Command="{Binding DiscoverCommand}" />
+        <KeyBinding Gesture="Ctrl+O" Command="{Binding OpenConfigurationCommand}" />
+        <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveSetupsCommand}" />
+        <KeyBinding Gesture="Ctrl+Shift+S" Command="{Binding SaveConfigurationAsCommand}" />
+        <KeyBinding Gesture="Ctrl+K" Command="{Binding ConnectSelectedCommand}" />
+        <KeyBinding Gesture="Ctrl+Shift+K" Command="{Binding DisconnectSelectedCommand}" />
+        <KeyBinding Gesture="Ctrl+R" Command="{Binding RestoreSelectedSetupCommand}" />
+        <KeyBinding Gesture="F5" Command="{Binding RefreshCommand}" />
+        <KeyBinding Gesture="Ctrl+T" Command="{Binding TriggerCommand}" />
+        <KeyBinding Gesture="Ctrl+L" Command="{Binding ToggleLogCommand}" />
+    </Window.KeyBindings>
+
+    <DockPanel>
+        <!-- ================================ Menu bar ================================ -->
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="_New configuration…" Command="{Binding NewConfigurationCommand}" />
+                <MenuItem Header="_Open configuration…" Command="{Binding OpenConfigurationCommand}" InputGesture="Ctrl+O" />
+                <MenuItem Header="Open _recent" ItemsSource="{Binding RecentConfigurations}" IsEnabled="{Binding HasRecentConfigurations}">
+                    <MenuItem.Styles>
+                        <Style Selector="MenuItem > MenuItem" x:DataType="vm:RecentConfiguration">
+                            <Setter Property="Header" Value="{Binding Name}" />
+                            <Setter Property="Command" Value="{Binding OpenCommand}" />
+                            <Setter Property="CommandParameter" Value="{Binding Path}" />
+                            <Setter Property="ToolTip.Tip" Value="{Binding Path}" />
+                        </Style>
+                    </MenuItem.Styles>
+                </MenuItem>
+                <MenuItem Header="Save configuration _as…" Command="{Binding SaveConfigurationAsCommand}" InputGesture="Ctrl+Shift+S" />
+                <Separator />
+                <MenuItem Header="_Save setups" Command="{Binding SaveSetupsCommand}" InputGesture="Ctrl+S"
+                          ToolTip.Tip="Store the complete setup of every connected instrument in this configuration" />
+                <Separator />
+                <MenuItem Header="_Import instruments…" Command="{Binding ImportInstrumentsCommand}"
+                          ToolTip.Tip="Add the instruments from another configuration file" />
+                <Separator />
+                <MenuItem Header="E_xit" Click="OnExit" InputGesture="Alt+F4" />
+            </MenuItem>
+            <MenuItem Header="_Instrument">
+                <MenuItem Header="_Add…" Command="{Binding AddInstrumentCommand}" InputGesture="Ctrl+N" />
+                <MenuItem Header="_Find on network…" Command="{Binding DiscoverCommand}" InputGesture="Ctrl+F" />
+                <MenuItem Header="Add _demo instrument" Command="{Binding AddDemoInstrumentCommand}" />
+                <Separator />
+                <MenuItem Header="_Connect" Command="{Binding ConnectSelectedCommand}" InputGesture="Ctrl+K" />
+                <MenuItem Header="_Disconnect" Command="{Binding DisconnectSelectedCommand}" InputGesture="Ctrl+Shift+K" />
+                <Separator />
+                <MenuItem Header="_Save setup" Command="{Binding SaveSelectedSetupCommand}" />
+                <MenuItem Header="_Restore saved setup…" Command="{Binding RestoreSelectedSetupCommand}" InputGesture="Ctrl+R" />
+                <MenuItem Header="_Export setup to file…" Command="{Binding ExportSetupCommand}" />
+                <MenuItem Header="_Import setup from file…" Command="{Binding ImportSetupCommand}" />
+                <Separator />
+                <MenuItem Header="Re_fresh all" Command="{Binding RefreshCommand}" InputGesture="F5" />
+                <MenuItem Header="Single-shot _trigger" Command="{Binding TriggerCommand}" InputGesture="Ctrl+T" />
+                <Separator />
+                <MenuItem Header="_Edit…" Command="{Binding EditInstrumentCommand}" InputGesture="F2" />
+                <MenuItem Header="Du_plicate…" Command="{Binding DuplicateInstrumentCommand}" />
+                <MenuItem Header="Move _up" Command="{Binding MoveUpCommand}" />
+                <MenuItem Header="Move do_wn" Command="{Binding MoveDownCommand}" />
+                <MenuItem Header="Re_move…" Command="{Binding RemoveInstrumentCommand}" InputGesture="Delete" />
+            </MenuItem>
+            <MenuItem Header="_View">
+                <MenuItem Header="Communication _log" ToggleType="CheckBox" IsChecked="{Binding ShowLog}" InputGesture="Ctrl+L" />
+                <Separator />
+                <MenuItem Header="_Theme">
+                    <MenuItem Header="_System" ToggleType="Radio" IsChecked="{Binding IsSystemTheme, Mode=OneWay}"
+                              Command="{Binding SetThemeCommand}" CommandParameter="System" />
+                    <MenuItem Header="_Light" ToggleType="Radio" IsChecked="{Binding IsLightTheme, Mode=OneWay}"
+                              Command="{Binding SetThemeCommand}" CommandParameter="Light" />
+                    <MenuItem Header="_Dark" ToggleType="Radio" IsChecked="{Binding IsDarkTheme, Mode=OneWay}"
+                              Command="{Binding SetThemeCommand}" CommandParameter="Dark" />
+                </MenuItem>
+            </MenuItem>
+            <MenuItem Header="_Help">
+                <MenuItem Header="_User guide" Click="OnContextHelp" InputGesture="F1" />
+                <MenuItem Header="_Keyboard shortcuts" Command="{Binding HelpCommand}" CommandParameter="{x:Static help:HelpTopics.Shortcuts}" />
+                <MenuItem Header="_Troubleshooting" Command="{Binding HelpCommand}" CommandParameter="{x:Static help:HelpTopics.Troubleshooting}" />
+                <Separator />
+                <MenuItem Header="_Releases and change history" Click="OnOpenReleases" />
+                <MenuItem Header="_About Strobe" Command="{Binding AboutCommand}" />
+            </MenuItem>
+        </Menu>
+
+        <!-- ================================ Status bar ================================ -->
+        <Border DockPanel.Dock="Bottom" Classes="chrome" BorderThickness="0,1,0,0" Height="26" Padding="10,0">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Border Classes="vrule" IsVisible="{Binding IsPortable}" />
+                    <TextBlock Text="Portable" Classes="caption" VerticalAlignment="Center" IsVisible="{Binding IsPortable}"
+                               ToolTip.Tip="This copy keeps its configuration and preferences in the Strobe-data folder beside the program." />
+                    <Border Classes="vrule" />
+                    <TextBlock Text="{Binding ConfigurationName}" Classes="caption" VerticalAlignment="Center" ToolTip.Tip="{Binding ConfigurationPath}" />
+                </StackPanel>
+
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" IsVisible="{Binding SelectedInstrument, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <Ellipse Classes="state" Classes.connected="{Binding SelectedInstrument.IsConnected, FallbackValue=False}"
+                             Classes.connecting="{Binding SelectedInstrument.IsConnecting, FallbackValue=False}"
+                             Classes.failed="{Binding SelectedInstrument.IsFailed, FallbackValue=False}" Margin="0,0,7,0" />
+                    <TextBlock Text="{Binding SelectedInstrument.StateText, FallbackValue=''}" Classes="caption" VerticalAlignment="Center" />
+                    <StackPanel Orientation="Horizontal" IsVisible="{Binding SelectedInstrument.IsConnected, FallbackValue=False}">
+                        <Border Classes="vrule" />
+                        <TextBlock Classes="caption" VerticalAlignment="Center" ToolTip.Tip="Trigger source (Trigger page)">
+                            <Run Text="Trigger" FontWeight="SemiBold" />
+                            <Run Text="{Binding SelectedInstrument?.Session?.TriggerSummary, FallbackValue=''}" />
+                        </TextBlock>
+                        <Border Classes="vrule" />
+                        <TextBlock Classes="caption" VerticalAlignment="Center" ToolTip.Tip="Burst mode (Burst page)">
+                            <Run Text="Burst" FontWeight="SemiBold" />
+                            <Run Text="{Binding SelectedInstrument?.Session?.BurstSummary, FallbackValue=''}" />
+                        </TextBlock>
+                        <Border Classes="vrule" />
+                        <TextBlock Classes="caption" VerticalAlignment="Center" Text="Setup not saved"
+                                   IsVisible="{Binding SelectedInstrument.HasUnsavedChanges, FallbackValue=False}"
+                                   ToolTip.Tip="Settings have changed since the setup was saved in this configuration. File ▸ Save setups (Ctrl+S) saves them." />
+                    </StackPanel>
+                    <Border Classes="vrule" />
+                </StackPanel>
+
+                <TextBlock Text="{Binding StatusMessage}" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                           Foreground="{DynamicResource TextSecondaryBrush}" Classes.failed="{Binding StatusIsError}">
+                    <TextBlock.Styles>
+                        <Style Selector="TextBlock.failed">
+                            <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
+                        </Style>
+                    </TextBlock.Styles>
+                </TextBlock>
+            </DockPanel>
+        </Border>
+
+        <!-- ================================ Body ================================ -->
+        <Grid ColumnDefinitions="232,*">
+
+            <!-- Instrument list -->
+            <Border Classes="chrome" BorderThickness="0,0,1,0" inf:HelpContext.Topic="{x:Static help:HelpTopics.Instruments}">
+                <DockPanel>
+                    <DockPanel DockPanel.Dock="Top" Margin="12,8,6,6">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button Classes="tool" Command="{Binding AddInstrumentCommand}" ToolTip.Tip="Add an instrument by address (Ctrl+N)"
+                                    AutomationProperties.Name="Add instrument" Content="Add…" />
+                            <Button Classes="tool" Command="{Binding DiscoverCommand}" ToolTip.Tip="Find instruments on the network (Ctrl+F)"
+                                    AutomationProperties.Name="Find instruments on the network">
+                                <Path Classes="glyph" Data="{StaticResource GlyphSearch}" />
+                            </Button>
+                        </StackPanel>
+                        <TextBlock Text="Instruments" Classes="strong" VerticalAlignment="Center" />
+                    </DockPanel>
+
+                    <Panel>
+                        <ListBox x:Name="InstrumentList"
+                                 ItemsSource="{Binding Instruments}"
+                                 SelectedItem="{Binding SelectedInstrument}"
+                                 inf:ListBehavior.DoubleTapCommand="{Binding ConnectInstrumentCommand}"
+                                 AutomationProperties.Name="Saved instruments">
+                            <ListBox.KeyBindings>
+                                <KeyBinding Gesture="Enter" Command="{Binding ConnectSelectedCommand}" />
+                                <KeyBinding Gesture="Delete" Command="{Binding RemoveInstrumentCommand}" />
+                                <KeyBinding Gesture="F2" Command="{Binding EditInstrumentCommand}" />
+                            </ListBox.KeyBindings>
+                            <ListBox.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Connect" Command="{Binding ConnectSelectedCommand}" />
+                                    <MenuItem Header="Disconnect" Command="{Binding DisconnectSelectedCommand}" />
+                                    <Separator />
+                                    <MenuItem Header="Save setup" Command="{Binding SaveSelectedSetupCommand}" />
+                                    <MenuItem Header="Restore saved setup…" Command="{Binding RestoreSelectedSetupCommand}" />
+                                    <Separator />
+                                    <MenuItem Header="Edit…" Command="{Binding EditInstrumentCommand}" />
+                                    <MenuItem Header="Duplicate…" Command="{Binding DuplicateInstrumentCommand}" />
+                                    <MenuItem Header="Move up" Command="{Binding MoveUpCommand}" />
+                                    <MenuItem Header="Move down" Command="{Binding MoveDownCommand}" />
+                                    <Separator />
+                                    <MenuItem Header="Remove…" Command="{Binding RemoveInstrumentCommand}" />
+                                </ContextMenu>
+                            </ListBox.ContextMenu>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:InstrumentItemViewModel">
+                                    <Grid ColumnDefinitions="16,*" ToolTip.Tip="{Binding LastSeen}" Margin="2,2">
+                                        <Ellipse Classes="state" Classes.connected="{Binding IsConnected}" Classes.connecting="{Binding IsConnecting}"
+                                                 Classes.failed="{Binding IsFailed}" VerticalAlignment="Top" Margin="0,6,0,0" />
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding Subtitle}" Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <TextBlock Margin="14,4,14,0" Classes="caption" VerticalAlignment="Top" IsVisible="{Binding !HasInstruments}"
+                                   Text="No instruments in this configuration. Use Instrument ▸ Add (Ctrl+N) or Find on network (Ctrl+F)." />
+                    </Panel>
+                </DockPanel>
+            </Border>
+
+            <!-- Selected instrument, or the start page -->
+            <Panel Grid.Column="1">
+                <ContentControl Content="{Binding SelectedInstrument}">
+                    <ContentControl.DataTemplates>
+                        <DataTemplate DataType="vm:InstrumentItemViewModel">
+                            <views:InstrumentPage />
+                        </DataTemplate>
+                    </ContentControl.DataTemplates>
+                </ContentControl>
+
+                <ScrollViewer IsVisible="{Binding SelectedInstrument, Converter={x:Static ObjectConverters.IsNull}}"
+                              inf:HelpContext.Topic="{x:Static help:HelpTopics.GettingStarted}">
+                    <StackPanel Margin="32,26" MaxWidth="560" HorizontalAlignment="Left">
+                        <TextBlock Text="Strobe" Classes="title" FontSize="20" />
+                        <TextBlock Classes="secondary" Margin="0,4,0,22" TextWrapping="Wrap"
+                                   Text="Control software for Stanford Research Systems DG645 delay generators." />
+
+                        <HeaderedContentControl Theme="{StaticResource Section}" Header="Start">
+                            <StackPanel Spacing="7">
+                                <Button Classes="link" Command="{Binding AddInstrumentCommand}" Content="Add an instrument by its address…" />
+                                <Button Classes="link" Command="{Binding DiscoverCommand}" Content="Find instruments on the network…" />
+                                <Button Classes="link" Command="{Binding OpenConfigurationCommand}" Content="Open a configuration…" />
+                                <Button Classes="link" Command="{Binding AddDemoInstrumentCommand}" Content="Try a simulated DG645" />
+                            </StackPanel>
+                        </HeaderedContentControl>
+
+                        <HeaderedContentControl Theme="{StaticResource Section}" Header="Help">
+                            <StackPanel Spacing="7">
+                                <Button Classes="link" Command="{Binding HelpCommand}" CommandParameter="{x:Static help:HelpTopics.GettingStarted}"
+                                        Content="Getting started (F1)" />
+                                <Button Classes="link" Command="{Binding HelpCommand}" CommandParameter="{x:Static help:HelpTopics.Configurations}"
+                                        Content="Configurations and saved setups" />
+                                <Button Classes="link" Command="{Binding HelpCommand}" CommandParameter="{x:Static help:HelpTopics.Shortcuts}"
+                                        Content="Keyboard shortcuts" />
+                            </StackPanel>
+                        </HeaderedContentControl>
+
+                        <TextBlock Classes="caption">
+                            <Run Text="Configuration:" />
+                            <Run Text="{Binding ConfigurationPath}" FontFamily="{StaticResource MonoFont}" />
+                        </TextBlock>
+                    </StackPanel>
+                </ScrollViewer>
+            </Panel>
+        </Grid>
+    </DockPanel>
+</Window>

@@ -5,7 +5,7 @@ namespace StanfordController.Presentation.Services;
 
 public enum AppTheme
 {
-    /// <summary>Follow the Windows light/dark app setting.</summary>
+    /// <summary>Follow the operating system's light/dark setting.</summary>
     System,
     Light,
     Dark,
@@ -25,7 +25,7 @@ public sealed class WindowPlacement
     public bool Maximized { get; set; }
 }
 
-/// <summary>Per-user preferences, stored next to the instrument list.</summary>
+/// <summary>Per-user preferences (settings.json in the data folder).</summary>
 public sealed class AppSettings
 {
     public AppTheme Theme { get; set; } = AppTheme.System;
@@ -35,6 +35,12 @@ public sealed class AppSettings
     public Guid? SelectedInstrumentId { get; set; }
 
     public bool ShowLog { get; set; } = true;
+
+    /// <summary>The configuration file open last time; reopened at startup.</summary>
+    public string? ConfigurationPath { get; set; }
+
+    /// <summary>Recently opened configuration files, most recent first.</summary>
+    public List<string> RecentConfigurations { get; set; } = [];
 }
 
 /// <summary>Loads and saves <see cref="AppSettings"/> as JSON. A missing or unreadable file gives the defaults.</summary>

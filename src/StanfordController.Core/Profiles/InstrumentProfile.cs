@@ -3,6 +3,19 @@ using StanfordController.Core.Transport;
 
 namespace StanfordController.Core.Profiles;
 
+/// <summary>What to do with a saved setup when its instrument connects.</summary>
+public enum SetupOnConnect
+{
+    /// <summary>Ask whether to keep the instrument's settings or load the saved setup (only when they differ).</summary>
+    Ask,
+
+    /// <summary>Always load the saved setup.</summary>
+    Restore,
+
+    /// <summary>Always keep the settings already on the instrument.</summary>
+    KeepInstrument,
+}
+
 /// <summary>A saved instrument: a friendly name plus everything needed to reach it.</summary>
 public sealed class InstrumentProfile
 {
@@ -28,8 +41,17 @@ public sealed class InstrumentProfile
     /// <summary>Send LCAL on disconnect so the front panel is usable again.</summary>
     public bool ReturnToLocalOnDisconnect { get; set; } = true;
 
-    /// <summary>Connect as soon as the program starts.</summary>
+    /// <summary>Connect as soon as the configuration is opened (including when the program starts).</summary>
     public bool ConnectOnStartup { get; set; }
+
+    /// <summary>
+    /// The instrument's complete setup (delays, outputs, trigger, burst) as last saved on this computer,
+    /// so it can be put back without re-entering anything. Null until a setup has been saved.
+    /// </summary>
+    public Dg645Settings? StoredSetup { get; set; }
+
+    /// <summary>What to do when the instrument connects and its settings differ from <see cref="StoredSetup"/>.</summary>
+    public SetupOnConnect SetupOnConnect { get; set; } = SetupOnConnect.Ask;
 
     public string? LastKnownIdentity { get; set; }
 

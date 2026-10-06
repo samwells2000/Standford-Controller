@@ -1,0 +1,48 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:help="clr-namespace:StanfordController.Presentation.Help;assembly=StanfordController.Presentation"
+        xmlns:md="clr-namespace:StanfordController.App.Help"
+        x:Class="StanfordController.App.Dialogs.HelpWindow"
+        x:DataType="help:HelpViewModel"
+        Title="Strobe Help"
+        Width="1000" Height="720" MinWidth="640" MinHeight="420"
+        WindowStartupLocation="CenterOwner"
+        Icon="/Assets/app.ico">
+    <Window.KeyBindings>
+        <KeyBinding Gesture="Alt+Left" Command="{Binding BackCommand}" />
+        <KeyBinding Gesture="Alt+Right" Command="{Binding ForwardCommand}" />
+    </Window.KeyBindings>
+
+    <Grid ColumnDefinitions="260,*">
+        <!-- Contents and search -->
+        <Border Classes="chrome" BorderThickness="0,0,1,0">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Margin="10,10,10,6" Spacing="6">
+                    <StackPanel Orientation="Horizontal" Spacing="2">
+                        <Button Classes="tool" Command="{Binding BackCommand}" ToolTip.Tip="Back (Alt+Left)" AutomationProperties.Name="Back">
+                            <Path Classes="glyph" Data="{StaticResource GlyphBack}" />
+                        </Button>
+                        <Button Classes="tool" Command="{Binding ForwardCommand}" ToolTip.Tip="Forward (Alt+Right)" AutomationProperties.Name="Forward">
+                            <Path Classes="glyph" Data="{StaticResource GlyphForward}" />
+                        </Button>
+                    </StackPanel>
+                    <TextBox x:Name="SearchBox" Text="{Binding SearchText}" PlaceholderText="Search the guide" />
+                    <TextBlock Classes="caption" Text="{Binding SearchSummary}" IsVisible="{Binding SearchSummary, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                </StackPanel>
+                <ListBox ItemsSource="{Binding Contents}" SelectedItem="{Binding SelectedEntry}" AutomationProperties.Name="Contents">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="help:HelpContentsEntry">
+                            <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" Classes.contents-section="{Binding IsSection}" />
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+
+        <!-- Topic -->
+        <ScrollViewer x:Name="Scroller" Grid.Column="1" HorizontalScrollBarVisibility="Disabled">
+            <md:MarkdownView x:Name="Viewer" Margin="32,22,32,32" MaxWidth="780" HorizontalAlignment="Left"
+                             Blocks="{Binding CurrentTopic.Blocks, FallbackValue={x:Null}}" />
+        </ScrollViewer>
+    </Grid>
+</Window>

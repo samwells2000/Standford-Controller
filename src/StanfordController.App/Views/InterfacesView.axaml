@@ -1,0 +1,78 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:StanfordController.Presentation.ViewModels;assembly=StanfordController.Presentation"
+             xmlns:help="clr-namespace:StanfordController.Presentation.Help;assembly=StanfordController.Presentation"
+             xmlns:inf="clr-namespace:StanfordController.App.Infrastructure"
+             x:Class="StanfordController.App.Views.InterfacesView"
+             x:DataType="vm:InstrumentSessionViewModel"
+             inf:HelpContext.Topic="{x:Static help:HelpTopics.Interfaces}">
+    <ScrollViewer>
+        <Grid Margin="20,16,20,12" ColumnDefinitions="Auto,32,*" DataContext="{Binding Interface}" x:DataType="vm:InterfaceViewModel">
+
+            <HeaderedContentControl Theme="{StaticResource Section}" Header="LAN (TCP/IP)" VerticalAlignment="Top" MaxWidth="400">
+                <StackPanel>
+                    <Border Classes="infobar warning" Margin="0,0,0,12">
+                        <Grid ColumnDefinitions="Auto,*">
+                            <Path Classes="glyph warning" Data="{StaticResource GlyphWarning}" VerticalAlignment="Top" Margin="0,1,10,0" />
+                            <TextBlock Grid.Column="1" TextWrapping="Wrap" Foreground="{DynamicResource WarningStrongTextBrush}" FontSize="12.5"
+                                       Text="Changes are stored at once but only take effect after the LAN interface is reset or the instrument is switched off and on. A wrong setting can make it unreachable over the network; it can always be corrected from the front panel." />
+                        </Grid>
+                    </Border>
+
+                    <UniformGrid Columns="2" Margin="0,0,0,8">
+                        <ContentControl Content="{Binding LanEnabled}" Margin="0,0,0,6" />
+                        <ContentControl Content="{Binding BareSocketEnabled}" Margin="0,0,0,6" />
+                        <ContentControl Content="{Binding DhcpEnabled}" Margin="0,0,0,6" />
+                        <ContentControl Content="{Binding TelnetEnabled}" Margin="0,0,0,6" />
+                        <ContentControl Content="{Binding AutoIpEnabled}" Margin="0,0,0,6" />
+                        <ContentControl Content="{Binding Vxi11Enabled}" Margin="0,0,0,6" />
+                        <ContentControl Content="{Binding StaticIpEnabled}" Margin="0,0,0,6" />
+                    </UniformGrid>
+
+                    <HeaderedContentControl Theme="{StaticResource FormRow}" Header="Static IP address" Content="{Binding StaticIpAddress}" />
+                    <HeaderedContentControl Theme="{StaticResource FormRow}" Header="Subnet mask" Content="{Binding SubnetMask}" />
+                    <HeaderedContentControl Theme="{StaticResource FormRow}" Header="Default gateway" Content="{Binding DefaultGateway}" />
+                    <HeaderedContentControl Theme="{StaticResource FormRow}" Header="MAC address">
+                        <SelectableTextBlock Text="{Binding MacAddress}" Classes="mono" Margin="0,5,0,0" />
+                    </HeaderedContentControl>
+                    <Button Classes="danger" Command="{Binding ResetLanCommand}" Content="Reset LAN interface…" Margin="0,6,0,0"
+                            ToolTip.Tip="IFRS 2: applies pending network settings and closes this connection" />
+                </StackPanel>
+            </HeaderedContentControl>
+
+            <StackPanel Grid.Column="2">
+                <HeaderedContentControl Theme="{StaticResource Section}" Header="RS-232">
+                    <StackPanel>
+                        <ContentControl Content="{Binding Rs232Enabled}" Margin="140,0,0,8" />
+                        <HeaderedContentControl Theme="{StaticResource FormRow}" Header="Baud rate" Content="{Binding BaudRate}" />
+                        <Button Command="{Binding ResetRs232Command}" Content="Reset RS-232 interface" Margin="140,0,0,0" ToolTip.Tip="IFRS 0" />
+                    </StackPanel>
+                </HeaderedContentControl>
+
+                <HeaderedContentControl Theme="{StaticResource Section}" Header="GPIB">
+                    <StackPanel>
+                        <ContentControl Content="{Binding GpibEnabled}" Margin="140,0,0,8" />
+                        <HeaderedContentControl Theme="{StaticResource FormRow}" Header="GPIB address" Content="{Binding GpibAddress}" />
+                        <Button Command="{Binding ResetGpibCommand}" Content="Reset GPIB interface" Margin="140,0,0,0" ToolTip.Tip="IFRS 1" />
+                    </StackPanel>
+                </HeaderedContentControl>
+
+                <HeaderedContentControl Theme="{StaticResource Section}" Header="Remote control">
+                    <StackPanel Spacing="6">
+                        <TextBlock Classes="secondary" TextWrapping="Wrap"
+                                   Text="Local mode unlocks the front panel; remote mode locks it. The lock gives this connection sole control over the other interfaces." />
+                        <WrapPanel>
+                            <Button Command="{Binding GoToLocalCommand}" Content="Go to local (LCAL)" Margin="0,0,8,8" />
+                            <Button Command="{Binding GoToRemoteCommand}" Content="Go to remote (REMT)" Margin="0,0,8,8" />
+                            <Button Command="{Binding RequestLockCommand}" Content="Request lock" Margin="0,0,8,8" />
+                            <Button Command="{Binding ReleaseLockCommand}" Content="Release lock" Margin="0,0,8,8" />
+                        </WrapPanel>
+                        <TextBlock Text="{Binding LockStatus}" Classes="secondary" TextWrapping="Wrap"
+                                   IsVisible="{Binding LockStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                        <TextBlock Classes="error" Text="{Binding Error}" IsVisible="{Binding HasError}" />
+                    </StackPanel>
+                </HeaderedContentControl>
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

@@ -125,7 +125,7 @@ public sealed class InterfaceViewModel : ParameterViewModel
             (v, ct) => Client.SetInterfaceSettingAsync(setting, v ? "1" : "0", ct))
         {
             Hint = $"IFCF {(int)setting},{{0|1}}",
-            ConfirmChange = confirmOff is null ? null : on => on || Context.Dialogs.Confirm("Interface settings", confirmOff),
+            ConfirmChange = confirmOff is null ? null : async on => on || await Context.Dialogs.ConfirmAsync("Interface settings", confirmOff, "Turn off"),
         };
 
     private EditableParameterViewModel<string> Ip(InterfaceSetting setting) =>
@@ -138,9 +138,9 @@ public sealed class InterfaceViewModel : ParameterViewModel
     {
         if (kind == InterfaceKind.Lan)
         {
-            if (!Context.Dialogs.Confirm("Reset LAN interface",
+            if (!await Context.Dialogs.ConfirmAsync("Reset LAN interface",
                     "Resetting the LAN interface applies new network settings and closes this connection. " +
-                    "If the IP address changes, update the instrument's saved address before reconnecting.\n\nReset now?"))
+                    "If the IP address changes, update the instrument's saved address before reconnecting.\n\nReset now?", "Reset"))
             {
                 return;
             }

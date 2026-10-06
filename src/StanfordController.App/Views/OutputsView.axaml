@@ -1,0 +1,112 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:StanfordController.Presentation.ViewModels;assembly=StanfordController.Presentation"
+             xmlns:help="clr-namespace:StanfordController.Presentation.Help;assembly=StanfordController.Presentation"
+             xmlns:controls="clr-namespace:StanfordController.App.Controls"
+             xmlns:inf="clr-namespace:StanfordController.App.Infrastructure"
+             x:Class="StanfordController.App.Views.OutputsView"
+             x:DataType="vm:InstrumentSessionViewModel"
+             inf:HelpContext.Topic="{x:Static help:HelpTopics.Outputs}">
+    <ScrollViewer>
+        <StackPanel Margin="20,16,20,12">
+
+            <HeaderedContentControl Theme="{StaticResource Section}" Header="Output levels">
+                <HeaderedContentControl.Tag>
+                    <TextBlock Classes="caption" Text="Amplitude and offset in volts; each is applied on Enter." />
+                </HeaderedContentControl.Tag>
+                <StackPanel>
+                    <Border Classes="table-header">
+                        <Grid ColumnDefinitions="64,110,66,110,66,124,*">
+                            <TextBlock Classes="header" Text="Output" />
+                            <TextBlock Grid.Column="1" Classes="header" Text="Amplitude" />
+                            <TextBlock Grid.Column="3" Classes="header" Text="Offset" />
+                            <TextBlock Grid.Column="5" Classes="header" Text="Polarity" />
+                            <TextBlock Grid.Column="6" Classes="header" Text="Logic presets" Margin="12,0,0,0" />
+                        </Grid>
+                    </Border>
+                    <ItemsControl ItemsSource="{Binding Outputs}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:OutputViewModel">
+                                <Border Classes="table-row" Padding="8,5">
+                                    <Grid ColumnDefinitions="64,110,66,110,66,124,*" RowDefinitions="Auto,Auto,Auto">
+                                        <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Top" Margin="0,4,0,0" ToolTip.Tip="{Binding Description}">
+                                            <controls:SeriesSwatch Output="{Binding Output}" Width="4" Height="20" CornerRadius="1" />
+                                            <TextBlock Text="{Binding Name}" Classes="strong" FontSize="14" VerticalAlignment="Center" />
+                                        </StackPanel>
+
+                                        <ContentControl Grid.Column="1" Content="{Binding Amplitude}" />
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="3" Margin="6,1,0,0" VerticalAlignment="Top">
+                                            <Button Classes="step" Command="{Binding AmplitudeUpCommand}" ToolTip.Tip="Step up (SPLA b,1)" AutomationProperties.Name="Increase amplitude by one step">
+                                                <Path Classes="glyph" Data="{StaticResource GlyphUp}" />
+                                            </Button>
+                                            <Button Classes="step" Command="{Binding AmplitudeDownCommand}" ToolTip.Tip="Step down (SPLA b,0)" AutomationProperties.Name="Decrease amplitude by one step">
+                                                <Path Classes="glyph" Data="{StaticResource GlyphDown}" />
+                                            </Button>
+                                        </StackPanel>
+
+                                        <ContentControl Grid.Column="3" Content="{Binding Offset}" />
+                                        <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="3" Margin="6,1,0,0" VerticalAlignment="Top">
+                                            <Button Classes="step" Command="{Binding OffsetUpCommand}" ToolTip.Tip="Step up (SPLO b,1)" AutomationProperties.Name="Increase offset by one step">
+                                                <Path Classes="glyph" Data="{StaticResource GlyphUp}" />
+                                            </Button>
+                                            <Button Classes="step" Command="{Binding OffsetDownCommand}" ToolTip.Tip="Step down (SPLO b,0)" AutomationProperties.Name="Decrease offset by one step">
+                                                <Path Classes="glyph" Data="{StaticResource GlyphDown}" />
+                                            </Button>
+                                        </StackPanel>
+
+                                        <ContentControl Grid.Column="5" Content="{Binding Polarity}" />
+
+                                        <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="6" Margin="12,0,0,0" VerticalAlignment="Top">
+                                            <Button Command="{Binding TtlCommand}" Content="TTL" MinWidth="52" ToolTip.Tip="4 V pulses from 0 V, positive polarity" />
+                                            <Button Command="{Binding NimCommand}" Content="NIM" MinWidth="52"
+                                                    ToolTip.Tip="−0.8 V pulses from 0 V (offset −0.8 V, amplitude 0.8 V, negative polarity)" />
+                                        </StackPanel>
+
+                                        <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="6" Classes="caption" Margin="0,5,0,0" TextWrapping="NoWrap"
+                                                   TextTrimming="CharacterEllipsis">
+                                            <Run Text="{Binding LevelSummary}" FontFamily="{StaticResource MonoFont}" />
+                                            <Run Text="   " />
+                                            <Run Text="{Binding TimingText}" />
+                                        </TextBlock>
+                                        <TextBlock Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="6" Classes="error" Text="{Binding Error}" IsVisible="{Binding HasError}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </HeaderedContentControl>
+
+            <HeaderedContentControl Theme="{StaticResource Section}" Header="Step sizes" HorizontalAlignment="Left">
+                <HeaderedContentControl.Tag>
+                    <TextBlock Classes="caption" Text="How far each up or down step button moves the value." />
+                </HeaderedContentControl.Tag>
+                <StackPanel>
+                    <Border Classes="table-header">
+                        <Grid ColumnDefinitions="64,130,12,130">
+                            <TextBlock Classes="header" Text="Output" />
+                            <TextBlock Grid.Column="1" Classes="header" Text="Amplitude step" />
+                            <TextBlock Grid.Column="3" Classes="header" Text="Offset step" />
+                        </Grid>
+                    </Border>
+                    <ItemsControl ItemsSource="{Binding Outputs}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:OutputViewModel">
+                                <Border Classes="table-row">
+                                    <Grid ColumnDefinitions="64,130,12,130">
+                                        <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
+                                            <controls:SeriesSwatch Output="{Binding Output}" Width="4" Height="18" CornerRadius="1" />
+                                            <TextBlock Text="{Binding Name}" Classes="strong" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <ContentControl Grid.Column="1" Content="{Binding AmplitudeStep}" />
+                                        <ContentControl Grid.Column="3" Content="{Binding OffsetStep}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </HeaderedContentControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

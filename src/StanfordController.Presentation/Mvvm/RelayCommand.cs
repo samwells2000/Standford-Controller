@@ -94,3 +94,40 @@ public sealed class AsyncRelayCommand(Func<Task> execute, Func<bool>? canExecute
 
     public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
 }
+
+/// <summary>An async command with a parameter; disables itself while running.</summary>
+public sealed class AsyncRelayCommand<T>(Func<T?, Task> execute, Func<T?, bool>? canExecute = null)
+    : ICommand, IRaiseCanExecuteChanged
+{
+    private bool _isRunning;
+
+    public event EventHandler? CanExecuteChanged;
+
+    public bool CanExecute(object? parameter) => !_isRunning && (canExecute?.Invoke(Convert(parameter)) ?? true);
+
+    public async void Execute(object? parameter) => await ExecuteAsync(Convert(parameter));
+
+    public async Task ExecuteAsync(T? parameter)
+    {
+        if (_isRunning || !(canExecute?.Invoke(parameter) ?? true))
+        {
+            return;
+        }
+
+        _isRunning = true;
+        RaiseCanExecuteChanged();
+        try
+        {
+            await execute(parameter);
+        }
+        finally
+        {
+            _isRunning = false;
+            RaiseCanExecuteChanged();
+        }
+    }
+
+    public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+
+    private static T? Convert(object? parameter) => parameter is T value ? value : default;
+}

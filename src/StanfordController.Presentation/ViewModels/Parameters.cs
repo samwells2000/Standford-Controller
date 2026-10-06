@@ -102,11 +102,26 @@ public abstract class ParameterViewModel(IInstrumentContext context, string labe
 
 public delegate bool ValueParser<T>(string text, out T value, out string? error);
 
+/// <summary>The part of a text-box setting the views bind to, whatever its value type.</summary>
+public abstract class TextParameterViewModel(IInstrumentContext context, string label) : ParameterViewModel(context, label)
+{
+    public abstract string Text { get; set; }
+
+    public abstract bool IsReadOnly { get; }
+
+    /// <summary>The text differs from the value last read from the instrument.</summary>
+    public abstract bool IsDirty { get; }
+
+    public abstract ICommand CommitCommand { get; }
+
+    public abstract ICommand RevertCommand { get; }
+}
+
 /// <summary>
 /// A text-box backed setting: the user edits <see cref="Text"/>, then <see cref="CommitCommand"/>
 /// (Enter or leaving the field) validates, writes, and reads back what the instrument actually accepted.
 /// </summary>
-public sealed class EditableParameterViewModel<T> : ParameterViewModel
+public sealed class EditableParameterViewModel<T> : TextParameterViewModel
     where T : notnull
 {
     private readonly Func<CancellationToken, Task<T>> _read;
@@ -137,7 +152,7 @@ public sealed class EditableParameterViewModel<T> : ParameterViewModel
 
     public event EventHandler? ValueChanged;
 
-    public string Text
+    public override string Text
     {
         get => _text;
         set
@@ -149,18 +164,17 @@ public sealed class EditableParameterViewModel<T> : ParameterViewModel
         }
     }
 
-    public bool IsReadOnly => _write is null;
+    public override bool IsReadOnly => _write is null;
 
-    /// <summary>The text differs from the value last read from the instrument.</summary>
-    public bool IsDirty => !IsReadOnly && !string.Equals(_text.Trim(), _committedText, StringComparison.Ordinal);
+    public override bool IsDirty => !IsReadOnly && !string.Equals(_text.Trim(), _committedText, StringComparison.Ordinal);
 
     public T? Value => _value;
 
     public bool HasValue => _hasValue;
 
-    public ICommand CommitCommand { get; }
+    public override ICommand CommitCommand { get; }
 
-    public ICommand RevertCommand { get; }
+    public override ICommand RevertCommand { get; }
 
     public override Task RefreshAsync() => RunAsync(async () => SetValue(await _read(CancellationToken.None)));
 
@@ -336,7 +350,7 @@ public sealed class ToggleParameterViewModel(
     public event EventHandler? ValueChanged;
 
     /// <summary>Optional question asked before applying a new value; return false to cancel.</summary>
-    public Func<bool, bool>? ConfirmChange { get; init; }
+    public Func<bool, Task<bool>>? ConfirmChange { get; init; }
 
     public bool IsChecked
     {
@@ -377,7 +391,7 @@ public sealed class ToggleParameterViewModel(
     private async Task ApplyAsync(bool value)
     {
         await Task.Yield();
-        if (ConfirmChange is not null && !ConfirmChange(value))
+        if (ConfirmChange is not null && !await ConfirmChange(value))
         {
             SetValue(!value);
             return;

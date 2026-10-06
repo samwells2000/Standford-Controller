@@ -1,0 +1,25 @@
+# PKGBUILD for Arch Linux and derivatives. Built from the release's Linux tarball.
+#   makepkg -si
+pkgname=strobe-bin
+pkgver=@VERSION@
+pkgrel=1
+pkgdesc="Control software for Stanford Research Systems DG645 digital delay generators"
+arch=('x86_64')
+url="@REPOSITORY@"
+license=('LicenseRef-unknown')
+depends=('libx11' 'libice' 'libsm' 'fontconfig')
+provides=('strobe')
+conflicts=('strobe')
+# The program is a self-contained .NET single-file bundle; stripping it would corrupt it.
+options=('!strip' '!debug')
+source=("Strobe-${pkgver}-linux-x64.tar.gz::${url}/releases/download/v${pkgver}/Strobe-${pkgver}-linux-x64.tar.gz")
+sha256sums=('@SHA256@')
+
+package() {
+    cd "$srcdir/strobe"
+    install -Dm755 strobe "$pkgdir/opt/strobe/strobe"
+    install -dm755 "$pkgdir/usr/bin"
+    ln -s /opt/strobe/strobe "$pkgdir/usr/bin/strobe"
+    install -Dm644 strobe.desktop "$pkgdir/usr/share/applications/strobe.desktop"
+    install -Dm644 strobe.png "$pkgdir/usr/share/icons/hicolor/128x128/apps/strobe.png"
+}
