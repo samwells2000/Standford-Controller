@@ -41,6 +41,8 @@ public sealed class TriggerViewModel : ParameterViewModel
         };
 
         Prescalers = Enum.GetValues<PrescaleInput>().Select(i => new PrescalerViewModel(context, i)).ToList();
+        TriggerPrescaler = Prescalers[0];
+        OutputPrescalers = Prescalers.Skip(1).ToList();
 
         Source.ValueChanged += (_, _) => OnPropertyChanged(nameof(IsSingleShot));
         TriggerNowCommand = new AsyncRelayCommand(TriggerNowAsync);
@@ -59,6 +61,12 @@ public sealed class TriggerViewModel : ParameterViewModel
     public ToggleParameterViewModel AdvancedTriggering { get; }
 
     public IReadOnlyList<PrescalerViewModel> Prescalers { get; }
+
+    /// <summary>The trigger-input prescaler (factor only).</summary>
+    public PrescalerViewModel TriggerPrescaler { get; }
+
+    /// <summary>The AB, CD, EF and GH prescalers (factor and phase).</summary>
+    public IReadOnlyList<PrescalerViewModel> OutputPrescalers { get; }
 
     /// <summary>True when *TRG (the Trigger button) starts a cycle.</summary>
     public bool IsSingleShot => Source.SelectedValue is (int)TriggerSource.SingleShot

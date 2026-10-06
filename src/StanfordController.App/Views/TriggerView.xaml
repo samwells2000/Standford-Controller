@@ -80,7 +80,18 @@
                         <TextBlock Grid.Column="1" Style="{StaticResource ColumnHeader}" Text="FACTOR (EVERY Nth)" />
                         <TextBlock Grid.Column="3" Style="{StaticResource ColumnHeader}" Text="PHASE (0 … N−1)" />
                     </Grid>
-                    <ItemsControl ItemsSource="{Binding Prescalers}" Focusable="False">
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding TriggerPrescaler.Name}" Style="{StaticResource FieldLabel}" VerticalAlignment="Top" Margin="0,7,0,0" />
+                        <ContentControl Grid.Column="1" Content="{Binding TriggerPrescaler.Factor}" ContentTemplate="{StaticResource TextField}" Focusable="False" />
+                        <TextBlock Grid.Column="3" Text="—" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Top" Margin="2,7,0,0" />
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding OutputPrescalers}" Focusable="False">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="{x:Type vm:PrescalerViewModel}">
                                 <Grid Margin="0,0,0,8">
@@ -92,10 +103,7 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="{Binding Name}" Style="{StaticResource FieldLabel}" VerticalAlignment="Top" Margin="0,7,0,0" />
                                     <ContentControl Grid.Column="1" Content="{Binding Factor}" ContentTemplate="{StaticResource TextField}" Focusable="False" />
-                                    <ContentControl Grid.Column="3" Content="{Binding Phase}" ContentTemplate="{StaticResource TextField}" Focusable="False"
-                                                    Visibility="{Binding HasPhase, Converter={StaticResource BoolToVisibility}}" />
-                                    <TextBlock Grid.Column="3" Text="—" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center"
-                                               Visibility="{Binding HasPhase, Converter={StaticResource BoolToVisibility}, ConverterParameter=Invert}" />
+                                    <ContentControl Grid.Column="3" Content="{Binding Phase}" ContentTemplate="{StaticResource TextField}" Focusable="False" />
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>

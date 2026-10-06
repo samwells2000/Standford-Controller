@@ -123,6 +123,9 @@ internal sealed class SmokeTest(MainWindow window, MainViewModel viewModel, stri
         Log($"Binding errors: {_bindingErrors}");
         Log($"Exit code: {exitCode}");
         File.WriteAllText(Path.Combine(outputDirectory, "smoke-test.log"), _log.ToString());
+
+        // The generated WPF Main returns void, so the process exit code comes from Environment.ExitCode.
+        Environment.ExitCode = exitCode;
         Application.Current.Shutdown(exitCode);
     }
 
@@ -134,6 +137,10 @@ internal sealed class SmokeTest(MainWindow window, MainViewModel viewModel, stri
         await Application.Current.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
     }
 
+    /// <summary>
+    /// Saves a PNG of the window's content. The main window is also laid out off-screen at 1440×900,
+    /// because CI runners have small screens that clamp the real window to its minimum size.
+    /// </summary>
     private void Capture(Window target, string name)
     {
         if (target.Content is not FrameworkElement root || root.ActualWidth < 1 || root.ActualHeight < 1)
@@ -142,19 +149,37 @@ internal sealed class SmokeTest(MainWindow window, MainViewModel viewModel, stri
             return;
         }
 
-        var dpi = VisualTreeHelper.GetDpi(target);
+        Save(root, name, new Size(root.ActualWidth, root.ActualHeight), VisualTreeHelper.GetDpi(target));
+        if (target == window)
+        {
+            var large = new Size(1440, 900);
+            root.Measure(large);
+            root.Arrange(new Rect(large));
+            root.UpdateLayout();
+            Save(root, name + "-1440", large, VisualTreeHelper.GetDpi(target));
+            root.InvalidateMeasure();
+            root.InvalidateArrange();
+            root.UpdateLayout();
+        }
+    }
+
+    private void Save(FrameworkElement root, string name, Size size, DpiScale dpi)
+    {
         var bitmap = new RenderTargetBitmap(
-            (int)Math.Ceiling(root.ActualWidth * dpi.DpiScaleX),
-            (int)Math.Ceiling(root.ActualHeight * dpi.DpiScaleY),
+            (int)Math.Ceiling(size.Width * dpi.DpiScaleX),
+            (int)Math.Ceiling(size.Height * dpi.DpiScaleY),
             dpi.PixelsPerInchX,
             dpi.PixelsPerInchY,
             PixelFormats.Pbgra32);
         bitmap.Render(root);
 
-        var encoder = new PngBitmapEncoder();
-        encoder.Frames.Add(BitmapFrame.Create(bitmap));
-        using var stream = File.Create(Path.Combine(outputDirectory, name + ".png"));
-        encoder.Save(stream);
+        var png = new PngBitmapEncoder();
+        png.Frames.Add(BitmapFrame.Create(bitmap));
+        using (var stream = File.Create(Path.Combine(outputDirectory, name + ".png")))
+        {
+            png.Save(stream);
+        }
+
         Log($"Saved {name}.png ({bitmap.PixelWidth}×{bitmap.PixelHeight})");
     }
 
