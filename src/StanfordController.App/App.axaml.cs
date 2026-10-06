@@ -41,7 +41,7 @@ public partial class App : Application
             ? null
             : smokeIndex + 1 < args.Length && !args[smokeIndex + 1].StartsWith("--", StringComparison.Ordinal)
                 ? Path.GetFullPath(args[smokeIndex + 1])
-                : Path.Combine(Path.GetTempPath(), "strobe-smoke-test");
+                : Path.Combine(Path.GetTempPath(), "tempo-smoke-test");
 
         string? startupMessage = null;
         if (smokeDirectory is not null)

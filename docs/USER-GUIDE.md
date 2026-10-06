@@ -1,6 +1,6 @@
-# Strobe user guide
+# Tempo user guide
 
-Strobe controls Stanford Research Systems **DG645** digital delay generators over Ethernet. It gives every instrument a name you choose, shows all of its settings on eight pages, and keeps complete setups in configuration files on your computer, so a day's work can be put back on the instrument with one click.
+Tempo (short for *Timing & Event Manager for Pulse Outputs*) controls Stanford Research Systems **DG645** digital delay generators over Ethernet. It gives every instrument a name you choose, shows all of its settings on eight pages, and keeps complete setups in configuration files on your computer, so a day's work can be put back on the instrument with one click.
 
 This guide is built into the program: press **F1** anywhere to open it at the page you are working on. It is also in the repository as `docs/USER-GUIDE.md`.
 
@@ -14,33 +14,33 @@ Every release on the GitHub releases page has these files:
 
 | File | Use it for |
 | --- | --- |
-| `Strobe.exe` | Windows 10 and 11. Keeps your configurations in `%APPDATA%\Strobe`. |
-| `Strobe-Portable.exe` | Windows, run from a USB stick or a shared folder. Keeps everything in a `Strobe-data` folder beside the program and writes nothing else to the computer. |
-| `strobe_<version>_amd64.deb` | Debian, Ubuntu and their derivatives. |
+| `Tempo.exe` | Windows 10 and 11. Keeps your configurations in `%APPDATA%\Tempo`. |
+| `Tempo-Portable.exe` | Windows, run from a USB stick or a shared folder. Keeps everything in a `Tempo-data` folder beside the program and writes nothing else to the computer. |
+| `tempo-dg645_<version>_amd64.deb` | Debian, Ubuntu and their derivatives. |
 | `PKGBUILD` | Arch Linux and its derivatives. |
-| `Strobe-<version>-linux-x64.tar.gz` | Any 64-bit Linux desktop: the program, a menu entry and an install script. |
-| `Strobe-linux-x64`, `Strobe-Portable-linux-x64` | The bare Linux program, normal and portable. |
+| `Tempo-<version>-linux-x64.tar.gz` | Any 64-bit Linux desktop: the program, a menu entry and an install script. |
+| `Tempo-linux-x64`, `Tempo-Portable-linux-x64` | The bare Linux program, normal and portable. |
 
 Nothing else is needed: the .NET runtime, the user interface library and the fonts are all inside the program file.
 
 ### Installing
 
-**Windows.** Save `Strobe.exe` anywhere (for example your Desktop or `C:\Tools`) and double-click it. The program is not code-signed, so the first time Windows may say *"Windows protected your PC"*: choose **More info**, then **Run anyway**.
+**Windows.** Save `Tempo.exe` anywhere (for example your Desktop or `C:\Tools`) and double-click it. The program is not code-signed, so the first time Windows may say *"Windows protected your PC"*: choose **More info**, then **Run anyway**.
 
-**Debian or Ubuntu.** `sudo apt install ./strobe_<version>_amd64.deb`, then start Strobe from the applications menu or run `strobe`.
+**Debian or Ubuntu.** `sudo apt install ./tempo-dg645_<version>_amd64.deb`, then start Tempo from the applications menu or run `tempo-dg645`.
 
-**Arch Linux.** Put the `PKGBUILD` in an empty folder and run `makepkg -si`. It downloads the release tarball, checks its checksum and installs Strobe as the `strobe-bin` package.
+**Arch Linux.** Put the `PKGBUILD` in an empty folder and run `makepkg -si`. It downloads the release tarball, checks its checksum and installs Tempo as the `tempo-dg645-bin` package.
 
-**Other Linux.** Unpack the tarball and run `./install.sh` (for yourself, in `~/.local`) or `sudo ./install.sh --system` (for everyone, in `/usr/local`). You can also run `./strobe` straight from the folder. If you download a bare program file instead, make it executable first with `chmod +x Strobe-linux-x64`.
+**Other Linux.** Unpack the tarball and run `./install.sh` (for yourself, in `~/.local`) or `sudo ./install.sh --system` (for everyone, in `/usr/local`). You can also run `./tempo-dg645` straight from the folder. If you download a bare program file instead, make it executable first with `chmod +x Tempo-linux-x64`.
 
-Strobe on Linux needs an X11 or XWayland desktop session, which every desktop distribution provides.
+Tempo on Linux needs an X11 or XWayland desktop session, which every desktop distribution provides.
 
 ### First connection
 
 1. Connect the DG645 to your network (or straight to the computer; see [Connecting the instrument directly](#connecting-the-instrument-directly)) and switch it on.
-2. Start Strobe. If you know the instrument's IP address, choose **Instrument ▸ Add** (Ctrl+N). If you don't, choose **Instrument ▸ Find on network** (Ctrl+F).
+2. Start Tempo. If you know the instrument's IP address, choose **Instrument ▸ Add** (Ctrl+N). If you don't, choose **Instrument ▸ Find on network** (Ctrl+F).
 3. Give the instrument a name you will recognise, such as *Laser lab DG645*, and press **Test connection** to check it answers. Then **Save**.
-4. Double-click the instrument in the list on the left (or press **Connect**). Strobe reads every setting and shows them on the pages.
+4. Double-click the instrument in the list on the left (or press **Connect**). Tempo reads every setting and shows them on the pages.
 5. Change what you need. When the setup is how you want it, press **Ctrl+S** to save it in the configuration on this computer.
 
 No hardware to hand? **Instrument ▸ Add demo instrument** adds a simulated DG645 that behaves like the real one, so you can try every page.
@@ -77,9 +77,9 @@ Each instrument is saved once, with a friendly name, so you never need to rememb
 | TCP port | 5025, the DG645's bare-socket port. Only change it if a network device forwards a different port to the instrument. |
 | Reply timeout | How long to wait for an answer, in milliseconds. 3000 suits most networks; raise it for slow or remote links. |
 | Location, Notes | Free text, shown when the instrument is selected. |
-| On opening | Connect automatically when this configuration opens, which includes when Strobe starts. |
-| Saved setup | What to do on connecting when the instrument's settings differ from the setup saved in Strobe; see [Configurations and saved setups](#configurations-and-saved-setups). |
-| On disconnecting | Return the front panel to local control (it is locked while Strobe is connected). |
+| On opening | Connect automatically when this configuration opens, which includes when Tempo starts. |
+| Saved setup | What to do on connecting when the instrument's settings differ from the setup saved in Tempo; see [Configurations and saved setups](#configurations-and-saved-setups). |
+| On disconnecting | Return the front panel to local control (it is locked while Tempo is connected). |
 
 **Test connection** opens a connection, asks the instrument to identify itself and closes again, so you can check the details before saving. The editor will not save while a field is invalid; the problems are listed at the bottom.
 
@@ -98,7 +98,7 @@ Select an instrument and use the **Instrument** menu, the right-click menu, or t
 
 To check a single address instead, type it under **One address** and press **Check**; this is the way to reach an instrument on another subnet or a directly connected one.
 
-Select a result and choose **Add selected…** (or double-click it) to open the instrument editor with the address filled in. If the address is already saved, Strobe selects the existing instrument instead.
+Select a result and choose **Add selected…** (or double-click it) to open the instrument editor with the address filled in. If the address is already saved, Tempo selects the existing instrument instead.
 
 The scan finds nothing if a firewall blocks outgoing connections on port 5025, if the instrument's bare-socket interface is turned off, or if the instrument is on a network this computer is not directly attached to.
 
@@ -108,7 +108,7 @@ A **configuration** is a file on your computer that holds your instruments and, 
 
 ### The open configuration
 
-Strobe always has one configuration open; its name is in the title bar and at the right of the status bar. The first time you run Strobe it creates **Default** (`Default.strobe` in the [data folder](#files-and-folders)). Changes to instruments (adding, editing, reordering, removing) are written to the open configuration straight away. Strobe reopens the last configuration you used when it starts.
+Tempo always has one configuration open; its name is in the title bar and at the right of the status bar. The first time you run Tempo it creates **Default** (`Default.tempo` in the [data folder](#files-and-folders)). Changes to instruments (adding, editing, reordering, removing) are written to the open configuration straight away. Tempo reopens the last configuration you used when it starts.
 
 | File menu | What it does |
 | --- | --- |
@@ -119,9 +119,9 @@ Strobe always has one configuration open; its name is in the title bar and at th
 | Save setups (Ctrl+S) | Saves the complete setup of every connected instrument into the open configuration. |
 | Import instruments… | Adds the instruments from another configuration file to this one. |
 
-Configuration files end in `.strobe` and contain plain JSON, so they can be kept with your experiment notes, put under version control, or copied to another computer.
+Configuration files end in `.tempo` and contain plain JSON, so they can be kept with your experiment notes, put under version control, or copied to another computer.
 
-A sensible way to work is one configuration per experiment or per lab: *Laser lab.strobe*, *Beamline 7.strobe*, and so on.
+A sensible way to work is one configuration per experiment or per lab: *Laser lab.tempo*, *Beamline 7.tempo*, and so on.
 
 ### Saving a setup
 
@@ -130,28 +130,28 @@ When an instrument is set up the way you want, save its setup:
 - **Ctrl+S** (File ▸ Save setups) saves every connected instrument at once.
 - **Save setup** on the command bar or the [Setups](#setups) page saves just this instrument.
 
-Strobe reads every setting back from the instrument, so what is saved is exactly what the instrument is doing. After you change anything, the status bar shows **Setup not saved** and the title bar gains an asterisk; if you close Strobe or open another configuration with unsaved setups, it asks whether to save them.
+Tempo reads every setting back from the instrument, so what is saved is exactly what the instrument is doing. After you change anything, the status bar shows **Setup not saved** and the title bar gains an asterisk; if you close Tempo or open another configuration with unsaved setups, it asks whether to save them.
 
 ### Putting a saved setup back
 
-**Restore saved…** (Ctrl+R) writes the saved setup to the instrument and reads every page back. Strobe applies the settings in an order that avoids temporary conflicts between linked channels, so a restore always ends with exactly the saved setup.
+**Restore saved…** (Ctrl+R) writes the saved setup to the instrument and reads every page back. Tempo applies the settings in an order that avoids temporary conflicts between linked channels, so a restore always ends with exactly the saved setup.
 
 ### When an instrument connects
 
-Since the setup was saved, the instrument may have been changed at its front panel, by another program, or by a reset. So when an instrument with a saved setup connects, Strobe reads its settings and compares them with the saved setup:
+Since the setup was saved, the instrument may have been changed at its front panel, by another program, or by a reset. So when an instrument with a saved setup connects, Tempo reads its settings and compares them with the saved setup:
 
 - If they match, nothing happens; the status line says so.
-- If they differ, Strobe lists what differs (for example *Delay C*, *Trigger rate*, *CD amplitude*) and asks whether to **Load saved setup** or **Keep instrument settings**.
+- If they differ, Tempo lists what differs (for example *Delay C*, *Trigger rate*, *CD amplitude*) and asks whether to **Load saved setup** or **Keep instrument settings**.
 
 Tick **Remember my choice for this instrument** to stop the question; you can change the choice later under **Saved setup** in the instrument editor (F2):
 
 | Choice | On connecting, if the settings differ |
 | --- | --- |
-| Ask which settings to use | Strobe asks, as above. This is the default. |
-| Load the setup saved in Strobe | The saved setup is applied without asking. |
+| Ask which settings to use | Tempo asks, as above. This is the default. |
+| Load the setup saved in Tempo | The saved setup is applied without asking. |
 | Keep the settings on the instrument | The instrument is left as it is; the status bar shows *Setup not saved* until you save or restore. |
 
-Combined with **Connect when this configuration opens**, *Load the setup saved in Strobe* gives a system that is fully set up a few seconds after the computer and instruments are switched on.
+Combined with **Connect when this configuration opens**, *Load the setup saved in Tempo* gives a system that is fully set up a few seconds after the computer and instruments are switched on.
 
 ### Setup files for one instrument
 
@@ -159,7 +159,7 @@ The [Setups](#setups) page can also export a single instrument's setup to a `.dg
 
 ## Connecting
 
-Double-click an instrument, press **Connect** or press Ctrl+K. Strobe:
+Double-click an instrument, press **Connect** or press Ctrl+K. Tempo:
 
 1. opens a TCP connection to the instrument (port 5025),
 2. asks it to identify itself and clears any old errors,
@@ -167,15 +167,15 @@ Double-click an instrument, press **Connect** or press Ctrl+K. Strobe:
 4. compares the instrument with its saved setup, if it has one (see [When an instrument connects](#when-an-instrument-connects)),
 5. starts reading the status register once a second (**Live status**).
 
-While Strobe is connected the DG645 is in remote mode and its front panel is locked. **Disconnect** (Ctrl+Shift+K) closes the connection and, unless you untick the option in the instrument editor, returns the front panel to local control. Closing Strobe disconnects every instrument.
+While Tempo is connected the DG645 is in remote mode and its front panel is locked. **Disconnect** (Ctrl+Shift+K) closes the connection and, unless you untick the option in the instrument editor, returns the front panel to local control. Closing Tempo disconnects every instrument.
 
-If the connection drops (the cable is pulled, the instrument is switched off, the network fails), Strobe notices within a few seconds, marks the instrument red and shows the reason. Connect again when it is back.
+If the connection drops (the cable is pulled, the instrument is switched off, the network fails), Tempo notices within a few seconds, marks the instrument red and shows the reason. Connect again when it is back.
 
 Several instruments can be connected at the same time; select one in the list to see its pages.
 
 ### Connecting the instrument directly
 
-With an Ethernet cable straight from the computer to the DG645 and no network in between, neither end gets an address from DHCP. If **Auto-IP** is enabled on the instrument (see [Interfaces](#interfaces)), both pick a link-local address in `169.254.x.x` after a minute or so. Read the address from the DG645's front-panel network settings and enter it in the instrument editor, or under **One address** in **Find on network**. (A full scan cannot help here: the link-local range has 65,536 addresses, and Strobe only scans the 256 around the computer's own address.)
+With an Ethernet cable straight from the computer to the DG645 and no network in between, neither end gets an address from DHCP. If **Auto-IP** is enabled on the instrument (see [Interfaces](#interfaces)), both pick a link-local address in `169.254.x.x` after a minute or so. Read the address from the DG645's front-panel network settings and enter it in the instrument editor, or under **One address** in **Find on network**. (A full scan cannot help here: the link-local range has 65,536 addresses, and Tempo only scans the 256 around the computer's own address.)
 
 ## Entering values
 
@@ -183,7 +183,7 @@ Every value field works the same way:
 
 - Type the new value and press **Enter** (or move to another field) to send it to the instrument. **Esc** puts the instrument's value back.
 - While you are typing, the field is amber: the value has not been sent yet.
-- After sending, Strobe reads the value back, so the field always shows what the instrument actually holds, including any rounding it applied.
+- After sending, Tempo reads the value back, so the field always shows what the instrument actually holds, including any rounding it applied.
 - If the instrument rejects the value, the field turns red and the reason appears under it, for example *Illegal delay (error 12)*.
 
 Numbers take the usual SI prefixes, with or without the unit and with or without a space:
@@ -194,7 +194,7 @@ Numbers take the usual SI prefixes, with or without the unit and with or without
 | Frequency | `10 kHz`, `2.5k`, `1MHz`, `500 mHz` | `u` `m` `k` `M` `G` |
 | Voltage | `2.5 V`, `800 mV`, `-0.8` | `m` `k` |
 
-A number with no prefix is in seconds, hertz or volts. Strobe always uses a full stop as the decimal point, whatever your computer's regional settings.
+A number with no prefix is in seconds, hertz or volts. Tempo always uses a full stop as the decimal point, whatever your computer's regional settings.
 
 The **up and down** buttons beside some fields step the value by the step size set for it (the DG645 keeps its own step sizes).
 
@@ -237,7 +237,7 @@ Each front-panel output (T0, AB, CD, EF, GH) has:
 - **Offset**: the level between pulses, in volts.
 - **Polarity**: positive pulses go up from the offset; negative pulses go down.
 
-Under each row, Strobe shows the resulting idle and pulse levels (for example *Idle 0.00 V → pulse 2.50 V*) and when the pulse happens.
+Under each row, Tempo shows the resulting idle and pulse levels (for example *Idle 0.00 V → pulse 2.50 V*) and when the pulse happens.
 
 The **TTL** and **NIM** buttons set an output for common logic levels in one go:
 
@@ -286,7 +286,7 @@ In burst mode, each trigger starts a train of delay cycles instead of one:
 | Burst delay | The time from the trigger to the first cycle. |
 | T0 output | Whether T0 fires on every cycle of the burst or only the first. |
 
-Below the settings, Strobe describes the burst in words, including when its last cycle starts. The status bar shows *Burst* followed by the count and period while burst mode is on.
+Below the settings, Tempo describes the burst in words, including when its last cycle starts. The status bar shows *Burst* followed by the count and period while burst mode is on.
 
 ## Setups
 
@@ -323,9 +323,9 @@ Commands the instrument rejected appear in **Errors**, newest first, with the ti
 
 These are the instrument's own interface settings, stored in the DG645.
 
-**LAN (TCP/IP).** Turn the LAN interface, DHCP, Auto-IP, static IP, the bare socket (port 5025, used by Strobe), telnet (port 5024) and the VXI-11 interface on or off, and set the static IP address, subnet mask and gateway. Changes are stored at once but only take effect when the LAN interface is reset (**Reset LAN interface…**, which closes this connection) or the instrument is switched off and on.
+**LAN (TCP/IP).** Turn the LAN interface, DHCP, Auto-IP, static IP, the bare socket (port 5025, used by Tempo), telnet (port 5024) and the VXI-11 interface on or off, and set the static IP address, subnet mask and gateway. Changes are stored at once but only take effect when the LAN interface is reset (**Reset LAN interface…**, which closes this connection) or the instrument is switched off and on.
 
-Take care: turning off the LAN, the bare socket, or every way of getting an address can make the instrument unreachable from Strobe. Strobe asks before turning these off, and everything can always be put right from the instrument's front panel.
+Take care: turning off the LAN, the bare socket, or every way of getting an address can make the instrument unreachable from Tempo. Tempo asks before turning these off, and everything can always be put right from the instrument's front panel.
 
 **RS-232 and GPIB.** Enable the rear-panel serial and GPIB interfaces, set the baud rate and GPIB address, and reset each interface.
 
@@ -337,11 +337,11 @@ The Terminal sends any DG645 command directly and shows the reply, for anything 
 
 - Type a command and press **Enter**. Queries end in `?`, for example `DLAY?2` (channel A's delay) or `TRAT?` (the trigger rate). Several commands can go on one line, separated by `;`.
 - **Up** and **Down** recall earlier commands.
-- With **Check for errors** ticked, Strobe asks the instrument for errors (`LERR?`) after each command and shows any it reports.
+- With **Check for errors** ticked, Tempo asks the instrument for errors (`LERR?`) after each command and shows any it reports.
 
 The **Command reference** beside it lists every DG645 command with its syntax and meaning; type in the search box to filter it, and double-click a command to put its example in the input line. In the syntax, *c* is a channel number (0 T0, 1 T1, 2 A … 9 H) and *b* an output number (0 T0, 1 AB, 2 CD, 3 EF, 4 GH). The full reference is also in [DG645-Command-Reference.md](DG645-Command-Reference.md).
 
-Commands sent from the Terminal can change settings shown on other pages; when they might have, Strobe shows **Pages may be out of date** until you refresh.
+Commands sent from the Terminal can change settings shown on other pages; when they might have, Tempo shows **Pages may be out of date** until you refresh.
 
 ## Communication log
 
@@ -353,7 +353,7 @@ Show or hide the log with the **Log** check box, **View ▸ Communication log** 
 
 **View ▸ Theme** chooses **Light**, **Dark** or **System**, which follows your operating system's light or dark setting. Both themes meet the WCAG AA contrast guidelines, and the four output colours were chosen to stay distinguishable with the common forms of colour blindness; every coloured mark also has a text label beside it.
 
-Strobe remembers the theme, the window's size and position, whether the log is shown, and which instrument was selected.
+Tempo remembers the theme, the window's size and position, whether the log is shown, and which instrument was selected.
 
 ## Keyboard shortcuts
 
@@ -379,15 +379,15 @@ Strobe remembers the theme, the window's size and position, whether the log is s
 
 ## Troubleshooting
 
-### Strobe cannot connect
+### Tempo cannot connect
 
 Work through these in order:
 
 1. **Is the address right?** Compare it with the instrument's front-panel network settings, or use **Find on network**. If the instrument uses DHCP its address may have changed; edit the saved instrument (F2).
 2. **Can the computer reach it?** From a command prompt or terminal, `ping <address>` should get replies. If not, check the cable, that both are on the same network, and any VPN that may be capturing traffic.
-3. **Is the bare socket on?** Strobe uses the DG645's bare-socket interface on TCP port 5025. If it has been turned off, turn it back on in the instrument's front-panel network settings.
+3. **Is the bare socket on?** Tempo uses the DG645's bare-socket interface on TCP port 5025. If it has been turned off, turn it back on in the instrument's front-panel network settings.
 4. **Is a firewall in the way?** Company firewalls sometimes block port 5025. Ask for outgoing TCP connections to the instrument on port 5025 to be allowed.
-5. **Is something else connected?** Close other programs that talk to the instrument (another copy of Strobe, a LabVIEW or Python script), then try again.
+5. **Is something else connected?** Close other programs that talk to the instrument (another copy of Tempo, a LabVIEW or Python script), then try again.
 
 A timeout means the instrument did not reply in time; on slow or remote networks, raise **Reply timeout** in the instrument editor.
 
@@ -401,31 +401,31 @@ The red message under the field gives the instrument's reason. *Illegal value* o
 
 ### The front panel is locked
 
-The DG645 locks its front panel while it is controlled remotely. Disconnecting returns it to local control; while connected, **Go to local** on the [Interfaces](#interfaces) page unlocks it. If Strobe closed without disconnecting (for example after a power cut), connect and disconnect again, use the instrument's own way of returning to local control (see its manual), or switch it off and on.
+The DG645 locks its front panel while it is controlled remotely. Disconnecting returns it to local control; while connected, **Go to local** on the [Interfaces](#interfaces) page unlocks it. If Tempo closed without disconnecting (for example after a power cut), connect and disconnect again, use the instrument's own way of returning to local control (see its manual), or switch it off and on.
 
-### Windows will not open Strobe.exe
+### Windows will not open Tempo.exe
 
 The program is not code-signed. In the *Windows protected your PC* box choose **More info ▸ Run anyway**. If the file was downloaded through a browser that marked it as blocked, right-click it, choose **Properties** and tick **Unblock**.
 
-### Linux will not start Strobe
+### Linux will not start Tempo
 
 - *Permission denied*: make the file executable with `chmod +x`.
-- Nothing appears, or an error mentions the display: Strobe needs a graphical desktop session (X11 or XWayland).
+- Nothing appears, or an error mentions the display: Tempo needs a graphical desktop session (X11 or XWayland).
 - An error mentions a missing library: install `libx11`, `libice`, `libsm` and `fontconfig` (the `.deb` and `PKGBUILD` do this for you).
 
 ### Starting again from scratch
 
-Close Strobe and delete (or rename) the [data folder](#files-and-folders). Strobe starts with an empty Default configuration and default preferences.
+Close Tempo and delete (or rename) the [data folder](#files-and-folders). Tempo starts with an empty Default configuration and default preferences.
 
 ### Reporting a problem
 
-Include the Strobe version (**Help ▸ About Strobe**), what you did, and the saved communication log (**Save…** above the log).
+Include the Tempo version (**Help ▸ About Tempo**), what you did, and the saved communication log (**Save…** above the log).
 
 ## Files and folders
 
 | File | Kept in |
 | --- | --- |
-| Configurations (`*.strobe`) | `Default.strobe` in the data folder, and any others wherever you save them |
+| Configurations (`*.tempo`) | `Default.tempo` in the data folder, and any others wherever you save them |
 | Preferences (`settings.json`) | The data folder |
 | Exported setups (`*.dg645.json`) | Wherever you save them |
 
@@ -433,15 +433,15 @@ The data folder is:
 
 | Program | Data folder |
 | --- | --- |
-| `Strobe.exe` on Windows | `%APPDATA%\Strobe` |
-| Strobe on Linux | `~/.config/Strobe` |
-| `Strobe-Portable.exe`, `Strobe-Portable-linux-x64` | A `Strobe-data` folder beside the program |
+| `Tempo.exe` on Windows | `%APPDATA%\Tempo` |
+| Tempo on Linux | `~/.config/Tempo` |
+| `Tempo-Portable.exe`, `Tempo-Portable-linux-x64` | A `Tempo-data` folder beside the program |
 
-**Help ▸ About Strobe** shows the data folder and has a button to open it.
+**Help ▸ About Tempo** shows the data folder and has a button to open it.
 
 The portable program needs to be able to write beside itself. If it cannot (for example on a read-only drive), it uses the normal data folder instead and says so in the status bar.
 
-Instruments saved by earlier versions of this program (named *DG645 Controller*, in `%APPDATA%\StanfordController`) are copied into the Default configuration the first time Strobe runs.
+Instruments saved by earlier versions of this program (named *DG645 Controller*, in `%APPDATA%\StanfordController`) are copied into the Default configuration the first time Tempo runs.
 
 ## Error codes
 

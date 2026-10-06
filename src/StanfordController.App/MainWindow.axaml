@@ -91,7 +91,7 @@
                 <MenuItem Header="_Troubleshooting" Command="{Binding HelpCommand}" CommandParameter="{x:Static help:HelpTopics.Troubleshooting}" />
                 <Separator />
                 <MenuItem Header="_Releases and change history" Click="OnOpenReleases" />
-                <MenuItem Header="_About Strobe" Command="{Binding AboutCommand}" />
+                <MenuItem Header="_About Tempo" Command="{Binding AboutCommand}" />
             </MenuItem>
         </Menu>
 
@@ -101,7 +101,7 @@
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                     <Border Classes="vrule" IsVisible="{Binding IsPortable}" />
                     <TextBlock Text="Portable" Classes="caption" VerticalAlignment="Center" IsVisible="{Binding IsPortable}"
-                               ToolTip.Tip="This copy keeps its configuration and preferences in the Strobe-data folder beside the program." />
+                               ToolTip.Tip="This copy keeps its configuration and preferences in the Tempo-data folder beside the program." />
                     <Border Classes="vrule" />
                     <TextBlock Text="{Binding ConfigurationName}" Classes="caption" VerticalAlignment="Center" ToolTip.Tip="{Binding ConfigurationPath}" />
                 </StackPanel>
@@ -219,9 +219,9 @@
                 <ScrollViewer IsVisible="{Binding SelectedInstrument, Converter={x:Static ObjectConverters.IsNull}}"
                               inf:HelpContext.Topic="{x:Static help:HelpTopics.GettingStarted}">
                     <StackPanel Margin="32,26" MaxWidth="560" HorizontalAlignment="Left">
-                        <TextBlock Text="Strobe" Classes="title" FontSize="20" />
+                        <TextBlock Text="Tempo" Classes="title" FontSize="20" />
                         <TextBlock Classes="secondary" Margin="0,4,0,22" TextWrapping="Wrap"
-                                   Text="Control software for Stanford Research Systems DG645 delay generators." />
+                                   Text="Timing &amp; Event Manager for Pulse Outputs: control software for Stanford Research Systems DG645 delay generators." />
 
                         <HeaderedContentControl Theme="{StaticResource Section}" Header="Start">
                             <StackPanel Spacing="7">

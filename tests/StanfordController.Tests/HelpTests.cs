@@ -74,8 +74,8 @@ public class HelpTests
     [Fact]
     public void SnakeCaseAndPatternsAreNotItalic()
     {
-        var inlines = Markdown.ParseInlines("files named Strobe_data_x and 2 * 3 * 4");
-        Assert.Equal("files named Strobe_data_x and 2 * 3 * 4", Assert.IsType<MdText>(Assert.Single(inlines)).Text);
+        var inlines = Markdown.ParseInlines("files named Tempo_data_x and 2 * 3 * 4");
+        Assert.Equal("files named Tempo_data_x and 2 * 3 * 4", Assert.IsType<MdText>(Assert.Single(inlines)).Text);
     }
 
     [Fact]

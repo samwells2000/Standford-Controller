@@ -229,7 +229,7 @@ public class ViewModelTests
     [Fact]
     public async Task MainViewModelConnectsToTheDemoInstrumentAndRemembersIt()
     {
-        var path = Path.Combine(Path.GetTempPath(), "sc-tests-" + Guid.NewGuid().ToString("N"), "Default.strobe");
+        var path = Path.Combine(Path.GetTempPath(), "sc-tests-" + Guid.NewGuid().ToString("N"), "Default.tempo");
         try
         {
             var main = new MainViewModel(path, new FakeDialogs());

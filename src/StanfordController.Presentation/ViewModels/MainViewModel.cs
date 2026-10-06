@@ -33,7 +33,7 @@ public sealed class MainViewModel : ObservableObject
     private bool _statusIsError;
     private bool _loading;
 
-    /// <param name="defaultConfigurationPath">The configuration used when none has been opened (Default.strobe).</param>
+    /// <param name="defaultConfigurationPath">The configuration used when none has been opened (Default.tempo).</param>
     public MainViewModel(string defaultConfigurationPath, IDialogService dialogs, AppSettingsStore? settingsStore = null)
     {
         _defaultConfigurationPath = Path.GetFullPath(defaultConfigurationPath);
@@ -116,7 +116,7 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
-    /// <summary>"Default — Strobe", with an asterisk while setups have unsaved changes.</summary>
+    /// <summary>"Default — Tempo", with an asterisk while setups have unsaved changes.</summary>
     public string WindowTitle => $"{ConfigurationName}{(HasUnsavedChanges ? " *" : string.Empty)} — {AppName}";
 
     /// <summary>Shown in the About box and status bar, e.g. "Version 1.0.42".</summary>

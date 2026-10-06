@@ -261,7 +261,7 @@ BURM 1;BURC 5;BURP 1e-6   burst of 5 cycles, 1 µs apart, per trigger
 LERR?                     → 0
 ```
 
-## Where each command appears in Strobe
+## Where each command appears in Tempo
 
 | Page | Commands |
 | --- | --- |

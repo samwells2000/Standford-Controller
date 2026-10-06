@@ -3,17 +3,17 @@ using StanfordController.Core.Profiles;
 namespace StanfordController.Presentation.Services;
 
 /// <summary>
-/// Where Strobe keeps its files. The normal build uses the user's application-data folder
-/// (<c>%APPDATA%\Strobe</c> on Windows, <c>~/.config/Strobe</c> on Linux); the portable build keeps everything
-/// in a <c>Strobe-data</c> folder next to the program, so it can run from a USB stick and leave nothing behind.
+/// Where Tempo keeps its files. The normal build uses the user's application-data folder
+/// (<c>%APPDATA%\Tempo</c> on Windows, <c>~/.config/Tempo</c> on Linux); the portable build keeps everything
+/// in a <c>Tempo-data</c> folder next to the program, so it can run from a USB stick and leave nothing behind.
 /// </summary>
 public sealed record AppPaths(string DataDirectory, bool IsPortable)
 {
-    public const string AppName = "Strobe";
+    public const string AppName = "Tempo";
 
-    public const string PortableFolderName = "Strobe-data";
+    public const string PortableFolderName = "Tempo-data";
 
-    /// <summary>Folder used by releases made before the program was named Strobe.</summary>
+    /// <summary>Folder used by releases made before the program was named Tempo.</summary>
     public const string LegacyFolderName = "StanfordController";
 
     public string SettingsPath => Path.Combine(DataDirectory, "settings.json");

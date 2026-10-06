@@ -18,7 +18,7 @@ using StanfordController.Presentation.ViewModels;
 namespace StanfordController.App;
 
 /// <summary>
-/// <c>Strobe --smoke-test &lt;folder&gt; [--headless]</c>: drives the real UI against the simulated instrument,
+/// <c>Tempo --smoke-test &lt;folder&gt; [--headless]</c>: drives the real UI against the simulated instrument,
 /// opens every page and dialog in both themes, saves screenshots, and exits with 0 only if nothing failed and
 /// no binding errors were logged. CI runs it on Windows and Linux to catch problems that compile cleanly.
 /// </summary>
@@ -206,7 +206,7 @@ internal sealed class SmokeTest
 
         // The question asked when an instrument's settings differ from its saved setup.
         var question = MessageDialog.ShowAsync(_window, MessageKind.Question, "Saved setup",
-            $"The settings on {item.Name} differ from the setup saved in Strobe on 2026-10-06 14:02:\n\n  •  Delay C\n  •  Trigger rate\n  •  CD amplitude\n\nWhich settings do you want to use?",
+            $"The settings on {item.Name} differ from the setup saved in Tempo on 2026-10-06 14:02:\n\n  •  Delay C\n  •  Trigger rate\n  •  CD amplitude\n\nWhich settings do you want to use?",
             "Load saved setup", "Keep instrument settings", showCancel: false, rememberText: "Remember my choice for this instrument");
         await IdleAsync();
         if (_lifetime.Windows.OfType<MessageDialog>().LastOrDefault() is { } message)

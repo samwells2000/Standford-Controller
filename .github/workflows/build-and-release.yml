@@ -2,13 +2,13 @@ name: Build and release
 
 # Every push and pull request is built, tested and smoke-tested on Windows and Linux.
 # Every push to main also publishes a GitHub Release with:
-#   Strobe.exe                       Windows 10/11, keeps its files in %APPDATA%\Strobe
-#   Strobe-Portable.exe              Windows, keeps its files in a Strobe-data folder beside it
-#   Strobe-linux-x64                 Linux (Debian, Ubuntu, Arch, ...), keeps its files in ~/.config/Strobe
-#   Strobe-Portable-linux-x64        Linux, keeps its files beside it
-#   Strobe-<version>-linux-x64.tar.gz  the Linux program with a desktop entry, icon and install script
-#   strobe_<version>_amd64.deb       Debian / Ubuntu package
-#   PKGBUILD                         Arch Linux package recipe (makepkg -si)
+#   Tempo.exe                            Windows 10/11, keeps its files in %APPDATA%\Tempo
+#   Tempo-Portable.exe                   Windows, keeps its files in a Tempo-data folder beside it
+#   Tempo-linux-x64                      Linux (Debian, Ubuntu, Arch, ...), keeps its files in ~/.config/Tempo
+#   Tempo-Portable-linux-x64             Linux, keeps its files beside it
+#   Tempo-<version>-linux-x64.tar.gz     the Linux program with a desktop entry, icon and install script
+#   tempo-dg645_<version>_amd64.deb      Debian / Ubuntu package
+#   PKGBUILD                             Arch Linux package recipe (makepkg -si)
 on:
   push:
     branches: ['**']
@@ -58,11 +58,11 @@ jobs:
           foreach ($folder in 'publish/standard', 'publish/portable') {
             $files = Get-ChildItem $folder
             $files | Format-Table Name, Length
-            if ($files.Count -ne 1 -or $files[0].Name -ne 'Strobe.exe') { throw "Expected $folder to contain only Strobe.exe" }
+            if ($files.Count -ne 1 -or $files[0].Name -ne 'Tempo.exe') { throw "Expected $folder to contain only Tempo.exe" }
           }
           New-Item -ItemType Directory dist | Out-Null
-          Copy-Item publish/standard/Strobe.exe dist/Strobe.exe
-          Copy-Item publish/portable/Strobe.exe dist/Strobe-Portable.exe
+          Copy-Item publish/standard/Tempo.exe dist/Tempo.exe
+          Copy-Item publish/portable/Tempo.exe dist/Tempo-Portable.exe
 
       # Starts the real program against its built-in simulated DG645, opens every page and dialog in both
       # themes, saves a setup to a configuration, and fails on any exception or data-binding error.
@@ -81,11 +81,11 @@ jobs:
             if (Test-Path $log) { Get-Content $log | Write-Host } else { Write-Warning 'No smoke test log was written.' }
             if ($process.ExitCode -ne 0) { throw "The smoke test of $exe failed with exit code $($process.ExitCode)." }
           }
-          Invoke-SmokeTest dist/Strobe.exe (Join-Path $env:RUNNER_TEMP 'smoke-test') @()
+          Invoke-SmokeTest dist/Tempo.exe (Join-Path $env:RUNNER_TEMP 'smoke-test') @()
           $portableDir = Join-Path $env:RUNNER_TEMP 'smoke-test-portable'
-          Invoke-SmokeTest dist/Strobe-Portable.exe $portableDir @('--headless')
+          Invoke-SmokeTest dist/Tempo-Portable.exe $portableDir @('--headless')
           if (-not (Select-String -Path (Join-Path $portableDir 'smoke-test.log') -Pattern 'portable build: True' -Quiet)) {
-            throw 'Strobe-Portable.exe does not run as the portable build.'
+            throw 'Tempo-Portable.exe does not run as the portable build.'
           }
 
       - name: Upload smoke test screenshots
@@ -137,28 +137,28 @@ jobs:
           dotnet publish src/StanfordController.App --configuration Release --runtime linux-x64 --output publish/portable -p:Version=${VERSION} -p:PortableBuild=true
           for folder in publish/standard publish/portable; do
             ls -la "$folder"
-            [ "$(ls "$folder")" = "Strobe" ] || { echo "Expected $folder to contain only Strobe"; exit 1; }
+            [ "$(ls "$folder")" = "Tempo" ] || { echo "Expected $folder to contain only Tempo"; exit 1; }
           done
           mkdir dist
-          install -m755 publish/standard/Strobe dist/Strobe-linux-x64
-          install -m755 publish/portable/Strobe dist/Strobe-Portable-linux-x64
+          install -m755 publish/standard/Tempo dist/Tempo-linux-x64
+          install -m755 publish/portable/Tempo dist/Tempo-Portable-linux-x64
 
       - name: UI smoke test
         run: |
           set -euo pipefail
           status=0
-          timeout 300 xvfb-run -a -s "-screen 0 1600x1000x24" dist/Strobe-linux-x64 --smoke-test "$RUNNER_TEMP/smoke-test" || status=$?
+          timeout 300 xvfb-run -a -s "-screen 0 1600x1000x24" dist/Tempo-linux-x64 --smoke-test "$RUNNER_TEMP/smoke-test" || status=$?
           cat "$RUNNER_TEMP/smoke-test/smoke-test.log" || true
           [ "$status" -eq 0 ] || { echo "The smoke test failed with exit code $status"; exit 1; }
-          timeout 300 dist/Strobe-Portable-linux-x64 --smoke-test "$RUNNER_TEMP/smoke-test-portable" --headless
+          timeout 300 dist/Tempo-Portable-linux-x64 --smoke-test "$RUNNER_TEMP/smoke-test-portable" --headless
           grep -q 'portable build: True' "$RUNNER_TEMP/smoke-test-portable/smoke-test.log" || { echo "The portable binary does not run as the portable build"; exit 1; }
 
       - name: Build Debian package, tarball and Arch PKGBUILD
         run: |
           set -euo pipefail
-          packaging/linux/build-packages.sh "${VERSION}" publish/standard/Strobe dist
-          dpkg-deb --info "dist/strobe_${VERSION}_amd64.deb"
-          dpkg-deb --contents "dist/strobe_${VERSION}_amd64.deb"
+          packaging/linux/build-packages.sh "${VERSION}" publish/standard/Tempo dist
+          dpkg-deb --info "dist/tempo-dg645_${VERSION}_amd64.deb"
+          dpkg-deb --contents "dist/tempo-dg645_${VERSION}_amd64.deb"
 
       - name: Upload smoke test screenshots
         if: always()
@@ -204,26 +204,26 @@ jobs:
         run: |
           set -euo pipefail
           cd dist
-          chmod +x Strobe-linux-x64 Strobe-Portable-linux-x64
-          sha256sum Strobe* strobe_* PKGBUILD > SHA256SUMS.txt
+          chmod +x Tempo-linux-x64 Tempo-Portable-linux-x64
+          sha256sum Tempo* tempo-dg645_* PKGBUILD > SHA256SUMS.txt
           cat SHA256SUMS.txt
           cat > notes.md <<NOTES
           | Download | For |
           | --- | --- |
-          | **Strobe.exe** | Windows 10 and 11. Keeps instruments and setups in %APPDATA%\\Strobe. |
-          | **Strobe-Portable.exe** | Windows, from a USB stick or shared folder. Keeps everything in a Strobe-data folder beside it. |
-          | **strobe_${VERSION}_amd64.deb** | Debian and Ubuntu: \`sudo apt install ./strobe_${VERSION}_amd64.deb\` |
+          | **Tempo.exe** | Windows 10 and 11. Keeps instruments and setups in %APPDATA%\\Tempo. |
+          | **Tempo-Portable.exe** | Windows, from a USB stick or shared folder. Keeps everything in a Tempo-data folder beside it. |
+          | **tempo-dg645_${VERSION}_amd64.deb** | Debian and Ubuntu: \`sudo apt install ./tempo-dg645_${VERSION}_amd64.deb\` |
           | **PKGBUILD** | Arch Linux: put it in an empty folder and run \`makepkg -si\` |
-          | **Strobe-${VERSION}-linux-x64.tar.gz** | Any x86-64 Linux desktop: unpack, then \`./install.sh\` or run \`./strobe\` |
-          | **Strobe-linux-x64** / **Strobe-Portable-linux-x64** | The bare Linux program (\`chmod +x\` after downloading). |
+          | **Tempo-${VERSION}-linux-x64.tar.gz** | Any x86-64 Linux desktop: unpack, then \`./install.sh\` or run \`./tempo-dg645\` |
+          | **Tempo-linux-x64** / **Tempo-Portable-linux-x64** | The bare Linux program (\`chmod +x\` after downloading). |
 
           SHA256SUMS.txt lists the checksum of every file.
           NOTES
-          gh release create "v${VERSION}" Strobe.exe Strobe-Portable.exe Strobe-linux-x64 Strobe-Portable-linux-x64 \
-            "Strobe-${VERSION}-linux-x64.tar.gz" "strobe_${VERSION}_amd64.deb" PKGBUILD SHA256SUMS.txt \
+          gh release create "v${VERSION}" Tempo.exe Tempo-Portable.exe Tempo-linux-x64 Tempo-Portable-linux-x64 \
+            "Tempo-${VERSION}-linux-x64.tar.gz" "tempo-dg645_${VERSION}_amd64.deb" PKGBUILD SHA256SUMS.txt \
             --repo "${GITHUB_REPOSITORY}" \
             --target "${GITHUB_SHA}" \
-            --title "Strobe ${VERSION}" \
+            --title "Tempo ${VERSION}" \
             --notes "$(cat notes.md)" \
             --generate-notes \
             --latest

@@ -6,10 +6,10 @@ namespace StanfordController.App;
 
 internal static class Program
 {
-    public const string FontFamilyUri = "avares://Strobe/Assets/Fonts#IBM Plex Sans";
+    public const string FontFamilyUri = "avares://Tempo/Assets/Fonts#IBM Plex Sans";
 
     /// <summary>
-    /// Strobe [--smoke-test &lt;folder&gt;] [--headless]. The smoke test drives the real UI against the simulated
+    /// Tempo [--smoke-test &lt;folder&gt;] [--headless]. The smoke test drives the real UI against the simulated
     /// instrument and saves screenshots; --headless runs it without a display.
     /// </summary>
     [STAThread]

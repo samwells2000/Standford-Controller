@@ -9,7 +9,7 @@ namespace StanfordController.Tests;
 /// <summary>Configuration files, saved setups and what happens to them when an instrument connects.</summary>
 public sealed class ConfigurationTests : IDisposable
 {
-    private readonly string _directory = Path.Combine(Path.GetTempPath(), "strobe-tests-" + Guid.NewGuid().ToString("N"));
+    private readonly string _directory = Path.Combine(Path.GetTempPath(), "tempo-tests-" + Guid.NewGuid().ToString("N"));
 
     public void Dispose()
     {
@@ -19,7 +19,7 @@ public sealed class ConfigurationTests : IDisposable
         }
     }
 
-    private string DefaultPath => Path.Combine(_directory, "Default.strobe");
+    private string DefaultPath => Path.Combine(_directory, "Default.tempo");
 
     private async Task<(MainViewModel Main, FakeDialogs Dialogs)> OpenAsync(string? settingsName = "settings.json")
     {
@@ -50,7 +50,7 @@ public sealed class ConfigurationTests : IDisposable
         var item = await ConnectAndConfigureAsync(main);
         item.Session!.NotifySettingsChanged();
         Assert.True(main.HasUnsavedChanges);
-        Assert.EndsWith("*" + " — Strobe", main.WindowTitle);
+        Assert.EndsWith("*" + " — Tempo", main.WindowTitle);
 
         Assert.True(await main.SaveAllSetupsAsync());
         Assert.False(main.HasUnsavedChanges);
@@ -169,7 +169,7 @@ public sealed class ConfigurationTests : IDisposable
     [Fact]
     public async Task OpenedConfigurationIsReopenedAtStartupAndListedAsRecent()
     {
-        var lab = new ConfigurationStore(Path.Combine(_directory, "Laser lab.strobe"));
+        var lab = new ConfigurationStore(Path.Combine(_directory, "Laser lab.tempo"));
         lab.Save([new InstrumentProfile { Name = "Lab DG645", Host = "10.0.0.20" }]);
 
         var (main, _) = await OpenAsync();
@@ -181,7 +181,7 @@ public sealed class ConfigurationTests : IDisposable
 
         var (reopened, _) = await OpenAsync();
         Assert.Equal("Laser lab", reopened.ConfigurationName);
-        Assert.Equal("Laser lab — Strobe", reopened.WindowTitle);
+        Assert.Equal("Laser lab — Tempo", reopened.WindowTitle);
 
         // If that file disappears, the default configuration opens instead.
         File.Delete(lab.FilePath);
@@ -197,7 +197,7 @@ public sealed class ConfigurationTests : IDisposable
         main.AddDemoInstrumentCommand.Execute(null);
         await ConnectAndConfigureAsync(main);
 
-        dialogs.SaveFilePath = Path.Combine(_directory, "Experiment 7.strobe");
+        dialogs.SaveFilePath = Path.Combine(_directory, "Experiment 7.tempo");
         main.SaveConfigurationAsCommand.Execute(null);
         for (var i = 0; i < 200 && main.ConfigurationName != "Experiment 7"; i++)
         {
@@ -250,9 +250,9 @@ public sealed class ConfigurationTests : IDisposable
         var paths = AppPaths.ForPortable(_directory);
         Assert.NotNull(paths);
         Assert.True(paths.IsPortable);
-        Assert.Equal(Path.Combine(_directory, "Strobe-data"), paths.DataDirectory);
+        Assert.Equal(Path.Combine(_directory, "Tempo-data"), paths.DataDirectory);
         Assert.True(Directory.Exists(paths.DataDirectory));
-        Assert.Equal(Path.Combine(paths.DataDirectory, "Default.strobe"), paths.DefaultConfigurationPath);
+        Assert.Equal(Path.Combine(paths.DataDirectory, "Default.tempo"), paths.DefaultConfigurationPath);
         Assert.False(paths.MigrateLegacyInstruments());
     }
 

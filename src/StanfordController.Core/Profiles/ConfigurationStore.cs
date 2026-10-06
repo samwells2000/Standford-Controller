@@ -4,10 +4,10 @@ using System.Text.Json.Serialization;
 namespace StanfordController.Core.Profiles;
 
 /// <summary>
-/// A configuration file (<c>*.strobe</c>): the saved instruments, each with its connection details and,
+/// A configuration file (<c>*.tempo</c>): the saved instruments, each with its connection details and,
 /// once saved, its complete setup. Plain JSON so it can be archived, diffed or copied to another computer.
 /// </summary>
-public sealed class StrobeConfiguration
+public sealed class TempoConfiguration
 {
     public const int CurrentFormatVersion = 2;
 
@@ -21,9 +21,9 @@ public sealed class StrobeConfiguration
 /// <summary>Reads and writes one configuration file. Saves are atomic, so a crash never loses the previous file.</summary>
 public sealed class ConfigurationStore(string path)
 {
-    public const string FileExtension = ".strobe";
+    public const string FileExtension = ".tempo";
 
-    public const string FileFilterName = "Strobe configuration";
+    public const string FileFilterName = "Tempo configuration";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -62,17 +62,17 @@ public sealed class ConfigurationStore(string path)
     }
 
     public static string Serialize(IEnumerable<InstrumentProfile> profiles) =>
-        JsonSerializer.Serialize(new StrobeConfiguration { Instruments = profiles.ToList() }, JsonOptions);
+        JsonSerializer.Serialize(new TempoConfiguration { Instruments = profiles.ToList() }, JsonOptions);
 
     /// <summary>Reads a configuration, including version 1 files (instruments.json from earlier releases).</summary>
     public static IReadOnlyList<InstrumentProfile> Deserialize(string json)
     {
-        var file = JsonSerializer.Deserialize<StrobeConfiguration>(json, JsonOptions)
-                   ?? throw new InvalidDataException("The file does not contain a Strobe configuration.");
-        if (file.FormatVersion > StrobeConfiguration.CurrentFormatVersion)
+        var file = JsonSerializer.Deserialize<TempoConfiguration>(json, JsonOptions)
+                   ?? throw new InvalidDataException("The file does not contain a Tempo configuration.");
+        if (file.FormatVersion > TempoConfiguration.CurrentFormatVersion)
         {
             throw new InvalidDataException(
-                $"The file was written by a newer version of Strobe (format {file.FormatVersion}). Update Strobe to open it.");
+                $"The file was written by a newer version of Tempo (format {file.FormatVersion}). Update Tempo to open it.");
         }
 
         return file.Instruments ?? [];

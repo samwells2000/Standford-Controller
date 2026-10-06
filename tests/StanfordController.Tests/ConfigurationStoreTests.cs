@@ -17,7 +17,7 @@ public sealed class ConfigurationStoreTests : IDisposable
     [Fact]
     public void SavedProfilesLoadBack()
     {
-        var store = new ConfigurationStore(Path.Combine(_directory, "nested", "Lab.strobe"));
+        var store = new ConfigurationStore(Path.Combine(_directory, "nested", "Lab.tempo"));
         Assert.Empty(store.Load());
 
         var profile = new InstrumentProfile { Name = "Laser lab", Host = "192.168.1.50", Location = "Room 101", Notes = "Rb timebase" };

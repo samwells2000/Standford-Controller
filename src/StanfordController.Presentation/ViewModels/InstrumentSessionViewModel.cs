@@ -380,7 +380,7 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
     public void MarkInstrumentDiffers()
     {
         HasUnsavedChanges = true;
-        SetStatus("Using the settings on the instrument, which differ from the setup saved in Strobe.");
+        SetStatus("Using the settings on the instrument, which differ from the setup saved in Tempo.");
     }
 
     /// <summary>Called once the current setup has been stored in the configuration.</summary>
