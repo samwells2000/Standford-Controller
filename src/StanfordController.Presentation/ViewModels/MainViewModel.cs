@@ -15,13 +15,17 @@ public sealed class MainViewModel : ObservableObject
 
     private readonly ProfileStore _store;
     private readonly IDialogService _dialogs;
+    private readonly AppSettingsStore? _settingsStore;
+    private AppSettings _settings = new();
     private InstrumentItemViewModel? _selected;
     private string? _statusMessage;
+    private bool _loading;
 
-    public MainViewModel(ProfileStore store, IDialogService dialogs)
+    public MainViewModel(ProfileStore store, IDialogService dialogs, AppSettingsStore? settingsStore = null)
     {
         _store = store;
         _dialogs = dialogs;
+        _settingsStore = settingsStore;
         Instruments.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasInstruments));
 
         AddInstrumentCommand = new RelayCommand(AddInstrument);
@@ -35,6 +39,16 @@ public sealed class MainViewModel : ObservableObject
         ExportInstrumentsCommand = new RelayCommand(ExportInstruments, () => Instruments.Count > 0);
         MoveUpCommand = new RelayCommand(() => MoveSelected(-1), () => _selected is not null && Instruments.IndexOf(_selected) > 0);
         MoveDownCommand = new RelayCommand(() => MoveSelected(1), () => _selected is not null && Instruments.IndexOf(_selected) < Instruments.Count - 1);
+        AboutCommand = new RelayCommand(_dialogs.ShowAbout);
+
+        // Keyboard shortcuts act on the selected instrument.
+        ConnectSelectedCommand = new RelayCommand(() => _selected?.ConnectCommand.Execute(null));
+        DisconnectSelectedCommand = new RelayCommand(() => _selected?.DisconnectCommand.Execute(null));
+        RefreshCommand = SessionCommand(s => s.RefreshAllCommand);
+        TriggerCommand = SessionCommand(s => s.TriggerCommand);
+        SaveSettingsFileCommand = SessionCommand(s => s.ExportSettingsCommand);
+        LoadSettingsFileCommand = SessionCommand(s => s.ImportSettingsCommand);
+        ToggleLogCommand = new RelayCommand(() => ShowLog = !ShowLog);
     }
 
     public ObservableCollection<InstrumentItemViewModel> Instruments { get; } = [];
@@ -49,8 +63,108 @@ public sealed class MainViewModel : ObservableObject
             if (SetProperty(ref _selected, value))
             {
                 RaiseSelectionCommands();
+                OnPropertyChanged(nameof(WindowTitle));
+                if (!_loading)
+                {
+                    _settings.SelectedInstrumentId = value?.Profile.Id;
+                    SaveSettings();
+                }
             }
         }
+    }
+
+    public string WindowTitle => _selected is null ? AppName : $"{_selected.Name} — {AppName}";
+
+    public const string AppName = "DG645 Controller";
+
+    /// <summary>Shown in the sidebar footer, e.g. "Version 1.0.42".</summary>
+    public string VersionText { get; init; } = string.Empty;
+
+    public AppTheme Theme
+    {
+        get => _settings.Theme;
+        set
+        {
+            if (_settings.Theme == value)
+            {
+                return;
+            }
+
+            _settings.Theme = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsSystemTheme));
+            OnPropertyChanged(nameof(IsLightTheme));
+            OnPropertyChanged(nameof(IsDarkTheme));
+            SaveSettings();
+        }
+    }
+
+    // Two-way targets for the System / Light / Dark segmented switch.
+    public bool IsSystemTheme
+    {
+        get => Theme == AppTheme.System;
+        set
+        {
+            if (value)
+            {
+                Theme = AppTheme.System;
+            }
+        }
+    }
+
+    public bool IsLightTheme
+    {
+        get => Theme == AppTheme.Light;
+        set
+        {
+            if (value)
+            {
+                Theme = AppTheme.Light;
+            }
+        }
+    }
+
+    public bool IsDarkTheme
+    {
+        get => Theme == AppTheme.Dark;
+        set
+        {
+            if (value)
+            {
+                Theme = AppTheme.Dark;
+            }
+        }
+    }
+
+    /// <summary>Whether communication logs are shown under the instrument pages (applies to every instrument).</summary>
+    public bool ShowLog
+    {
+        get => _settings.ShowLog;
+        set
+        {
+            if (_settings.ShowLog == value)
+            {
+                return;
+            }
+
+            _settings.ShowLog = value;
+            foreach (var item in Instruments)
+            {
+                item.Log.IsPanelVisible = value;
+            }
+
+            OnPropertyChanged();
+            SaveSettings();
+        }
+    }
+
+    /// <summary>The window placement saved last time, if any.</summary>
+    public WindowPlacement? WindowPlacement => _settings.Window;
+
+    public void SaveWindowPlacement(WindowPlacement placement)
+    {
+        _settings.Window = placement;
+        SaveSettings();
     }
 
     public string? StatusMessage
@@ -84,8 +198,47 @@ public sealed class MainViewModel : ObservableObject
 
     public ICommand MoveDownCommand { get; }
 
+    public ICommand AboutCommand { get; }
+
+    public ICommand ConnectSelectedCommand { get; }
+
+    public ICommand DisconnectSelectedCommand { get; }
+
+    public ICommand RefreshCommand { get; }
+
+    public ICommand TriggerCommand { get; }
+
+    public ICommand SaveSettingsFileCommand { get; }
+
+    public ICommand LoadSettingsFileCommand { get; }
+
+    public ICommand ToggleLogCommand { get; }
+
     public void Load()
     {
+        _loading = true;
+        try
+        {
+            LoadCore();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void LoadCore()
+    {
+        if (_settingsStore is not null)
+        {
+            _settings = _settingsStore.Load();
+            OnPropertyChanged(nameof(Theme));
+            OnPropertyChanged(nameof(IsSystemTheme));
+            OnPropertyChanged(nameof(IsLightTheme));
+            OnPropertyChanged(nameof(IsDarkTheme));
+            OnPropertyChanged(nameof(ShowLog));
+        }
+
         IReadOnlyList<InstrumentProfile> profiles;
         try
         {
@@ -114,7 +267,7 @@ public sealed class MainViewModel : ObservableObject
             Instruments.Add(CreateItem(profile));
         }
 
-        SelectedInstrument = Instruments.FirstOrDefault();
+        SelectedInstrument = Instruments.FirstOrDefault(i => i.Profile.Id == _settings.SelectedInstrumentId) ?? Instruments.FirstOrDefault();
         RaiseSelectionCommands();
     }
 
@@ -136,7 +289,29 @@ public sealed class MainViewModel : ObservableObject
         return item;
     }
 
-    private InstrumentItemViewModel CreateItem(InstrumentProfile profile) => new(profile, _dialogs, _ => Save());
+    private InstrumentItemViewModel CreateItem(InstrumentProfile profile)
+    {
+        var item = new InstrumentItemViewModel(profile, _dialogs, _ => Save());
+        item.Log.IsPanelVisible = _settings.ShowLog;
+        item.Log.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(LogViewModel.IsPanelVisible))
+            {
+                ShowLog = item.Log.IsPanelVisible;
+            }
+        };
+        return item;
+    }
+
+    private ICommand SessionCommand(Func<InstrumentSessionViewModel, ICommand> pick) => new RelayCommand(() =>
+    {
+        if (_selected?.Session is { } session && pick(session) is { } command && command.CanExecute(null))
+        {
+            command.Execute(null);
+        }
+    });
+
+    private void SaveSettings() => _settingsStore?.Save(_settings);
 
     private void Save()
     {
@@ -181,6 +356,7 @@ public sealed class MainViewModel : ObservableObject
         var addressChanged = editor.Result.Host != item.Profile.Host || editor.Result.Port != item.Profile.Port;
         item.UpdateProfile(editor.Result);
         Save();
+        OnPropertyChanged(nameof(WindowTitle));
         StatusMessage = addressChanged && item.IsConnected
             ? $"Saved {item.Name}. Reconnect to use the new address."
             : $"Saved {item.Name}.";

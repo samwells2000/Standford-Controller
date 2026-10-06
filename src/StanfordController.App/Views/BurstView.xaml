@@ -26,10 +26,10 @@
                         <ContentControl Content="{Binding T0Mode}" ContentTemplate="{StaticResource ChoiceField}" Focusable="False" />
                     </HeaderedContentControl>
 
-                    <Border Background="{StaticResource SurfaceAltBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                    <Border Background="{DynamicResource SurfaceAltBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                             CornerRadius="8" Padding="14,10" Margin="0,8,0,0"
                             Visibility="{Binding Summary, Converter={StaticResource NullToVisibility}}">
-                        <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" />
+                        <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" />
                     </Border>
                 </StackPanel>
             </Border>

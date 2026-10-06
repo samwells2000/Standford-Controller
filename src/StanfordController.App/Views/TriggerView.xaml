@@ -30,7 +30,7 @@
                         <ContentControl Content="{Binding Inhibit}" ContentTemplate="{StaticResource ChoiceField}" Focusable="False" />
                     </HeaderedContentControl>
 
-                    <Border Background="{StaticResource AccentSoftBrush}" CornerRadius="8" Padding="14,12" Margin="0,8,0,0">
+                    <Border Background="{DynamicResource AccentSoftBrush}" CornerRadius="8" Padding="14,12" Margin="0,8,0,0">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -38,7 +38,7 @@
                             </Grid.ColumnDefinitions>
                             <StackPanel VerticalAlignment="Center">
                                 <TextBlock Text="Single shot" FontWeight="SemiBold" />
-                                <TextBlock Style="{StaticResource Caption}" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,10,0"
+                                <TextBlock Style="{StaticResource Caption}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,2,10,0"
                                            Text="Fires one delay cycle (*TRG) when the source is a single-shot mode." />
                             </StackPanel>
                             <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Command="{Binding TriggerNowCommand}"
@@ -89,7 +89,7 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="{Binding TriggerPrescaler.Name}" Style="{StaticResource FieldLabel}" VerticalAlignment="Top" Margin="0,7,0,0" />
                         <ContentControl Grid.Column="1" Content="{Binding TriggerPrescaler.Factor}" ContentTemplate="{StaticResource TextField}" Focusable="False" />
-                        <TextBlock Grid.Column="3" Text="—" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Top" Margin="2,7,0,0" />
+                        <TextBlock Grid.Column="3" Text="—" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Top" Margin="2,7,0,0" />
                     </Grid>
                     <ItemsControl ItemsSource="{Binding OutputPrescalers}" Focusable="False">
                         <ItemsControl.ItemTemplate>

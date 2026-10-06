@@ -35,6 +35,10 @@ internal sealed class FakeDialogs : IDialogService
     public void CopyToClipboard(string text)
     {
     }
+
+    public void ShowAbout()
+    {
+    }
 }
 
 public class ViewModelTests

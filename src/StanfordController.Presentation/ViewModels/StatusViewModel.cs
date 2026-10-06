@@ -192,7 +192,13 @@ public sealed class StatusViewModel : ParameterViewModel
     /// <summary>Background poll of the instrument status register. Throws on communication failure.</summary>
     public async Task PollAsync()
     {
-        Latch(InstrumentBits, (int)await Client.GetInstrumentStatusAsync(), enable: false);
+        InstrumentStatusFlags status;
+        using (Client.SuppressTrafficLogging())
+        {
+            status = await Client.GetInstrumentStatusAsync();
+        }
+
+        Latch(InstrumentBits, (int)status, enable: false);
         _lastPoll = DateTime.Now;
         OnPropertyChanged(nameof(LastPollText));
     }

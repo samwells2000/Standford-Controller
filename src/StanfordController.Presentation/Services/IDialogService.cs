@@ -23,4 +23,7 @@ public interface IDialogService
     string? PickOpenFile(string title, string filter);
 
     void CopyToClipboard(string text);
+
+    /// <summary>Shows the About window (version, documentation links, data folder).</summary>
+    void ShowAbout();
 }

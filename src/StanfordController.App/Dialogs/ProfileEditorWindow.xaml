@@ -5,10 +5,10 @@
         Width="560" SizeToContent="Height" ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
         FontFamily="{StaticResource UiFont}" FontSize="13"
-        Background="{StaticResource SurfaceBrush}"
+        Background="{DynamicResource SurfaceBrush}"
         FocusManager.FocusedElement="{Binding ElementName=NameBox}">
 
-    <Border Background="{StaticResource SurfaceBrush}" Padding="28,24,28,22">
+    <Border Background="{DynamicResource SurfaceBrush}" Padding="28,24,28,22">
     <StackPanel>
         <TextBlock Text="{Binding Title}" Style="{StaticResource PageTitle}" FontSize="19" />
         <TextBlock Style="{StaticResource CardSubtitle}" Margin="0,4,0,20"
@@ -45,7 +45,7 @@
         </HeaderedContentControl>
 
         <!-- Connection test -->
-        <Border Background="{StaticResource SurfaceAltBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8"
+        <Border Background="{DynamicResource SurfaceAltBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8"
                 Padding="14,12" Margin="0,6,0,0">
             <DockPanel>
                 <Button DockPanel.Dock="Right" Command="{Binding TestConnectionCommand}" VerticalAlignment="Top">
@@ -57,13 +57,13 @@
                 <TextBlock VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,12,0" Text="{Binding TestResult, TargetNullValue='Check the instrument answers before saving.'}">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
-                            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding TestSucceeded}" Value="True">
-                                    <Setter Property="Foreground" Value="{StaticResource SuccessBrush}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource SuccessTextBrush}" />
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding TestSucceeded}" Value="False">
-                                    <Setter Property="Foreground" Value="{StaticResource DangerBrush}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -73,9 +73,9 @@
         </Border>
 
         <!-- Validation -->
-        <Border Background="{StaticResource DangerSoftBrush}" CornerRadius="8" Padding="12,10" Margin="0,12,0,0"
+        <Border Background="{DynamicResource DangerSoftBrush}" CornerRadius="8" Padding="12,10" Margin="0,12,0,0"
                 Visibility="{Binding HasVisibleProblems, Converter={StaticResource BoolToVisibility}}">
-            <TextBlock Text="{Binding ProblemsText}" Foreground="#991B1B" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding ProblemsText}" Foreground="{DynamicResource DangerStrongTextBrush}" TextWrapping="Wrap" />
         </Border>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,22,0,0">

@@ -37,6 +37,8 @@ public sealed class DialogService : IDialogService
         return dialog.ShowDialog(Owner) == true ? dialog.FileName : null;
     }
 
+    public void ShowAbout() => new AboutWindow { Owner = Owner }.ShowDialog();
+
     public void CopyToClipboard(string text)
     {
         try

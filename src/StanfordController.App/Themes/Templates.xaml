@@ -6,11 +6,7 @@
     <inf:NullToVisibilityConverter x:Key="NullToVisibility" />
     <inf:InverseBoolConverter x:Key="InverseBool" />
     <inf:NotNullConverter x:Key="NotNull" />
-    <inf:OutputBrushConverter x:Key="OutputBrush" />
-    <inf:ConnectionStateBrushConverter x:Key="StateBrush" />
-    <inf:ConnectionStateSoftBrushConverter x:Key="StateSoftBrush" />
     <inf:TerminalLineBrushConverter x:Key="TerminalLineBrush" />
-    <inf:LogDirectionBrushConverter x:Key="LogDirectionBrush" />
 
     <!-- EditableParameterViewModel<T>: text box that applies on Enter / leaving the field. -->
     <DataTemplate x:Key="TextField">
@@ -55,13 +51,6 @@
         </StackPanel>
     </DataTemplate>
 
-    <!-- Coloured channel/output badge; DataContext is the name ("AB", "C", ...). -->
-    <DataTemplate x:Key="OutputBadge">
-        <Border Style="{StaticResource Badge}" Background="{Binding Converter={StaticResource OutputBrush}}" MinWidth="34">
-            <TextBlock Text="{Binding}" Foreground="White" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center" />
-        </Border>
-    </DataTemplate>
-
     <!-- One bit of a status register, with its enable checkbox. -->
     <DataTemplate x:Key="StatusBitRow">
         <Grid Margin="0,0,0,7" ToolTip="{Binding Description}">
@@ -78,7 +67,7 @@
             <TextBlock Grid.Column="3" Text="{Binding Description}" Style="{StaticResource Caption}" VerticalAlignment="Center"
                        TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" Margin="0,0,8,0" />
             <CheckBox Grid.Column="4" IsChecked="{Binding IsEnabled}" Content="Enable"
-                      IsEnabled="{Binding IsUsed}" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                      IsEnabled="{Binding IsUsed}" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
         </Grid>
     </DataTemplate>
 

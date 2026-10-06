@@ -12,9 +12,9 @@
         </Grid.ColumnDefinitions>
 
         <!-- ============================== Console ============================== -->
-        <Border Background="{StaticResource TerminalBrush}" CornerRadius="10" Padding="0">
+        <Border Background="{DynamicResource TerminalBrush}" CornerRadius="10" Padding="0">
             <DockPanel>
-                <Border DockPanel.Dock="Bottom" BorderBrush="#1E293B" BorderThickness="0,1,0,0" Padding="12,10">
+                <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource TerminalBorderBrush}" BorderThickness="0,1,0,0" Padding="12,10">
                     <DockPanel>
                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="8,0,0,0">
                             <Button Style="{StaticResource PrimaryButton}" Command="{Binding SendCommand}" Content="Send" />
@@ -24,7 +24,7 @@
                                    VerticalAlignment="Center" Margin="2,0,8,0" />
                         <TextBox x:Name="Input" Text="{Binding Input, UpdateSourceTrigger=PropertyChanged}"
                                  FontFamily="{StaticResource MonoFont}" FontSize="13.5"
-                                 Background="#111A2E" Foreground="#E2E8F0" BorderBrush="#334155" CaretBrush="White">
+                                 Background="{DynamicResource TerminalInputBrush}" Foreground="{DynamicResource TerminalTextBrush}" BorderBrush="{DynamicResource TerminalBorderBrush}" CaretBrush="White">
                             <TextBox.InputBindings>
                                 <KeyBinding Key="Enter" Command="{Binding SendCommand}" />
                                 <KeyBinding Key="Up" Command="{Binding HistoryUpCommand}" />
@@ -33,7 +33,7 @@
                         </TextBox>
                     </DockPanel>
                 </Border>
-                <CheckBox DockPanel.Dock="Bottom" IsChecked="{Binding CheckErrors}" Margin="14,0,0,8" Foreground="#94A3B8" FontSize="12"
+                <CheckBox DockPanel.Dock="Bottom" IsChecked="{Binding CheckErrors}" Margin="14,0,0,8" Foreground="{DynamicResource TerminalMutedBrush}" FontSize="12"
                           Content="Check for errors (LERR?) after each command" />
                 <ListBox ItemsSource="{Binding Lines}" Background="Transparent" BorderThickness="0" Margin="8,10,8,8"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled" inf:AutoScrollBehavior.IsEnabled="True">
@@ -75,9 +75,9 @@
                                Text="Double-click a command to copy its example into the terminal. c = channel (0 T0, 1 T1, 2 A … 9 H), b = output (0 T0, 1 AB … 4 GH)." />
                     <Grid Margin="0,0,0,8">
                         <TextBox x:Name="FilterBox" Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}" Padding="30,0,8,0" />
-                        <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconSearch}" FontSize="12" Foreground="{StaticResource TextMutedBrush}"
+                        <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconSearch}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"
                                    HorizontalAlignment="Left" Margin="11,0,0,0" IsHitTestVisible="False" />
-                        <TextBlock Text="Search commands" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" Margin="31,0,0,0"
+                        <TextBlock Text="Search commands" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" Margin="31,0,0,0"
                                    IsHitTestVisible="False"
                                    Visibility="{Binding Filter, Converter={StaticResource NullToVisibility}, ConverterParameter=Invert}" />
                     </Grid>
@@ -92,7 +92,7 @@
                                     <TextBlock DockPanel.Dock="Right" Text="{Binding Category}" Style="{StaticResource Caption}" VerticalAlignment="Center" />
                                     <TextBlock Text="{Binding Syntax}" FontFamily="{StaticResource MonoFont}" FontWeight="SemiBold" FontSize="12.5" />
                                 </DockPanel>
-                                <TextBlock Text="{Binding Description}" TextWrapping="Wrap" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0" />
+                                <TextBlock Text="{Binding Description}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,2,0,0" />
                             </StackPanel>
                         </DataTemplate>
                     </ListBox.ItemTemplate>

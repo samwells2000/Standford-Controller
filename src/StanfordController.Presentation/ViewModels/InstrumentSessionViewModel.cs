@@ -4,6 +4,7 @@ using System.Windows.Input;
 using StanfordController.Core;
 using StanfordController.Core.Profiles;
 using StanfordController.Core.Protocol;
+using StanfordController.Core.Units;
 using StanfordController.Presentation.Mvvm;
 using StanfordController.Presentation.Services;
 
@@ -35,6 +36,7 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
     private ChoiceOption? _recallSlot;
     private IReadOnlyList<PulseTiming> _timing = [];
     private bool _disconnectRequested;
+    private bool _settingsMayBeStale;
 
     public InstrumentSessionViewModel(InstrumentProfile profile, Dg645Client client, IDialogService dialogs, LogViewModel log)
     {
@@ -57,7 +59,14 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         _recallSlot = RecallSlots[1];
 
         RefreshAllCommand = new AsyncRelayCommand(RefreshAllAsync, () => !IsBusy);
-        TriggerCommand = new AsyncRelayCommand(() => RunAsync("Trigger", () => Client.TriggerAsync()));
+        TriggerCommand = new AsyncRelayCommand(() => RunAsync("Trigger", () => Client.TriggerAsync()), () => Trigger.IsSingleShot);
+        Trigger.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(TriggerViewModel.IsSingleShot))
+            {
+                (TriggerCommand as IRaiseCanExecuteChanged)?.RaiseCanExecuteChanged();
+            }
+        };
         SaveToSlotCommand = new AsyncRelayCommand(SaveToSlotAsync, () => !IsBusy);
         RecallSlotCommand = new AsyncRelayCommand(RecallSlotAsync, () => !IsBusy);
         ExportSettingsCommand = new AsyncRelayCommand(ExportSettingsAsync, () => !IsBusy);
@@ -130,6 +139,13 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
     {
         get => _statusMessage;
         private set => SetProperty(ref _statusMessage, value);
+    }
+
+    /// <summary>True after settings were changed from the terminal, until the next Refresh all.</summary>
+    public bool SettingsMayBeStale
+    {
+        get => _settingsMayBeStale;
+        private set => SetProperty(ref _settingsMayBeStale, value);
     }
 
     public bool StatusIsError
@@ -242,6 +258,11 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         });
 
         RecomputeTiming();
+        if (!_disconnectRequested)
+        {
+            SettingsMayBeStale = false;
+        }
+
         if (!_statusIsError)
         {
             SetStatus($"Settings read at {DateTime.Now:HH:mm:ss}.");
@@ -278,7 +299,13 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         }
     }
 
-    public void NotifySettingsChanged() => RecomputeTiming();
+    public void NotifySettingsChanged()
+    {
+        RecomputeTiming();
+        SetStatus($"Change applied at {DateTime.Now:HH:mm:ss}.");
+    }
+
+    public void NotifyExternalChange() => SettingsMayBeStale = true;
 
     public void RequestDisconnect(string reason)
     {
@@ -313,6 +340,18 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         }
 
         Timing = pulses;
+
+        foreach (var output in Outputs)
+        {
+            var pulse = pulses.FirstOrDefault(p => p.Output == output.Output.ToString());
+            output.TimingText = pulse is null
+                ? "Fires at the start of every delay cycle."
+                : pulse.Start is null || pulse.End is null
+                    ? "Pulse timing cannot be resolved from the channel references."
+                    : pulse.End < pulse.Start
+                        ? $"No pulse: {pulse.EndChannel} is set before {pulse.StartChannel}."
+                        : $"Pulse T0 + {EngineeringUnits.Format(pulse.Start.Value, Quantity.Time)} → T0 + {EngineeringUnits.Format(pulse.End.Value, Quantity.Time)}, {EngineeringUnits.Format(pulse.Width, Quantity.Time)} wide";
+        }
 
         double? Resolve(Dg645Channel channel, HashSet<Dg645Channel> visiting)
         {

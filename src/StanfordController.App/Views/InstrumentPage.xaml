@@ -12,7 +12,7 @@
 
     <DockPanel>
         <!-- ============================== Header ============================== -->
-        <Border DockPanel.Dock="Top" Background="{StaticResource SurfaceBrush}" Padding="28,20,28,18">
+        <Border DockPanel.Dock="Top" Background="{DynamicResource SurfaceBrush}" Padding="28,20,28,18">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -22,19 +22,18 @@
                 <StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="{Binding Name}" Style="{StaticResource PageTitle}" MaxWidth="560" />
-                        <Border Style="{StaticResource Badge}" Margin="14,2,0,0"
-                                Background="{Binding State, Converter={StaticResource StateSoftBrush}}">
+                        <Border Style="{StaticResource StateBadge}" Tag="{Binding State}" Margin="14,2,0,0">
                             <StackPanel Orientation="Horizontal">
-                                <Ellipse Width="8" Height="8" Fill="{Binding State, Converter={StaticResource StateBrush}}" VerticalAlignment="Center" />
+                                <Ellipse Style="{StaticResource StateDot}" Tag="{Binding State}" Width="8" Height="8" VerticalAlignment="Center" />
                                 <TextBlock Text="{Binding StateText}" FontSize="12" FontWeight="SemiBold" Margin="6,0,0,0"
-                                           Foreground="{StaticResource TextSecondaryBrush}" />
+                                           Foreground="{DynamicResource TextSecondaryBrush}" />
                             </StackPanel>
                         </Border>
                     </StackPanel>
 
-                    <TextBlock Margin="0,6,0,0" Foreground="{StaticResource TextSecondaryBrush}">
+                    <TextBlock Margin="0,6,0,0" Foreground="{DynamicResource TextSecondaryBrush}">
                         <Run Text="{Binding Address, Mode=OneWay}" FontFamily="{StaticResource MonoFont}" />
-                        <Run Text="  ·  " Foreground="{StaticResource TextMutedBrush}" />
+                        <Run Text="  ·  " Foreground="{DynamicResource TextMutedBrush}" />
                         <Run Text="{Binding Location, Mode=OneWay, TargetNullValue='No location set'}" />
                     </TextBlock>
 
@@ -76,7 +75,7 @@
                 </StackPanel>
             </Grid>
         </Border>
-        <Border DockPanel.Dock="Top" Height="1" Background="{StaticResource BorderBrush}" />
+        <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource BorderBrush}" />
 
         <!-- ============================== Body ============================== -->
         <Grid>
@@ -92,16 +91,16 @@
 
                         <TextBlock Style="{StaticResource CardTitle}" FontSize="18" Text="{Binding StateText}" />
 
-                        <Border Background="{StaticResource DangerSoftBrush}" CornerRadius="8" Padding="12,10" Margin="0,12,0,4"
+                        <Border Background="{DynamicResource DangerSoftBrush}" CornerRadius="8" Padding="12,10" Margin="0,12,0,4"
                                 Visibility="{Binding LastError, Converter={StaticResource NullToVisibility}}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconWarning}" Foreground="{StaticResource DangerBrush}"
+                                <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconWarning}" Foreground="{DynamicResource DangerTextBrush}"
                                            VerticalAlignment="Top" Margin="0,2,10,0" />
-                                <TextBlock Grid.Column="1" Text="{Binding LastError}" TextWrapping="Wrap" Foreground="#991B1B" />
+                                <TextBlock Grid.Column="1" Text="{Binding LastError}" TextWrapping="Wrap" Foreground="{DynamicResource DangerStrongTextBrush}" />
                             </Grid>
                         </Border>
 

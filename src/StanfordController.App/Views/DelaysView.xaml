@@ -54,15 +54,18 @@
                                         <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
 
-                                    <Border Style="{StaticResource Badge}" Background="{Binding Channel, Converter={StaticResource OutputBrush}}"
-                                            MinWidth="36" ToolTip="{Binding Role}">
-                                        <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                    <Border Style="{StaticResource SeriesBadge}" Tag="{Binding Output}" ToolTip="{Binding Role}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Style="{StaticResource SeriesDot}" Tag="{Binding Output}" />
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Margin="6,0,0,0" Foreground="{DynamicResource TextBrush}" />
+                                        </StackPanel>
                                     </Border>
 
                                     <ComboBox Grid.Column="1" ItemsSource="{Binding ReferenceOptions}" SelectedItem="{Binding Reference}"
-                                              DisplayMemberPath="Label" ToolTip="Channel this delay is measured from (DLAY c,d,t)" />
+                                              DisplayMemberPath="Label" AutomationProperties.Name="Reference channel"
+                                              ToolTip="Channel this delay is measured from (DLAY c,d,t). Changing it keeps the delay value, so the time from T0 changes." />
 
-                                    <TextBlock Grid.Column="2" Text="+" FontSize="15" Foreground="{StaticResource TextMutedBrush}"
+                                    <TextBlock Grid.Column="2" Text="+" FontSize="15" Foreground="{DynamicResource TextMutedBrush}"
                                                HorizontalAlignment="Center" VerticalAlignment="Center" />
 
                                     <TextBox Grid.Column="3" Style="{StaticResource ParamTextBox}"
@@ -73,13 +76,13 @@
 
                                     <StackPanel Grid.Column="4" Orientation="Horizontal" Margin="6,0,0,0">
                                         <Button Style="{StaticResource IconButton}" Content="{StaticResource IconUp}" Command="{Binding StepUpCommand}"
-                                                ToolTip="Increase by the step size (SPDL c,1)" />
+                                                ToolTip="Increase by the step size (SPDL c,1)" AutomationProperties.Name="Increase delay by one step" />
                                         <Button Style="{StaticResource IconButton}" Content="{StaticResource IconDown}" Command="{Binding StepDownCommand}"
-                                                ToolTip="Decrease by the step size (SPDL c,0)" Margin="4,0,0,0" />
+                                                ToolTip="Decrease by the step size (SPDL c,0)" Margin="4,0,0,0" AutomationProperties.Name="Decrease delay by one step" />
                                     </StackPanel>
 
                                     <TextBlock Grid.Column="5" Text="{Binding AbsoluteText}" Style="{StaticResource MonoText}"
-                                               Foreground="{StaticResource TextSecondaryBrush}" Margin="12,0,8,0" />
+                                               Foreground="{DynamicResource TextSecondaryBrush}" Margin="12,0,8,0" />
 
                                     <ContentControl Grid.Column="6" Content="{Binding StepSize}" ContentTemplate="{StaticResource TextField}" Focusable="False" />
 
@@ -97,8 +100,15 @@
                 <StackPanel>
                     <TextBlock Style="{StaticResource CardTitle}" Text="Timing diagram" />
                     <TextBlock Style="{StaticResource CardSubtitle}"
-                               Text="Output pulses relative to T0, drawn from the delays above. Negative-polarity outputs are drawn inverted." />
-                    <controls:TimingDiagram Pulses="{Binding Timing}" Height="270" />
+                               Text="Output pulses relative to T0, drawn from the delays above. Negative-polarity outputs are drawn inverted. Hover for exact edge times." />
+                    <controls:TimingDiagram Pulses="{Binding Timing}" Height="290"
+                                            TextBrush="{DynamicResource TextBrush}" MutedBrush="{DynamicResource TextMutedBrush}"
+                                            GridBrush="{DynamicResource ChartGridBrush}" AxisBrush="{DynamicResource ChartAxisBrush}"
+                                            WarningBrush="{DynamicResource WarningTextBrush}" PanelBrush="{DynamicResource SurfaceBrush}"
+                                            T0Brush="{DynamicResource SeriesT0Brush}" ABBrush="{DynamicResource SeriesABBrush}"
+                                            CDBrush="{DynamicResource SeriesCDBrush}" EFBrush="{DynamicResource SeriesEFBrush}"
+                                            GHBrush="{DynamicResource SeriesGHBrush}"
+                                            AutomationProperties.Name="Timing diagram of the output pulses" />
                 </StackPanel>
             </Border>
         </StackPanel>

@@ -6,9 +6,11 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using StanfordController.App.Controls;
 using StanfordController.App.Dialogs;
 using StanfordController.App.Infrastructure;
 using StanfordController.Core.Protocol;
+using StanfordController.Presentation.Services;
 using StanfordController.Presentation.ViewModels;
 
 namespace StanfordController.App;
@@ -73,36 +75,35 @@ internal sealed class SmokeTest(MainWindow window, MainViewModel viewModel, stri
             await session.Terminal.SendAsync();
             await IdleAsync();
 
-            var tabs = AutoScrollBehavior.FindChild<TabControl>(window) ?? throw new InvalidOperationException("No tab control found.");
-            for (var i = 0; i < tabs.Items.Count; i++)
+            // Every page and dialog, in the light theme and then the dark theme. Switching at runtime
+            // also proves every colour is a DynamicResource that both palettes define.
+            foreach (var theme in new[] { AppTheme.Light, AppTheme.Dark })
             {
-                tabs.SelectedIndex = i;
+                viewModel.Theme = theme;
                 await IdleAsync();
-                var header = (tabs.Items[i] as TabItem)?.Header?.ToString() ?? $"tab{i}";
-                Capture(window, $"{i + 3:00}-{Slug(header)}");
-
-                // Also capture the bottom of pages that scroll.
-                if ((tabs.Items[i] as TabItem)?.Content is DependencyObject page
-                    && AutoScrollBehavior.FindChild<ScrollViewer>(page) is { ScrollableHeight: > 0 } viewer)
-                {
-                    viewer.ScrollToEnd();
-                    await IdleAsync();
-                    Capture(window, $"{i + 3:00}-{Slug(header)}-end");
-                    viewer.ScrollToHome();
-                }
+                var suffix = theme == AppTheme.Dark ? "-dark" : string.Empty;
+                await CapturePagesAsync(suffix);
+                await CaptureDialogsAsync(item, suffix);
             }
 
-            var editor = new ProfileEditorWindow { DataContext = new ProfileEditorViewModel(item.Profile, [], isNew: false), Owner = window };
-            editor.Show();
-            await IdleAsync();
-            Capture(editor, "90-edit-instrument");
-            editor.Close();
+            // A set command from the terminal flags the other pages as possibly out of date.
+            session.Terminal.Input = "TRAT 2500";
+            await session.Terminal.SendAsync();
+            if (!session.SettingsMayBeStale)
+            {
+                throw new InvalidOperationException("A set command from the terminal did not flag the pages as out of date.");
+            }
 
-            var discovery = new DiscoveryWindow { DataContext = new DiscoveryViewModel(), Owner = window };
-            discovery.Show();
             await IdleAsync();
-            Capture(discovery, "91-find-instruments");
-            discovery.Close();
+            Capture(window, "93-terminal-changed-settings-dark");
+            await session.RefreshAllAsync();
+            if (session.SettingsMayBeStale || session.Trigger.Rate.Text != "2.5 kHz")
+            {
+                throw new InvalidOperationException($"Refresh all did not pick up the terminal change (rate shows {session.Trigger.Rate.Text}).");
+            }
+
+            viewModel.Theme = AppTheme.Light;
+            await IdleAsync();
 
             await item.DisconnectAsync();
             await IdleAsync();
@@ -119,6 +120,52 @@ internal sealed class SmokeTest(MainWindow window, MainViewModel viewModel, stri
         }
 
         Finish();
+    }
+
+    private async Task CapturePagesAsync(string suffix)
+    {
+        var tabs = AutoScrollBehavior.FindChild<TabControl>(window) ?? throw new InvalidOperationException("No tab control found.");
+        for (var i = 0; i < tabs.Items.Count; i++)
+        {
+            tabs.SelectedIndex = i;
+            await IdleAsync();
+            var header = (tabs.Items[i] as TabItem)?.Header?.ToString() ?? $"tab{i}";
+            Capture(window, $"{i + 3:00}-{Slug(header)}{suffix}");
+
+            // Also capture the bottom of pages that scroll, with the timing diagram showing its hover read-out.
+            if ((tabs.Items[i] as TabItem)?.Content is DependencyObject page
+                && AutoScrollBehavior.FindChild<ScrollViewer>(page) is { ScrollableHeight: > 0 } viewer)
+            {
+                viewer.ScrollToEnd();
+                await IdleAsync();
+                var diagram = AutoScrollBehavior.FindChild<TimingDiagram>(page);
+                diagram?.SimulateHover(new Point(diagram.ActualWidth * 0.33, diagram.ActualHeight * 0.32));
+                await IdleAsync();
+                Capture(window, $"{i + 3:00}-{Slug(header)}-end{suffix}");
+                diagram?.SimulateHover(null);
+                viewer.ScrollToHome();
+            }
+        }
+
+        tabs.SelectedIndex = 0;
+    }
+
+    private async Task CaptureDialogsAsync(InstrumentItemViewModel item, string suffix)
+    {
+        var dialogs = new Window[]
+        {
+            new ProfileEditorWindow { DataContext = new ProfileEditorViewModel(item.Profile, [], isNew: false), Owner = window },
+            new DiscoveryWindow { DataContext = new DiscoveryViewModel(), Owner = window },
+            new AboutWindow { Owner = window },
+        };
+        var names = new[] { "90-edit-instrument", "91-find-instruments", "94-about" };
+        for (var i = 0; i < dialogs.Length; i++)
+        {
+            dialogs[i].Show();
+            await IdleAsync();
+            Capture(dialogs[i], names[i] + suffix);
+            dialogs[i].Close();
+        }
     }
 
     public void Fail(Exception exception)

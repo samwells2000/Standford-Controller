@@ -5,6 +5,8 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
+                <!-- Slot 0 is the colour palette; ThemeManager swaps it between Colors.Light and Colors.Dark. -->
+                <ResourceDictionary Source="Themes/Colors.Light.xaml" />
                 <ResourceDictionary Source="Themes/Theme.xaml" />
                 <ResourceDictionary Source="Themes/Templates.xaml" />
             </ResourceDictionary.MergedDictionaries>

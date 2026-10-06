@@ -13,33 +13,45 @@
         </Grid.RowDefinitions>
 
         <!-- ============================== Toolbar ============================== -->
-        <Border Background="{StaticResource SurfaceBrush}" Padding="24,10,24,10" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
+        <Border Background="{DynamicResource SurfaceBrush}" Padding="24,10,24,10" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
             <DockPanel>
                 <StackPanel Orientation="Horizontal">
-                    <Button Command="{Binding RefreshAllCommand}" ToolTip="Read every setting from the instrument again">
+                    <Button Command="{Binding RefreshAllCommand}" ToolTip="Read every setting from the instrument again (F5)">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconRefresh}" FontSize="12" />
                             <TextBlock Text="Refresh all" Margin="8,0,0,0" />
                         </StackPanel>
                     </Button>
                     <Button Command="{Binding TriggerCommand}" Margin="8,0,0,0"
-                            ToolTip="Send *TRG: starts a delay cycle when the trigger source is one of the single-shot modes">
+                            ToolTip="Send *TRG to start one delay cycle (Ctrl+T). Available when the trigger source is a single-shot mode (Trigger tab).">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconTrigger}" FontSize="12" />
                             <TextBlock Text="Single shot trigger" Margin="8,0,0,0" />
                         </StackPanel>
                     </Button>
-                    <Border Width="1" Background="{StaticResource BorderBrush}" Margin="14,4" />
+                    <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="14,4" />
                     <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding IsPolling}" Content="Live status"
                               ToolTip="Read the instrument status register in the background (Status &amp; diagnostics tab)" />
                     <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding Log.IsPanelVisible}" Content="Show log"
-                              Margin="18,0,0,0" ToolTip="Show every command sent and reply received" />
+                              Margin="18,0,0,0" ToolTip="Show every command sent and reply received (Ctrl+L)" />
                 </StackPanel>
+
+                <!-- Settings changed from the terminal: the pages may not show them yet. -->
+                <Button DockPanel.Dock="Right" HorizontalAlignment="Right" Command="{Binding RefreshAllCommand}" Margin="12,0,0,0"
+                        Background="{DynamicResource WarningSoftBrush}" BorderBrush="{DynamicResource WarningBorderBrush}"
+                        Foreground="{DynamicResource WarningStrongTextBrush}" Padding="10,4" MinHeight="28"
+                        ToolTip="Commands sent from the Terminal may have changed settings shown on other pages. Click to read everything again (F5)."
+                        Visibility="{Binding SettingsMayBeStale, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconRefresh}" FontSize="11" />
+                        <TextBlock Text="Pages may be out of date" Margin="6,0,0,0" FontSize="12" FontWeight="SemiBold" />
+                    </StackPanel>
+                </Button>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
                             Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}">
                     <ProgressBar IsIndeterminate="True" Width="120" VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding BusyText}" Margin="10,0,0,0" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding BusyText}" Margin="10,0,0,0" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" />
                 </StackPanel>
             </DockPanel>
         </Border>
@@ -73,14 +85,14 @@
         </TabControl>
 
         <!-- ============================== Log ============================== -->
-        <Border Grid.Row="2" Height="150" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0"
+        <Border Grid.Row="2" Height="150" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0"
                 Visibility="{Binding Log.IsPanelVisible, Converter={StaticResource BoolToVisibility}}">
             <DockPanel>
                 <DockPanel DockPanel.Dock="Top" Margin="24,8,18,4">
                     <TextBlock Text="Communication log" FontWeight="SemiBold" VerticalAlignment="Center" />
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                         <CheckBox IsChecked="{Binding Log.ShowTraffic}" Content="Show commands and replies" FontSize="12"
-                                  Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,12,0" VerticalAlignment="Center" />
+                                  Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,12,0" VerticalAlignment="Center" />
                         <Button Style="{StaticResource GhostButton}" Command="{Binding CopyLogCommand}" Padding="10,4" MinHeight="28" ToolTip="Copy the log to the clipboard">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconCopy}" FontSize="11" />
@@ -111,11 +123,9 @@
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{Binding TimeText}" Style="{StaticResource MonoText}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Width="96" />
-                                <TextBlock Text="{Binding Marker}" Style="{StaticResource MonoText}" FontSize="12" Width="20"
-                                           Foreground="{Binding Direction, Converter={StaticResource LogDirectionBrush}}" />
-                                <TextBlock Text="{Binding Text}" Style="{StaticResource MonoText}" FontSize="12"
-                                           Foreground="{Binding Direction, Converter={StaticResource LogDirectionBrush}}" />
+                                <TextBlock Text="{Binding TimeText}" Style="{StaticResource MonoText}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Width="96" />
+                                <TextBlock Text="{Binding Marker}" Style="{StaticResource LogText}" Width="20" />
+                                <TextBlock Text="{Binding Text}" Style="{StaticResource LogText}" />
                             </StackPanel>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
@@ -124,17 +134,17 @@
         </Border>
 
         <!-- ============================== Status bar ============================== -->
-        <Border Grid.Row="3" Background="{StaticResource SurfaceAltBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="24,6">
+        <Border Grid.Row="3" Background="{DynamicResource SurfaceAltBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="24,6">
             <DockPanel>
-                <TextBlock DockPanel.Dock="Right" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="16,0,0,0"
+                <TextBlock DockPanel.Dock="Right" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="16,0,0,0"
                            Text="Edit a field, then press Enter (or move to another field) to apply it. Esc reverts." />
                 <TextBlock Text="{Binding StatusMessage}" FontSize="12" TextTrimming="CharacterEllipsis">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
-                            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding StatusIsError}" Value="True">
-                                    <Setter Property="Foreground" Value="{StaticResource DangerBrush}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>

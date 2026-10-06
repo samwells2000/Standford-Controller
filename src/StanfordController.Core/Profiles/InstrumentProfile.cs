@@ -37,6 +37,11 @@ public sealed class InstrumentProfile
 
     public InstrumentProfile Clone() => (InstrumentProfile)MemberwiseClone();
 
+    /// <summary>"192.168.1.300" or "10.0.1" would otherwise pass as DNS names and fail only when connecting.</summary>
+    private static bool LooksLikeBadIPv4(string host) =>
+        host.All(c => char.IsDigit(c) || c == '.')
+        && !(host.Count(c => c == '.') == 3 && System.Net.IPAddress.TryParse(host, out _));
+
     public IDg645Transport CreateTransport() => IsSimulator
         ? new SimulatorTransport()
         : new TcpTransport(Host, Port, TimeSpan.FromMilliseconds(Math.Max(TimeoutMs, 500)));
@@ -65,7 +70,7 @@ public sealed class InstrumentProfile
             {
                 problems.Add("Enter the instrument's IP address or host name.");
             }
-            else if (Uri.CheckHostName(Host.Trim()) == UriHostNameType.Unknown)
+            else if (Uri.CheckHostName(Host.Trim()) == UriHostNameType.Unknown || LooksLikeBadIPv4(Host.Trim()))
             {
                 problems.Add($"\"{Host.Trim()}\" is not a valid IP address or host name.");
             }

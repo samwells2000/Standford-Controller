@@ -124,6 +124,13 @@ public sealed class TerminalViewModel : ParameterViewModel
         await RunAsync(async () =>
         {
             var result = await Client.ExecuteRawAsync(line, _checkErrors);
+
+            // Any set command may have changed what the other pages show.
+            if (line.Split(';').Any(part => part.Trim().Length > 0 && !part.Contains('?')))
+            {
+                Context.NotifyExternalChange();
+            }
+
             foreach (var response in result.Responses)
             {
                 Lines.Add(new TerminalLine(TerminalLineKind.Response, response));

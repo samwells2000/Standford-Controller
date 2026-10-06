@@ -4,13 +4,27 @@
         xmlns:vm="clr-namespace:StanfordController.Presentation.ViewModels;assembly=StanfordController.Presentation"
         xmlns:views="clr-namespace:StanfordController.App.Views"
         xmlns:inf="clr-namespace:StanfordController.App.Infrastructure"
-        Title="Stanford DG645 Controller"
+        Title="{Binding WindowTitle}"
         Width="1360" Height="880" MinWidth="1080" MinHeight="680"
         WindowStartupLocation="CenterScreen"
         FontFamily="{StaticResource UiFont}" FontSize="13"
-        Background="{StaticResource WindowBrush}"
+        Background="{DynamicResource WindowBrush}"
         Icon="Assets/app.ico"
-        Closing="OnClosing">
+        Closing="OnClosing"
+        SourceInitialized="OnSourceInitialized">
+
+    <Window.InputBindings>
+        <KeyBinding Key="N" Modifiers="Control" Command="{Binding AddInstrumentCommand}" />
+        <KeyBinding Key="F" Modifiers="Control" Command="{Binding DiscoverCommand}" />
+        <KeyBinding Key="F5" Command="{Binding RefreshCommand}" />
+        <KeyBinding Key="T" Modifiers="Control" Command="{Binding TriggerCommand}" />
+        <KeyBinding Key="S" Modifiers="Control" Command="{Binding SaveSettingsFileCommand}" />
+        <KeyBinding Key="O" Modifiers="Control" Command="{Binding LoadSettingsFileCommand}" />
+        <KeyBinding Key="L" Modifiers="Control" Command="{Binding ToggleLogCommand}" />
+        <KeyBinding Key="K" Modifiers="Control" Command="{Binding ConnectSelectedCommand}" />
+        <KeyBinding Key="K" Modifiers="Control+Shift" Command="{Binding DisconnectSelectedCommand}" />
+        <KeyBinding Key="F1" Command="{Binding AboutCommand}" />
+    </Window.InputBindings>
 
     <Window.Resources>
         <DataTemplate DataType="{x:Type vm:InstrumentItemViewModel}">
@@ -18,30 +32,30 @@
         </DataTemplate>
     </Window.Resources>
 
-    <Grid Background="{StaticResource WindowBrush}">
+    <Grid Background="{DynamicResource WindowBrush}">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="290" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
         <!-- ================================ Sidebar ================================ -->
-        <Border Background="{StaticResource SidebarBrush}">
+        <Border Background="{DynamicResource SidebarBrush}">
             <DockPanel>
                 <!-- Brand -->
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="20,22,20,22">
                     <Image Source="Assets/logo.png" Width="34" Height="34" RenderOptions.BitmapScalingMode="HighQuality" />
                     <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                         <TextBlock Text="DG645 Controller" Foreground="White" FontSize="16" FontWeight="SemiBold" />
-                        <TextBlock Text="Stanford Research Systems" Foreground="{StaticResource SidebarMutedBrush}" FontSize="11.5" />
+                        <TextBlock Text="Stanford Research Systems" Foreground="{DynamicResource SidebarMutedBrush}" FontSize="11.5" />
                     </StackPanel>
                 </StackPanel>
 
                 <!-- List header -->
                 <Grid DockPanel.Dock="Top" Margin="22,0,14,8">
-                    <TextBlock Text="SAVED INSTRUMENTS" Foreground="{StaticResource SidebarMutedBrush}" FontSize="11" FontWeight="SemiBold"
+                    <TextBlock Text="SAVED INSTRUMENTS" Foreground="{DynamicResource SidebarMutedBrush}" FontSize="11" FontWeight="SemiBold"
                                VerticalAlignment="Center" />
                     <Button Style="{StaticResource SidebarButton}" HorizontalAlignment="Right" Padding="8,4"
-                            Command="{Binding AddInstrumentCommand}" ToolTip="Add an instrument by IP address">
+                            Command="{Binding AddInstrumentCommand}" ToolTip="Add an instrument by IP address (Ctrl+N)">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconAdd}" FontSize="11" />
                             <TextBlock Text="Add" Margin="6,0,0,0" FontSize="12" />
@@ -50,10 +64,10 @@
                 </Grid>
 
                 <!-- Bottom actions -->
-                <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource SidebarDividerBrush}" BorderThickness="0,1,0,0" Padding="10,10,10,14">
+                <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource SidebarDividerBrush}" BorderThickness="0,1,0,0" Padding="10,10,10,14">
                     <StackPanel>
                         <Button Style="{StaticResource SidebarButton}" Command="{Binding DiscoverCommand}"
-                                ToolTip="Scan your local network for DG645s">
+                                ToolTip="Scan your local network for DG645s (Ctrl+F)">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconSearch}" Width="20" />
                                 <TextBlock Text="Find instruments on network…" Margin="8,0,0,0" />
@@ -82,6 +96,30 @@
                                 </StackPanel>
                             </Button>
                         </UniformGrid>
+
+                        <!-- Appearance -->
+                        <Border Background="{DynamicResource SidebarSegmentBrush}" CornerRadius="7" Padding="3" Margin="2,10,2,0"
+                                ToolTip="Colour theme. System follows the Windows light/dark app setting.">
+                            <UniformGrid Columns="3">
+                                <RadioButton Style="{StaticResource SegmentButton}" GroupName="Theme" IsChecked="{Binding IsSystemTheme}"
+                                             Content="System" AutomationProperties.Name="Follow the Windows theme" />
+                                <RadioButton Style="{StaticResource SegmentButton}" GroupName="Theme" IsChecked="{Binding IsLightTheme}"
+                                             Content="Light" AutomationProperties.Name="Light theme" />
+                                <RadioButton Style="{StaticResource SegmentButton}" GroupName="Theme" IsChecked="{Binding IsDarkTheme}"
+                                             Content="Dark" AutomationProperties.Name="Dark theme" />
+                            </UniformGrid>
+                        </Border>
+
+                        <DockPanel Margin="12,10,4,0">
+                            <Button DockPanel.Dock="Right" Style="{StaticResource SidebarButton}" Padding="8,3" FontSize="12"
+                                    Command="{Binding AboutCommand}" ToolTip="Version, documentation and keyboard shortcuts (F1)">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconInfo}" FontSize="11" />
+                                    <TextBlock Text="About" Margin="6,0,0,0" />
+                                </StackPanel>
+                            </Button>
+                            <TextBlock Text="{Binding VersionText}" Foreground="{DynamicResource SidebarMutedBrush}" FontSize="11.5" VerticalAlignment="Center" />
+                        </DockPanel>
                     </StackPanel>
                 </Border>
 
@@ -92,7 +130,13 @@
                              ItemContainerStyle="{StaticResource SidebarItem}"
                              ItemsSource="{Binding Instruments}"
                              SelectedItem="{Binding SelectedInstrument}"
-                             inf:DoubleClickBehavior.Command="{Binding ConnectInstrumentCommand}">
+                             inf:DoubleClickBehavior.Command="{Binding ConnectInstrumentCommand}"
+                             AutomationProperties.Name="Saved instruments">
+                        <ListBox.InputBindings>
+                            <KeyBinding Key="Enter" Command="{Binding ConnectSelectedCommand}" />
+                            <KeyBinding Key="Delete" Command="{Binding RemoveInstrumentCommand}" />
+                            <KeyBinding Key="F2" Command="{Binding EditInstrumentCommand}" />
+                        </ListBox.InputBindings>
                         <ListBox.ItemTemplate>
                             <DataTemplate DataType="{x:Type vm:InstrumentItemViewModel}">
                                 <Grid ToolTip="{Binding LastSeen}" Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBox}}">
@@ -100,12 +144,12 @@
                                         <ColumnDefinition Width="18" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <Ellipse Width="9" Height="9" VerticalAlignment="Top" Margin="0,5,0,0" HorizontalAlignment="Left"
-                                             Fill="{Binding State, Converter={StaticResource StateBrush}}" />
+                                    <Ellipse Style="{StaticResource StateDot}" Tag="{Binding State}" VerticalAlignment="Top" Margin="0,5,0,0"
+                                             HorizontalAlignment="Left" ToolTip="{Binding StateText}" />
                                     <StackPanel Grid.Column="1">
-                                        <TextBlock Text="{Binding Name}" Foreground="{StaticResource SidebarTextBrush}" FontWeight="SemiBold"
+                                        <TextBlock Text="{Binding Name}" Foreground="{DynamicResource SidebarTextBrush}" FontWeight="SemiBold"
                                                    TextTrimming="CharacterEllipsis" />
-                                        <TextBlock Text="{Binding Subtitle}" Foreground="{StaticResource SidebarMutedBrush}" FontSize="11.5"
+                                        <TextBlock Text="{Binding Subtitle}" Foreground="{DynamicResource SidebarMutedBrush}" FontSize="11.5"
                                                    TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
                                     </StackPanel>
                                     <Grid.ContextMenu>
@@ -132,7 +176,7 @@
                         </ListBox.ItemTemplate>
                     </ListBox>
 
-                    <TextBlock Margin="24,8,24,0" TextWrapping="Wrap" Foreground="{StaticResource SidebarMutedBrush}" FontSize="12.5"
+                    <TextBlock Margin="24,8,24,0" TextWrapping="Wrap" Foreground="{DynamicResource SidebarMutedBrush}" FontSize="12.5"
                                Visibility="{Binding HasInstruments, Converter={StaticResource BoolToVisibility}, ConverterParameter=Invert}"
                                Text="No instruments saved yet. Add one by IP address, find one on the network, or try the demo instrument." />
                 </Grid>

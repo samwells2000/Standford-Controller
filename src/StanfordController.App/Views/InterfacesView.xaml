@@ -22,9 +22,9 @@
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconWarning}" Foreground="{StaticResource WarningBrush}"
+                            <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconWarning}" Foreground="{DynamicResource WarningTextBrush}"
                                        VerticalAlignment="Top" Margin="0,2,10,0" />
-                            <TextBlock Grid.Column="1" TextWrapping="Wrap" Foreground="#92400E" FontSize="12.5"
+                            <TextBlock Grid.Column="1" TextWrapping="Wrap" Foreground="{DynamicResource WarningStrongTextBrush}" FontSize="12.5"
                                        Text="Changes are stored immediately but take effect only after the LAN interface is reset or the instrument is power-cycled. A wrong setting can make the instrument unreachable over the network; it can always be corrected from the front panel." />
                         </Grid>
                     </Border>
@@ -109,7 +109,7 @@
                                 </StackPanel>
                             </Button>
                         </WrapPanel>
-                        <TextBlock Text="{Binding LockStatus}" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"
+                        <TextBlock Text="{Binding LockStatus}" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"
                                    Visibility="{Binding LockStatus, Converter={StaticResource NullToVisibility}}" />
                         <TextBlock Style="{StaticResource ErrorText}" Text="{Binding Error}"
                                    Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />

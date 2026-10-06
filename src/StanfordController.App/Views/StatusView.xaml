@@ -21,7 +21,7 @@
                         </Grid>
                         <TextBlock Style="{StaticResource CardSubtitle}">
                             <Run Text="Events since the indicators were last cleared (INSR? / INSE)." />
-                            <Run Text="{Binding Status.LastPollText, Mode=OneWay}" Foreground="{StaticResource TextMutedBrush}" />
+                            <Run Text="{Binding Status.LastPollText, Mode=OneWay}" Foreground="{DynamicResource TextMutedBrush}" />
                         </TextBlock>
                         <ItemsControl ItemsSource="{Binding Status.InstrumentBits}" ItemTemplate="{StaticResource StatusBitRow}" Focusable="False" />
                         <WrapPanel Margin="0,8,0,0">
@@ -58,7 +58,7 @@
                     <StackPanel>
                         <TextBlock Style="{StaticResource CardTitle}" Text="Errors" />
                         <TextBlock Style="{StaticResource CardSubtitle}" Text="Commands the instrument rejected, newest first." />
-                        <Border BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="6" Height="150">
+                        <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6" Height="150">
                             <Grid>
                                 <ListBox ItemsSource="{Binding Status.Errors}" Style="{StaticResource PlainList}"
                                          ItemContainerStyle="{StaticResource PlainListItem}" Margin="2">
@@ -66,8 +66,8 @@
                                         <DataTemplate>
                                             <StackPanel Orientation="Horizontal">
                                                 <TextBlock Text="{Binding TimeText}" Style="{StaticResource MonoText}" FontSize="12"
-                                                           Foreground="{StaticResource TextMutedBrush}" Width="70" />
-                                                <TextBlock Text="{Binding Summary}" FontSize="12.5" Foreground="{StaticResource DangerBrush}" />
+                                                           Foreground="{DynamicResource TextMutedBrush}" Width="70" />
+                                                <TextBlock Text="{Binding Summary}" FontSize="12.5" Foreground="{DynamicResource DangerTextBrush}" />
                                             </StackPanel>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>

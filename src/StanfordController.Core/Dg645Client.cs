@@ -41,6 +41,7 @@ public sealed record RawCommandResult(IReadOnlyList<string> Responses, IReadOnly
 /// </summary>
 public sealed class Dg645Client(IDg645Transport transport) : IAsyncDisposable
 {
+    private static readonly AsyncLocal<bool> QuietTraffic = new();
     private readonly SemaphoreSlim _gate = new(1, 1);
 
     public TimeSpan QueryTimeout { get; set; } = TimeSpan.FromSeconds(3);
@@ -692,6 +693,29 @@ public sealed class Dg645Client(IDg645Transport transport) : IAsyncDisposable
         return errors;
     }
 
-    private void Log(CommunicationDirection direction, string text) =>
+    /// <summary>
+    /// Within the returned scope, commands and replies on this async flow are not reported through
+    /// <see cref="Communication"/> (errors still are). Used for background polling so the log stays readable.
+    /// </summary>
+    public IDisposable SuppressTrafficLogging()
+    {
+        var previous = QuietTraffic.Value;
+        QuietTraffic.Value = true;
+        return new QuietScope(previous);
+    }
+
+    private void Log(CommunicationDirection direction, string text)
+    {
+        if (QuietTraffic.Value && direction is CommunicationDirection.Sent or CommunicationDirection.Received)
+        {
+            return;
+        }
+
         Communication?.Invoke(this, new CommunicationEventArgs(direction, text));
+    }
+
+    private sealed class QuietScope(bool previous) : IDisposable
+    {
+        public void Dispose() => QuietTraffic.Value = previous;
+    }
 }

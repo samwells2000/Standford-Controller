@@ -6,10 +6,10 @@
         Width="720" Height="600" MinWidth="560" MinHeight="460"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
         FontFamily="{StaticResource UiFont}" FontSize="13"
-        Background="{StaticResource SurfaceBrush}"
+        Background="{DynamicResource SurfaceBrush}"
         Closing="OnClosing">
 
-    <Border Background="{StaticResource SurfaceBrush}" Padding="28,24,28,22">
+    <Border Background="{DynamicResource SurfaceBrush}" Padding="28,24,28,22">
     <DockPanel>
         <StackPanel DockPanel.Dock="Top">
             <TextBlock Text="Find instruments on the network" Style="{StaticResource PageTitle}" FontSize="19" />
@@ -52,7 +52,7 @@
 
             <ProgressBar Value="{Binding Progress, Mode=OneWay}" Maximum="1" Margin="0,0,0,8"
                          Visibility="{Binding IsScanning, Converter={StaticResource BoolToVisibility}}" />
-            <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,10" />
+            <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,10" />
         </StackPanel>
 
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
@@ -61,7 +61,7 @@
                     IsEnabled="{Binding Selected, Converter={StaticResource NotNull}}" />
         </StackPanel>
 
-        <Border BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8">
+        <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8">
             <ListBox ItemsSource="{Binding Results}" SelectedItem="{Binding Selected}" Style="{StaticResource PlainList}"
                      ItemContainerStyle="{StaticResource PlainListItem}" Margin="4" MouseDoubleClick="OnResultDoubleClick">
                 <ListBox.ItemTemplate>
@@ -72,14 +72,11 @@
                                 <ColumnDefinition Width="140" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <Border Style="{StaticResource Badge}" Margin="0,0,12,0" MinWidth="64">
-                                <Border.Background>
-                                    <SolidColorBrush Color="#E2E8F0" />
-                                </Border.Background>
+                            <Border Style="{StaticResource Badge}" Margin="0,0,12,0" MinWidth="64" Background="{DynamicResource SurfaceHoverBrush}">
                                 <TextBlock Text="{Binding Model}" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center" />
                             </Border>
                             <TextBlock Grid.Column="1" Text="{Binding Address}" Style="{StaticResource MonoText}" />
-                            <TextBlock Grid.Column="2" Text="{Binding Identity}" Foreground="{StaticResource TextSecondaryBrush}"
+                            <TextBlock Grid.Column="2" Text="{Binding Identity}" Foreground="{DynamicResource TextSecondaryBrush}"
                                        TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip="{Binding Identity}" />
                         </Grid>
                     </DataTemplate>

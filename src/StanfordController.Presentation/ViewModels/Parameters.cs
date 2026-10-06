@@ -23,6 +23,9 @@ public interface IInstrumentContext
 
     /// <summary>Ends the session, e.g. after the LAN interface was reset.</summary>
     void RequestDisconnect(string reason);
+
+    /// <summary>Settings may have been changed behind the pages' backs (e.g. from the terminal).</summary>
+    void NotifyExternalChange();
 }
 
 public sealed record ChoiceOption(int Value, string Label)

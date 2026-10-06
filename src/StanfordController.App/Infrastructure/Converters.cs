@@ -2,8 +2,6 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
-using StanfordController.Core;
-using StanfordController.Core.Protocol;
 using StanfordController.Presentation.ViewModels;
 
 namespace StanfordController.App.Infrastructure;
@@ -60,51 +58,6 @@ public sealed class InverseBoolConverter : IValueConverter
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => value is not true;
 }
 
-/// <summary>Maps an output (or a channel/output name such as "AB" or "C") to its theme colour.</summary>
-public sealed class OutputBrushConverter : IValueConverter
-{
-    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-    {
-        var key = value switch
-        {
-            Dg645Output output => output.ToString(),
-            Dg645Channel channel => channel switch
-            {
-                Dg645Channel.A or Dg645Channel.B => "AB",
-                Dg645Channel.C or Dg645Channel.D => "CD",
-                Dg645Channel.E or Dg645Channel.F => "EF",
-                Dg645Channel.G or Dg645Channel.H => "GH",
-                _ => "T0",
-            },
-            string s => s,
-            _ => "T0",
-        };
-
-        return Application.Current.TryFindResource($"Output{key}Brush") as Brush ?? Brushes.Gray;
-    }
-
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
-        throw new NotSupportedException();
-}
-
-public sealed class ConnectionStateBrushConverter : IValueConverter
-{
-    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-    {
-        var key = value switch
-        {
-            ConnectionState.Connected => "SuccessBrush",
-            ConnectionState.Connecting => "WarningBrush",
-            ConnectionState.Failed => "DangerBrush",
-            _ => "SidebarMutedBrush",
-        };
-        return Application.Current.TryFindResource(key) as Brush ?? Brushes.Gray;
-    }
-
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
-        throw new NotSupportedException();
-}
-
 public sealed class TerminalLineBrushConverter : IValueConverter
 {
     private static readonly Brush Command = Frozen("#93C5FD");
@@ -131,40 +84,3 @@ public sealed class TerminalLineBrushConverter : IValueConverter
     }
 }
 
-public sealed class LogDirectionBrushConverter : IValueConverter
-{
-    private static readonly Brush Sent = TerminalLineBrushConverter.Frozen("#2563EB");
-    private static readonly Brush Received = TerminalLineBrushConverter.Frozen("#059669");
-    private static readonly Brush Error = TerminalLineBrushConverter.Frozen("#DC2626");
-    private static readonly Brush Info = TerminalLineBrushConverter.Frozen("#64748B");
-
-    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) => value switch
-    {
-        CommunicationDirection.Sent => Sent,
-        CommunicationDirection.Received => Received,
-        CommunicationDirection.Error => Error,
-        _ => Info,
-    };
-
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
-        throw new NotSupportedException();
-}
-
-/// <summary>Picks the soft background for the connection badge in the instrument header.</summary>
-public sealed class ConnectionStateSoftBrushConverter : IValueConverter
-{
-    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-    {
-        var key = value switch
-        {
-            ConnectionState.Connected => "SuccessSoftBrush",
-            ConnectionState.Connecting => "WarningSoftBrush",
-            ConnectionState.Failed => "DangerSoftBrush",
-            _ => "SurfaceAltBrush",
-        };
-        return Application.Current.TryFindResource(key) as Brush ?? Brushes.Transparent;
-    }
-
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
-        throw new NotSupportedException();
-}

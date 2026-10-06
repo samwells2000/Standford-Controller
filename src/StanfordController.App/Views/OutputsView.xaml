@@ -24,14 +24,17 @@
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <Border Style="{StaticResource Badge}" Background="{Binding Output, Converter={StaticResource OutputBrush}}" MinWidth="44"
-                                            VerticalAlignment="Top">
-                                        <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold" FontSize="13" HorizontalAlignment="Center" />
+                                    <Border Style="{StaticResource SeriesBadge}" Tag="{Binding Output}" VerticalAlignment="Top">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Style="{StaticResource SeriesDot}" Tag="{Binding Output}" />
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13" Margin="6,0,0,0" Foreground="{DynamicResource TextBrush}" />
+                                        </StackPanel>
                                     </Border>
                                     <StackPanel Grid.Column="1" Margin="12,0,0,0">
-                                        <TextBlock Text="{Binding Description}" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding Description}" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" />
                                         <TextBlock Text="{Binding LevelSummary}" Style="{StaticResource MonoText}" FontSize="12" Margin="0,3,0,0"
-                                                   Foreground="{StaticResource TextBrush}" />
+                                                   Foreground="{DynamicResource TextBrush}" />
+                                        <TextBlock Text="{Binding TimingText}" Style="{StaticResource Caption}" Margin="0,3,0,0" />
                                     </StackPanel>
                                 </Grid>
 
@@ -43,8 +46,8 @@
                                         </Grid.ColumnDefinitions>
                                         <ContentControl Content="{Binding Amplitude}" ContentTemplate="{StaticResource TextField}" Focusable="False" />
                                         <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="6,0,0,0" VerticalAlignment="Top">
-                                            <Button Style="{StaticResource IconButton}" Content="{StaticResource IconUp}" Command="{Binding AmplitudeUpCommand}" ToolTip="Step up (SPLA b,1)" />
-                                            <Button Style="{StaticResource IconButton}" Content="{StaticResource IconDown}" Command="{Binding AmplitudeDownCommand}" ToolTip="Step down (SPLA b,0)" Margin="4,0,0,0" />
+                                            <Button Style="{StaticResource IconButton}" Content="{StaticResource IconUp}" Command="{Binding AmplitudeUpCommand}" ToolTip="Step up (SPLA b,1)" AutomationProperties.Name="Increase amplitude by one step" />
+                                            <Button Style="{StaticResource IconButton}" Content="{StaticResource IconDown}" Command="{Binding AmplitudeDownCommand}" ToolTip="Step down (SPLA b,0)" Margin="4,0,0,0" AutomationProperties.Name="Decrease amplitude by one step" />
                                         </StackPanel>
                                     </Grid>
                                 </HeaderedContentControl>
@@ -57,8 +60,8 @@
                                         </Grid.ColumnDefinitions>
                                         <ContentControl Content="{Binding Offset}" ContentTemplate="{StaticResource TextField}" Focusable="False" />
                                         <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="6,0,0,0" VerticalAlignment="Top">
-                                            <Button Style="{StaticResource IconButton}" Content="{StaticResource IconUp}" Command="{Binding OffsetUpCommand}" ToolTip="Step up (SPLO b,1)" />
-                                            <Button Style="{StaticResource IconButton}" Content="{StaticResource IconDown}" Command="{Binding OffsetDownCommand}" ToolTip="Step down (SPLO b,0)" Margin="4,0,0,0" />
+                                            <Button Style="{StaticResource IconButton}" Content="{StaticResource IconUp}" Command="{Binding OffsetUpCommand}" ToolTip="Step up (SPLO b,1)" AutomationProperties.Name="Increase offset by one step" />
+                                            <Button Style="{StaticResource IconButton}" Content="{StaticResource IconDown}" Command="{Binding OffsetDownCommand}" ToolTip="Step down (SPLO b,0)" Margin="4,0,0,0" AutomationProperties.Name="Decrease offset by one step" />
                                         </StackPanel>
                                     </Grid>
                                 </HeaderedContentControl>

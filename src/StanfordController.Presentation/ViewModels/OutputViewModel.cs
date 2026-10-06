@@ -12,6 +12,8 @@ public sealed class OutputViewModel : ParameterViewModel
     public const double NimAmplitude = 0.8;
     public const double NimOffset = -0.8;
 
+    private string _timingText = string.Empty;
+
     public OutputViewModel(IInstrumentContext context, Dg645Output output)
         : base(context, $"Output {output}")
     {
@@ -60,6 +62,13 @@ public sealed class OutputViewModel : ParameterViewModel
     public string Description => Output == Dg645Output.T0
         ? "Marks the start of each delay cycle."
         : $"High from {Output.ToString()[0]} to {Output.ToString()[1]} (positive polarity).";
+
+    /// <summary>When this output pulses, from the channel delays (kept up to date by the session).</summary>
+    public string TimingText
+    {
+        get => _timingText;
+        set => SetProperty(ref _timingText, value);
+    }
 
     public EditableParameterViewModel<double> Amplitude { get; }
 
