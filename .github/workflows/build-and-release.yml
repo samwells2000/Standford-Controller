@@ -81,27 +81,6 @@ jobs:
           if (Test-Path $log) { Get-Content $log } else { Write-Warning 'No smoke test log was written.' }
           if ($process.ExitCode -ne 0) { throw "The smoke test failed with exit code $($process.ExitCode)." }
 
-      # TEMPORARY: prints JPEG previews of the screenshots into the log for review.
-      - name: Print screenshot previews
-        if: always() && github.ref != 'refs/heads/main'
-        shell: pwsh
-        run: |
-          Add-Type -AssemblyName PresentationCore
-          $dir = Join-Path $env:RUNNER_TEMP 'smoke-test'
-          Get-ChildItem $dir -Filter '*.png' | Where-Object { $_.Name -match '^(03|04|05|10|91|92)' } | Sort-Object Name | ForEach-Object {
-            $decoder = [System.Windows.Media.Imaging.BitmapDecoder]::Create([Uri]$_.FullName, 'None', 'OnLoad')
-            $frame = $decoder.Frames[0]
-            $jpeg = New-Object System.Windows.Media.Imaging.JpegBitmapEncoder
-            $jpeg.QualityLevel = 88
-            $jpeg.Frames.Add([System.Windows.Media.Imaging.BitmapFrame]::Create($frame))
-            $ms = New-Object System.IO.MemoryStream
-            $jpeg.Save($ms)
-            $b64 = [Convert]::ToBase64String($ms.ToArray())
-            Write-Output "=====BEGIN $($_.BaseName)====="
-            for ($i = 0; $i -lt $b64.Length; $i += 3000) { Write-Output $b64.Substring($i, [Math]::Min(3000, $b64.Length - $i)) }
-            Write-Output "=====END $($_.BaseName)====="
-          }
-
       - name: Upload smoke test screenshots
         if: always()
         uses: actions/upload-artifact@v7

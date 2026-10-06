@@ -25,7 +25,8 @@ A new release is built automatically every time `main` changes (see [Releases](#
   duplicate, reorder, remove, and import/export the list to share it with colleagues.
 * **Find instruments on the network.** Scans the PC's local subnets for instruments on port 5025 and
   reads their identity, or checks a single address. Add one with a click.
-* **Connection test** before saving, and several instruments connected at once.
+* **Connection test** before saving, several instruments connected at once, and an optional
+  "connect automatically when the program starts" per instrument.
 * **Delays & timing.** Channels A–H with reference channel (T0, A–H) and delay, step size and ▲/▼ step
   buttons, time from T0, and a live timing diagram of the AB, CD, EF and GH pulses with pulse widths
   and a hover read-out of exact edge times. Values accept units: `1.5 us`, `250 ns`, `2 ms`, `1e-6`.
@@ -58,6 +59,8 @@ A new release is built automatically every time `main` changes (see [Releases](#
 
 These are rendered by the CI smoke test against the built-in simulated DG645, at the program's minimum
 window size.
+
+![Dark theme](docs/screenshots/dark.jpg)
 
 | | |
 | --- | --- |
