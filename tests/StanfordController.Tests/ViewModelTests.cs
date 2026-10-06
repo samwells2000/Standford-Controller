@@ -159,6 +159,29 @@ public class ViewModelTests
     }
 
     [Fact]
+    public async Task PrescalersSplitIntoTriggerInputAndOutputs()
+    {
+        var (session, simulator) = await CreateSessionAsync();
+        Assert.Null(session.Trigger.TriggerPrescaler.Phase);
+        Assert.Equal(["Output AB", "Output CD", "Output EF", "Output GH"], session.Trigger.OutputPrescalers.Select(p => p.Name));
+        Assert.All(session.Trigger.OutputPrescalers, p => Assert.NotNull(p.Phase));
+
+        var cd = session.Trigger.OutputPrescalers[1];
+        cd.Factor.Text = "4";
+        await ((Presentation.Mvvm.AsyncRelayCommand)cd.Factor.CommitCommand).ExecuteAsync();
+        cd.Phase!.Text = "3";
+        await ((Presentation.Mvvm.AsyncRelayCommand)cd.Phase.CommitCommand).ExecuteAsync();
+        Assert.Contains("PRES 2,4", simulator.ReceivedLines);
+        Assert.Contains("PHAS 2,3", simulator.ReceivedLines);
+
+        // Phase must be below the factor; the instrument rejects it and the field shows the reason.
+        cd.Phase.Text = "9";
+        await ((Presentation.Mvvm.AsyncRelayCommand)cd.Phase.CommitCommand).ExecuteAsync();
+        Assert.True(cd.Phase.HasError);
+        Assert.Equal("3", cd.Phase.Text);
+    }
+
+    [Fact]
     public async Task TerminalShowsRepliesAndErrors()
     {
         var (session, _) = await CreateSessionAsync();
