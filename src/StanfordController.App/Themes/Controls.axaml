@@ -1,0 +1,116 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ============================== Tabs ============================== -->
+    <!-- Notebook tabs on the chrome band; the selected tab joins the page below it. -->
+    <ControlTheme x:Key="{x:Type TabControl}" TargetType="TabControl">
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+        <Setter Property="ItemsPanel">
+            <ItemsPanelTemplate>
+                <StackPanel Orientation="Horizontal" />
+            </ItemsPanelTemplate>
+        </Setter>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <DockPanel>
+                    <Panel DockPanel.Dock="Top" Background="{DynamicResource ChromeBrush}">
+                        <Border Height="1" VerticalAlignment="Bottom" Background="{DynamicResource BorderBrush}" />
+                        <ItemsPresenter Name="PART_ItemsPresenter" ItemsPanel="{TemplateBinding ItemsPanel}" Margin="8,5,8,0" />
+                    </Panel>
+                    <ContentPresenter Name="PART_SelectedContentHost"
+                                      Background="{TemplateBinding Background}"
+                                      Padding="{TemplateBinding Padding}"
+                                      Content="{TemplateBinding SelectedContent}"
+                                      ContentTemplate="{TemplateBinding SelectedContentTemplate}" />
+                </DockPanel>
+            </ControlTemplate>
+        </Setter>
+    </ControlTheme>
+
+    <ControlTheme x:Key="{x:Type TabItem}" TargetType="TabItem">
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Padding" Value="13,5,13,6" />
+        <Setter Property="Margin" Value="0,0,1,0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Panel>
+                    <Border Name="PART_Tab" Background="Transparent" BorderBrush="Transparent" BorderThickness="1,1,1,0"
+                            CornerRadius="3,3,0,0" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Header}"
+                                          ContentTemplate="{TemplateBinding HeaderTemplate}" HorizontalAlignment="Center" />
+                    </Border>
+                    <Border Name="PART_Marker" Height="2" VerticalAlignment="Top" CornerRadius="3,3,0,0" Background="Transparent" />
+                </Panel>
+            </ControlTemplate>
+        </Setter>
+        <Style Selector="^:pointerover">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+        </Style>
+        <Style Selector="^:pointerover /template/ Border#PART_Tab">
+            <Setter Property="Background" Value="{DynamicResource ChromeHoverBrush}" />
+        </Style>
+        <Style Selector="^:selected">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="ZIndex" Value="1" />
+        </Style>
+        <Style Selector="^:selected /template/ Border#PART_Tab">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+        </Style>
+        <Style Selector="^:selected /template/ Border#PART_Marker">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+        </Style>
+        <Style Selector="^:focus-visible /template/ Border#PART_Tab">
+            <Setter Property="BorderBrush" Value="{DynamicResource FocusBrush}" />
+        </Style>
+    </ControlTheme>
+
+    <!-- ============================== Page structure ============================== -->
+    <!-- A titled group: the title followed by a rule, like a group box without the box. Extra content in Tag sits at the right. -->
+    <ControlTheme x:Key="Section" TargetType="HeaderedContentControl">
+        <Setter Property="Margin" Value="0,0,0,20" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <StackPanel>
+                    <DockPanel Margin="0,0,0,8" MinHeight="22">
+                        <ContentPresenter DockPanel.Dock="Left" Content="{TemplateBinding Header}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <ContentPresenter DockPanel.Dock="Right" Content="{TemplateBinding Tag}" VerticalAlignment="Center" Margin="12,0,0,0" />
+                        <Border Classes="rule" Margin="10,1,0,0" VerticalAlignment="Center" />
+                    </DockPanel>
+                    <ContentPresenter Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" />
+                </StackPanel>
+            </ControlTemplate>
+        </Setter>
+    </ControlTheme>
+
+    <!-- Label, then a fixed-width field, then optional extra content from Tag. -->
+    <ControlTheme x:Key="FormRow" TargetType="HeaderedContentControl">
+        <Setter Property="Margin" Value="0,0,0,8" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Grid ColumnDefinitions="140,230,*">
+                    <ContentPresenter Content="{TemplateBinding Header}" VerticalAlignment="Top" Margin="0,5,12,0" TextWrapping="Wrap" />
+                    <ContentPresenter Grid.Column="1" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" />
+                    <ContentPresenter Grid.Column="2" Content="{TemplateBinding Tag}" VerticalAlignment="Top" Margin="10,0,0,0" />
+                </Grid>
+            </ControlTemplate>
+        </Setter>
+    </ControlTheme>
+
+    <!-- Label, then a field that fills the width (dialogs). -->
+    <ControlTheme x:Key="DialogRow" TargetType="HeaderedContentControl">
+        <Setter Property="Margin" Value="0,0,0,10" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Grid ColumnDefinitions="140,*">
+                    <ContentPresenter Content="{TemplateBinding Header}" VerticalAlignment="Top" Margin="0,5,12,0" TextWrapping="Wrap" />
+                    <ContentPresenter Grid.Column="1" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" />
+                </Grid>
+            </ControlTemplate>
+        </Setter>
+    </ControlTheme>
+
+</ResourceDictionary>

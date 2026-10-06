@@ -1,0 +1,72 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:StanfordController.Presentation.ViewModels;assembly=StanfordController.Presentation"
+             xmlns:views="clr-namespace:StanfordController.App.Views"
+             xmlns:inf="clr-namespace:StanfordController.App.Infrastructure"
+             x:Class="StanfordController.App.Views.SessionView"
+             x:DataType="vm:InstrumentSessionViewModel">
+    <DockPanel>
+        <!-- ============================== Communication log ============================== -->
+        <Border DockPanel.Dock="Bottom" Height="170" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0"
+                Background="{DynamicResource SurfaceBrush}" IsVisible="{Binding Log.IsPanelVisible}">
+            <DockPanel>
+                <Border DockPanel.Dock="Top" Classes="chrome" BorderThickness="0,0,0,1" Padding="12,1,6,1">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <CheckBox Content="Commands and replies" IsChecked="{Binding Log.ShowTraffic}" Margin="0,0,10,0"
+                                      ToolTip.Tip="Untick to show only connection events and errors" />
+                            <Button Classes="tool" Content="Copy" Command="{Binding CopyLogCommand}" ToolTip.Tip="Copy the log to the clipboard" />
+                            <Button Classes="tool" Content="Save…" Command="{Binding SaveLogCommand}" ToolTip.Tip="Save the log to a text file" />
+                            <Button Classes="tool" Content="Clear" Command="{Binding Log.ClearCommand}" />
+                            <Button Classes="tool" Command="{Binding Log.HideCommand}" ToolTip.Tip="Hide the log (Ctrl+L)" AutomationProperties.Name="Hide the log">
+                                <Path Classes="glyph" Data="{StaticResource GlyphClose}" />
+                            </Button>
+                        </StackPanel>
+                        <TextBlock Text="Communication log" Classes="strong" VerticalAlignment="Center" />
+                    </DockPanel>
+                </Border>
+                <ListBox Classes="plain" ItemsSource="{Binding Log.Entries}" inf:ListBehavior.AutoScroll="True" Padding="4,2">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:LogEntry">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding TimeText}" Classes="log" Foreground="{DynamicResource TextMutedBrush}" Width="98" />
+                                <TextBlock Text="{Binding Marker}" Classes="log" Classes.sent="{Binding IsSent}" Classes.received="{Binding IsReceived}"
+                                           Classes.failed="{Binding IsError}" Width="20" />
+                                <TextBlock Text="{Binding Text}" Classes="log" Classes.sent="{Binding IsSent}" Classes.received="{Binding IsReceived}"
+                                           Classes.failed="{Binding IsError}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+
+        <!-- ============================== Pages ============================== -->
+        <TabControl x:Name="Pages">
+            <TabItem Header="Delays">
+                <views:DelaysView />
+            </TabItem>
+            <TabItem Header="Outputs">
+                <views:OutputsView />
+            </TabItem>
+            <TabItem Header="Trigger">
+                <views:TriggerView />
+            </TabItem>
+            <TabItem Header="Burst">
+                <views:BurstView />
+            </TabItem>
+            <TabItem Header="Setups">
+                <views:SetupsView />
+            </TabItem>
+            <TabItem Header="Status">
+                <views:StatusView />
+            </TabItem>
+            <TabItem Header="Interfaces">
+                <views:InterfacesView />
+            </TabItem>
+            <TabItem Header="Terminal">
+                <views:TerminalView />
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</UserControl>

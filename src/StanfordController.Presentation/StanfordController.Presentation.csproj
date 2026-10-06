@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>StanfordController.Presentation</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\StanfordController.Core\StanfordController.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="StanfordController.Tests" />
+  </ItemGroup>
+
+  <!-- The user guide is read on GitHub and shown in the program's Help window from this one file. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\docs\USER-GUIDE.md" LogicalName="StanfordController.UserGuide.md" Link="Help\USER-GUIDE.md" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,75 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:StanfordController.Presentation.ViewModels;assembly=StanfordController.Presentation"
+             xmlns:help="clr-namespace:StanfordController.Presentation.Help;assembly=StanfordController.Presentation"
+             xmlns:inf="clr-namespace:StanfordController.App.Infrastructure"
+             x:Class="StanfordController.App.Views.SetupsView"
+             x:DataType="vm:InstrumentSessionViewModel"
+             inf:HelpContext.Topic="{x:Static help:HelpTopics.Setups}">
+    <ScrollViewer>
+        <StackPanel Margin="20,16,20,12" MaxWidth="720" HorizontalAlignment="Left">
+
+            <HeaderedContentControl Theme="{StaticResource Section}" Header="Saved setup on this computer">
+                <StackPanel Spacing="10">
+                    <TextBlock Classes="secondary" TextWrapping="Wrap"
+                               Text="The complete setup — delays, output levels, trigger and burst — kept in the open configuration, so it can be put back whenever the instrument is switched on or reconnected." />
+                    <HeaderedContentControl Theme="{StaticResource FormRow}" Header="Saved setup" Margin="0">
+                        <TextBlock Text="{Binding Owner.StoredSetupText, FallbackValue='—'}" VerticalAlignment="Center" Margin="0,5,0,0" />
+                    </HeaderedContentControl>
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="140,0,0,0">
+                        <Button Classes="accent" Content="Save setup" Command="{Binding Owner.SaveSetupCommand, FallbackValue={x:Null}}"
+                                ToolTip.Tip="Read every setting and store it in the configuration (File ▸ Save setups saves all connected instruments, Ctrl+S)" />
+                        <Button Content="Restore saved setup…" Command="{Binding Owner.RestoreSetupCommand, FallbackValue={x:Null}}"
+                                ToolTip.Tip="Write the saved setup to the instrument (Ctrl+R)" />
+                    </StackPanel>
+                    <TextBlock Classes="caption" Margin="140,0,0,0" TextWrapping="Wrap"
+                               Text="What happens on connecting, when the instrument's settings differ from the saved setup, is set per instrument under Edit (F2)." />
+                </StackPanel>
+            </HeaderedContentControl>
+
+            <HeaderedContentControl Theme="{StaticResource Section}" Header="Setup files">
+                <StackPanel Spacing="8">
+                    <TextBlock Classes="secondary" TextWrapping="Wrap"
+                               Text="One instrument's setup as a .dg645.json file, to archive with an experiment, send to a colleague or load into another DG645." />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Export setup to file…" Command="{Binding ExportSettingsCommand}" />
+                        <Button Content="Import setup from file…" Command="{Binding ImportSettingsCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </HeaderedContentControl>
+
+            <HeaderedContentControl Theme="{StaticResource Section}" Header="Instrument memory">
+                <StackPanel>
+                    <TextBlock Classes="secondary" TextWrapping="Wrap" Margin="0,0,0,10"
+                               Text="Nine setups stored inside the DG645 itself (*SAV / *RCL), which can also be recalled from its front panel." />
+                    <HeaderedContentControl Theme="{StaticResource FormRow}" Header="Save current to">
+                        <ComboBox ItemsSource="{Binding SaveSlots}" SelectedItem="{Binding SaveSlot}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="x:Int32">
+                                    <TextBlock Text="{Binding StringFormat='Location {0}'}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <HeaderedContentControl.Tag>
+                            <Button Content="Save" Command="{Binding SaveToSlotCommand}" />
+                        </HeaderedContentControl.Tag>
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Theme="{StaticResource FormRow}" Header="Recall">
+                        <ComboBox ItemsSource="{Binding RecallSlots}" SelectedItem="{Binding RecallSlot}" />
+                        <HeaderedContentControl.Tag>
+                            <Button Content="Recall" Command="{Binding RecallSlotCommand}" />
+                        </HeaderedContentControl.Tag>
+                    </HeaderedContentControl>
+                </StackPanel>
+            </HeaderedContentControl>
+
+            <HeaderedContentControl Theme="{StaticResource Section}" Header="Reset">
+                <StackPanel Spacing="8">
+                    <TextBlock Classes="secondary" TextWrapping="Wrap"
+                               Text="Return the instrument to its default settings (*RST). Every delay, level, trigger and burst setting is replaced." />
+                    <Button Classes="danger" Content="Reset to defaults…" Command="{Binding ResetCommand}" HorizontalAlignment="Left" />
+                </StackPanel>
+            </HeaderedContentControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

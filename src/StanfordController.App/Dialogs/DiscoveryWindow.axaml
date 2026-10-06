@@ -1,0 +1,71 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:StanfordController.Presentation.ViewModels;assembly=StanfordController.Presentation"
+        xmlns:disc="clr-namespace:StanfordController.Core.Discovery;assembly=StanfordController.Core"
+        x:Class="StanfordController.App.Dialogs.DiscoveryWindow"
+        x:DataType="vm:DiscoveryViewModel"
+        Title="Find instruments on the network"
+        Width="720" Height="560" MinWidth="560" MinHeight="420"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+    <DockPanel>
+        <Border DockPanel.Dock="Bottom" Classes="chrome" BorderThickness="0,1,0,0" Padding="16,10">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                <Button Content="Add selected…" Classes="accent" MinWidth="110" Click="OnAdd"
+                        IsEnabled="{Binding Selected, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <Button Content="Close" IsCancel="True" MinWidth="88" Click="OnClose" />
+            </StackPanel>
+        </Border>
+
+        <DockPanel Margin="20,16,20,16">
+            <StackPanel DockPanel.Dock="Top" Spacing="10" Margin="0,0,0,12">
+                <TextBlock Classes="caption"
+                           Text="Scans this computer's local networks for instruments answering on the DG645's TCP port, then asks each for its identity (*IDN?)." />
+
+                <Grid ColumnDefinitions="110,*,Auto">
+                    <TextBlock Text="Networks" Classes="label" VerticalAlignment="Top" Margin="0,5,0,0" />
+                    <SelectableTextBlock Grid.Column="1" Text="{Binding NetworksText}" Classes="mono" TextWrapping="Wrap" VerticalAlignment="Top" Margin="0,5,12,0" />
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
+                        <TextBlock Text="Port" Classes="label" />
+                        <TextBox Text="{Binding PortText}" Width="70" Classes="param" />
+                        <Button Command="{Binding ScanCommand}" Content="Scan" Classes="accent" />
+                        <Button Command="{Binding CancelCommand}" Content="Stop" />
+                    </StackPanel>
+                </Grid>
+
+                <Grid ColumnDefinitions="110,*,Auto">
+                    <TextBlock Text="One address" Classes="label" />
+                    <TextBox Grid.Column="1" Text="{Binding ProbeAddress}" Classes="param" Margin="0,0,8,0"
+                             PlaceholderText="e.g. 169.254.10.20 for a directly connected instrument" />
+                    <Button Grid.Column="2" Command="{Binding ProbeCommand}" Content="Check" />
+                </Grid>
+
+                <ProgressBar Value="{Binding Progress}" Maximum="1" IsVisible="{Binding IsScanning}" />
+                <TextBlock Text="{Binding StatusText}" Classes="secondary" TextWrapping="Wrap" />
+            </StackPanel>
+
+            <Border Classes="framed">
+                <DockPanel>
+                    <Border DockPanel.Dock="Top" Classes="table-header" BorderThickness="0,0,0,1">
+                        <Grid ColumnDefinitions="90,150,*">
+                            <TextBlock Classes="header" Text="Model" />
+                            <TextBlock Grid.Column="1" Classes="header" Text="Address" />
+                            <TextBlock Grid.Column="2" Classes="header" Text="Identity" />
+                        </Grid>
+                    </Border>
+                    <ListBox x:Name="Results" ItemsSource="{Binding Results}" SelectedItem="{Binding Selected}" DoubleTapped="OnResultDoubleTapped">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="disc:DiscoveredInstrument">
+                                <Grid ColumnDefinitions="90,150,*">
+                                    <TextBlock Text="{Binding Model}" Classes="strong" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Address}" Classes="mono" />
+                                    <TextBlock Grid.Column="2" Text="{Binding Identity}" Classes="secondary" TextTrimming="CharacterEllipsis"
+                                               ToolTip.Tip="{Binding Identity}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+        </DockPanel>
+    </DockPanel>
+</Window>

@@ -1,0 +1,75 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:StanfordController.Presentation.ViewModels;assembly=StanfordController.Presentation"
+             xmlns:help="clr-namespace:StanfordController.Presentation.Help;assembly=StanfordController.Presentation"
+             xmlns:inf="clr-namespace:StanfordController.App.Infrastructure"
+             x:Class="StanfordController.App.Views.TriggerView"
+             x:DataType="vm:InstrumentSessionViewModel"
+             inf:HelpContext.Topic="{x:Static help:HelpTopics.Trigger}">
+    <ScrollViewer>
+        <Grid Margin="20,16,20,12" ColumnDefinitions="Auto,32,Auto" DataContext="{Binding Trigger}" x:DataType="vm:TriggerViewModel">
+
+            <StackPanel>
+                <HeaderedContentControl Theme="{StaticResource Section}" Header="Trigger">
+                    <StackPanel>
+                        <HeaderedContentControl Theme="{StaticResource FormRow}" Header="Source" Content="{Binding Source}" />
+                        <HeaderedContentControl Theme="{StaticResource FormRow}" Header="Internal rate" Content="{Binding Rate}" />
+                        <HeaderedContentControl Theme="{StaticResource FormRow}" Header="External threshold" Content="{Binding Level}" />
+                        <HeaderedContentControl Theme="{StaticResource FormRow}" Header="Inhibit input" Content="{Binding Inhibit}" />
+                        <HeaderedContentControl Theme="{StaticResource FormRow}" Header="Single shot">
+                            <StackPanel Spacing="4">
+                                <Button Command="{Binding TriggerNowCommand}" IsEnabled="{Binding IsSingleShot}" Content="Trigger now" HorizontalAlignment="Left"
+                                        ToolTip.Tip="Send *TRG to start one delay cycle (Ctrl+T)" />
+                                <TextBlock Classes="caption" Text="Available when the source is a single-shot mode." />
+                            </StackPanel>
+                        </HeaderedContentControl>
+                        <TextBlock Classes="error" Text="{Binding Error}" IsVisible="{Binding HasError}" />
+                    </StackPanel>
+                </HeaderedContentControl>
+            </StackPanel>
+
+            <StackPanel Grid.Column="2">
+                <HeaderedContentControl Theme="{StaticResource Section}" Header="Advanced triggering">
+                    <StackPanel>
+                        <ContentControl Content="{Binding AdvancedTriggering}" Margin="140,0,0,10" />
+                        <HeaderedContentControl Theme="{StaticResource FormRow}" Header="Holdoff" Content="{Binding Holdoff}" />
+                        <TextBlock Classes="caption" Margin="140,0,0,0" MaxWidth="230" HorizontalAlignment="Left"
+                                   Text="Holdoff and the prescalers below only act while advanced triggering is on." />
+                    </StackPanel>
+                </HeaderedContentControl>
+
+                <HeaderedContentControl Theme="{StaticResource Section}" Header="Prescalers">
+                    <StackPanel>
+                        <Border Classes="table-header">
+                            <Grid ColumnDefinitions="112,120,10,120">
+                                <TextBlock Classes="header" Text="Input" />
+                                <TextBlock Grid.Column="1" Classes="header" Text="Divide by N" />
+                                <TextBlock Grid.Column="3" Classes="header" Text="Phase" />
+                            </Grid>
+                        </Border>
+                        <Border Classes="table-row">
+                            <Grid ColumnDefinitions="112,120,10,120">
+                                <TextBlock Text="{Binding TriggerPrescaler.Name}" VerticalAlignment="Center" />
+                                <ContentControl Grid.Column="1" Content="{Binding TriggerPrescaler.Factor}" />
+                                <TextBlock Grid.Column="3" Text="—" Classes="muted" VerticalAlignment="Center" Margin="4,0,0,0" />
+                            </Grid>
+                        </Border>
+                        <ItemsControl ItemsSource="{Binding OutputPrescalers}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:PrescalerViewModel">
+                                    <Border Classes="table-row">
+                                        <Grid ColumnDefinitions="112,120,10,120">
+                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                                            <ContentControl Grid.Column="1" Content="{Binding Factor}" />
+                                            <ContentControl Grid.Column="3" Content="{Binding Phase}" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </HeaderedContentControl>
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

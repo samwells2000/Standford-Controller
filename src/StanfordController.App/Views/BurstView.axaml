@@ -1,0 +1,24 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:StanfordController.Presentation.ViewModels;assembly=StanfordController.Presentation"
+             xmlns:help="clr-namespace:StanfordController.Presentation.Help;assembly=StanfordController.Presentation"
+             xmlns:inf="clr-namespace:StanfordController.App.Infrastructure"
+             x:Class="StanfordController.App.Views.BurstView"
+             x:DataType="vm:InstrumentSessionViewModel"
+             inf:HelpContext.Topic="{x:Static help:HelpTopics.Burst}">
+    <ScrollViewer>
+        <StackPanel Margin="20,16,20,12" HorizontalAlignment="Left" DataContext="{Binding Burst}" x:DataType="vm:BurstViewModel">
+            <HeaderedContentControl Theme="{StaticResource Section}" Header="Burst mode">
+                <StackPanel>
+                    <ContentControl Content="{Binding Enabled}" Margin="140,0,0,10" />
+                    <HeaderedContentControl Theme="{StaticResource FormRow}" Header="Cycles per burst" Content="{Binding Count}" />
+                    <HeaderedContentControl Theme="{StaticResource FormRow}" Header="Burst period" Content="{Binding Period}" />
+                    <HeaderedContentControl Theme="{StaticResource FormRow}" Header="Burst delay" Content="{Binding Delay}" />
+                    <HeaderedContentControl Theme="{StaticResource FormRow}" Header="T0 output" Content="{Binding T0Mode}" />
+                    <TextBlock Text="{Binding Summary}" Classes="secondary" TextWrapping="Wrap" Margin="140,6,0,0" MaxWidth="440" HorizontalAlignment="Left"
+                               IsVisible="{Binding Summary, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                </StackPanel>
+            </HeaderedContentControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -1,0 +1,128 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:StanfordController.Presentation.ViewModels;assembly=StanfordController.Presentation"
+             xmlns:help="clr-namespace:StanfordController.Presentation.Help;assembly=StanfordController.Presentation"
+             xmlns:inf="clr-namespace:StanfordController.App.Infrastructure"
+             x:Class="StanfordController.App.Views.StatusView"
+             x:DataType="vm:InstrumentSessionViewModel"
+             inf:HelpContext.Topic="{x:Static help:HelpTopics.Status}">
+    <UserControl.Resources>
+        <!-- One bit of a status register: lamp, bit number, name, meaning, and its enable box. -->
+        <DataTemplate x:Key="BitRow" x:DataType="vm:StatusBitViewModel">
+            <Border Classes="table-row" Padding="8,3" ToolTip.Tip="{Binding Description}">
+                <Grid ColumnDefinitions="20,24,118,*,Auto">
+                    <Ellipse Classes="led" Classes.on="{Binding IsSet}" />
+                    <TextBlock Grid.Column="1" Text="{Binding Bit}" Classes="muted" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="2" Text="{Binding Name}" Classes="mono" FontSize="12" />
+                    <TextBlock Grid.Column="3" Text="{Binding Description}" Classes="secondary" FontSize="12" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" Margin="0,0,8,0" />
+                    <CheckBox Grid.Column="4" IsChecked="{Binding IsEnabled}" IsEnabled="{Binding IsUsed}" Content="Enable" FontSize="12" />
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <ScrollViewer>
+        <Grid Margin="20,16,20,12" ColumnDefinitions="*,28,*">
+
+            <StackPanel>
+                <HeaderedContentControl Theme="{StaticResource Section}" Header="Instrument status">
+                    <HeaderedContentControl.Tag>
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="{Binding Status.LastPollText}" Classes="caption" VerticalAlignment="Center" />
+                            <CheckBox Content="Live" IsChecked="{Binding IsPolling}" ToolTip.Tip="Read the register every second" />
+                        </StackPanel>
+                    </HeaderedContentControl.Tag>
+                    <StackPanel>
+                        <TextBlock Classes="caption" Margin="0,0,0,6" Text="Events since the lamps were last cleared (INSR? / INSE)." />
+                        <ItemsControl ItemsSource="{Binding Status.InstrumentBits}" ItemTemplate="{StaticResource BitRow}" />
+                        <WrapPanel Margin="0,10,0,0">
+                            <Button Command="{Binding Status.ReadStatusCommand}" Content="Read now" Margin="0,0,8,8" />
+                            <Button Command="{Binding Status.ClearIndicatorsCommand}" Content="Clear lamps" Margin="0,0,8,8" />
+                            <Button Command="{Binding Status.ApplyEnableMasksCommand}" Content="Apply enable masks" Margin="0,0,8,8"
+                                    ToolTip.Tip="Write the Enable boxes on this page to INSE, *ESE and *SRE" />
+                        </WrapPanel>
+                    </StackPanel>
+                </HeaderedContentControl>
+
+                <HeaderedContentControl Theme="{StaticResource Section}" Header="Standard event status">
+                    <StackPanel>
+                        <TextBlock Classes="caption" Margin="0,0,0,6" Text="IEEE-488.2 event register (*ESR? / *ESE)." />
+                        <ItemsControl ItemsSource="{Binding Status.EventBits}" ItemTemplate="{StaticResource BitRow}" />
+                    </StackPanel>
+                </HeaderedContentControl>
+
+                <HeaderedContentControl Theme="{StaticResource Section}" Header="Status byte">
+                    <StackPanel>
+                        <TextBlock Classes="caption" Margin="0,0,0,6" Text="Serial poll status byte and service request enable (*STB? / *SRE)." />
+                        <ItemsControl ItemsSource="{Binding Status.StatusByteBits}" ItemTemplate="{StaticResource BitRow}" />
+                        <ContentControl Content="{Binding Status.PowerOnStatusClear}" Margin="0,10,0,0" />
+                    </StackPanel>
+                </HeaderedContentControl>
+            </StackPanel>
+
+            <StackPanel Grid.Column="2">
+                <HeaderedContentControl Theme="{StaticResource Section}" Header="Errors">
+                    <StackPanel>
+                        <TextBlock Classes="caption" Margin="0,0,0,6" Text="Commands the instrument rejected, newest first." />
+                        <Border Classes="framed" Height="150">
+                            <Panel>
+                                <ListBox Classes="plain" ItemsSource="{Binding Status.Errors}">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:ErrorEntry">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding TimeText}" Classes="mono muted" FontSize="12" Width="70" />
+                                                <TextBlock Text="{Binding Summary}" Foreground="{DynamicResource DangerTextBrush}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                                <TextBlock Text="No errors" Classes="caption" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           IsVisible="{Binding !Status.Errors.Count}" />
+                            </Panel>
+                        </Border>
+                        <WrapPanel Margin="0,10,0,0">
+                            <Button Command="{Binding Status.ReadErrorsCommand}" Content="Read error queue" ToolTip.Tip="Read LERR? until the queue is empty" Margin="0,0,8,8" />
+                            <Button Command="{Binding Status.ClearStatusCommand}" Content="Clear status (*CLS)" Margin="0,0,8,8" />
+                            <Button Command="{Binding Status.ClearErrorListCommand}" Content="Clear list" Margin="0,0,8,8" />
+                        </WrapPanel>
+                    </StackPanel>
+                </HeaderedContentControl>
+
+                <HeaderedContentControl Theme="{StaticResource Section}" Header="Diagnostics">
+                    <StackPanel>
+                        <Grid ColumnDefinitions="140,Auto,*" RowDefinitions="Auto,8,Auto,10,Auto">
+                            <TextBlock Text="Self test" Classes="label" />
+                            <Button Grid.Column="1" Command="{Binding Status.SelfTestCommand}" Content="Run (*TST?)" />
+                            <TextBlock Grid.Column="2" Text="{Binding Status.SelfTestResult}" Margin="12,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap" />
+
+                            <TextBlock Grid.Row="2" Text="Auto calibration" Classes="label" />
+                            <Button Grid.Row="2" Grid.Column="1" Command="{Binding Status.AutoCalibrateCommand}" Content="Run (*CAL?)" />
+                            <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding Status.CalibrationResult}" Margin="12,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap" />
+
+                            <TextBlock Grid.Row="4" Text="Timebase" Classes="label" />
+                            <TextBlock Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding Status.Timebase}" VerticalAlignment="Center" />
+                        </Grid>
+                        <TextBlock Classes="error" Text="{Binding Status.Error}" IsVisible="{Binding Status.HasError}" Margin="0,8,0,0" />
+                    </StackPanel>
+                </HeaderedContentControl>
+
+                <HeaderedContentControl Theme="{StaticResource Section}" Header="Front-panel display">
+                    <StackPanel>
+                        <HeaderedContentControl Theme="{StaticResource FormRow}" Header="Show">
+                            <ComboBox ItemsSource="{Binding Status.DisplayModes}" SelectedItem="{Binding Status.DisplayMode}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Theme="{StaticResource FormRow}" Header="Channel or output">
+                            <ComboBox ItemsSource="{Binding Status.DisplayChannelOptions}" SelectedItem="{Binding Status.DisplayChannel}" />
+                        </HeaderedContentControl>
+                        <Button Command="{Binding Status.ApplyDisplayCommand}" Content="Show on instrument" Margin="140,0,0,0" />
+                    </StackPanel>
+                </HeaderedContentControl>
+
+                <HeaderedContentControl Theme="{StaticResource Section}" Header="Identity">
+                    <SelectableTextBlock Text="{Binding Identity}" Classes="mono" TextWrapping="Wrap" />
+                </HeaderedContentControl>
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</UserControl>
