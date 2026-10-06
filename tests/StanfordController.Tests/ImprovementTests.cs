@@ -99,7 +99,8 @@ public sealed class ImprovementTests : IDisposable
         var changed = 0;
         session.TriggerCommand.CanExecuteChanged += (_, _) => changed++;
         session.Trigger.Source.Selected = session.Trigger.Source.Options.Single(o => o.Value == (int)TriggerSource.SingleShot);
-        for (var i = 0; i < 200 && !session.Trigger.IsSingleShot; i++)
+        // The button re-evaluates once the instrument has confirmed the new source.
+        for (var i = 0; i < 200 && (changed == 0 || session.Trigger.Source.IsBusy); i++)
         {
             await Task.Delay(10);
         }
