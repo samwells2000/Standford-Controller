@@ -21,10 +21,10 @@
                             <ColumnDefinition SharedSizeGroup="Name" Width="56" />
                             <ColumnDefinition SharedSizeGroup="Ref" Width="84" />
                             <ColumnDefinition SharedSizeGroup="Plus" Width="22" />
-                            <ColumnDefinition SharedSizeGroup="Delay" Width="160" />
+                            <ColumnDefinition SharedSizeGroup="Delay" Width="150" />
                             <ColumnDefinition SharedSizeGroup="Steps" Width="78" />
-                            <ColumnDefinition SharedSizeGroup="Abs" Width="150" />
-                            <ColumnDefinition SharedSizeGroup="StepSize" Width="120" />
+                            <ColumnDefinition SharedSizeGroup="Abs" Width="136" />
+                            <ColumnDefinition SharedSizeGroup="StepSize" Width="104" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <TextBlock Style="{StaticResource ColumnHeader}" Text="CHANNEL" />

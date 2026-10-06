@@ -73,7 +73,14 @@
                     <TextBlock Style="{StaticResource CardTitle}" Text="Command reference" />
                     <TextBlock Style="{StaticResource CardSubtitle}" Margin="0,0,0,8"
                                Text="Double-click a command to copy its example into the terminal. c = channel (0 T0, 1 T1, 2 A … 9 H), b = output (0 T0, 1 AB … 4 GH)." />
-                    <TextBox Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8" ToolTip="Search commands" />
+                    <Grid Margin="0,0,0,8">
+                        <TextBox x:Name="FilterBox" Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}" Padding="30,0,8,0" />
+                        <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconSearch}" FontSize="12" Foreground="{StaticResource TextMutedBrush}"
+                                   HorizontalAlignment="Left" Margin="11,0,0,0" IsHitTestVisible="False" />
+                        <TextBlock Text="Search commands" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" Margin="31,0,0,0"
+                                   IsHitTestVisible="False"
+                                   Visibility="{Binding Filter, Converter={StaticResource NullToVisibility}, ConverterParameter=Invert}" />
+                    </Grid>
                 </StackPanel>
                 <ListBox ItemsSource="{Binding FilteredCommands}" SelectedItem="{Binding SelectedCommand}" Style="{StaticResource PlainList}"
                          ItemContainerStyle="{StaticResource PlainListItem}"

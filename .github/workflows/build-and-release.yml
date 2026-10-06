@@ -88,13 +88,13 @@ jobs:
         run: |
           Add-Type -AssemblyName PresentationCore
           $dir = Join-Path $env:RUNNER_TEMP 'smoke-test'
-          Get-ChildItem $dir -Filter '*.png' | Where-Object { $_.Name -match '^(0[3-9]|10|90|91)' } | Sort-Object Name | ForEach-Object {
+          Get-ChildItem $dir -Filter '*.png' | Where-Object { $_.Name -match '^(01|03|04|05|08|10|90)' } | Sort-Object Name | ForEach-Object {
             $decoder = [System.Windows.Media.Imaging.BitmapDecoder]::Create([Uri]$_.FullName, 'None', 'OnLoad')
             $frame = $decoder.Frames[0]
             $scale = [Math]::Min(1.0, 1100.0 / $frame.PixelWidth)
             $scaled = New-Object System.Windows.Media.Imaging.TransformedBitmap($frame, (New-Object System.Windows.Media.ScaleTransform($scale, $scale)))
             $jpeg = New-Object System.Windows.Media.Imaging.JpegBitmapEncoder
-            $jpeg.QualityLevel = 72
+            $jpeg.QualityLevel = 90
             $jpeg.Frames.Add([System.Windows.Media.Imaging.BitmapFrame]::Create($scaled))
             $ms = New-Object System.IO.MemoryStream
             $jpeg.Save($ms)
