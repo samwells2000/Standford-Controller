@@ -78,13 +78,15 @@ jobs:
               throw "The smoke test of $exe did not finish within 4 minutes."
             }
             $log = Join-Path $dir 'smoke-test.log'
-            if (Test-Path $log) { Get-Content $log } else { Write-Warning 'No smoke test log was written.' }
+            if (Test-Path $log) { Get-Content $log | Write-Host } else { Write-Warning 'No smoke test log was written.' }
             if ($process.ExitCode -ne 0) { throw "The smoke test of $exe failed with exit code $($process.ExitCode)." }
-            return $log
           }
-          Invoke-SmokeTest dist/Strobe.exe (Join-Path $env:RUNNER_TEMP 'smoke-test') @() | Out-Null
-          $portableLog = Invoke-SmokeTest dist/Strobe-Portable.exe (Join-Path $env:RUNNER_TEMP 'smoke-test-portable') @('--headless')
-          if (-not (Select-String -Path $portableLog -Pattern 'portable build: True' -Quiet)) { throw 'Strobe-Portable.exe does not run as the portable build.' }
+          Invoke-SmokeTest dist/Strobe.exe (Join-Path $env:RUNNER_TEMP 'smoke-test') @()
+          $portableDir = Join-Path $env:RUNNER_TEMP 'smoke-test-portable'
+          Invoke-SmokeTest dist/Strobe-Portable.exe $portableDir @('--headless')
+          if (-not (Select-String -Path (Join-Path $portableDir 'smoke-test.log') -Pattern 'portable build: True' -Quiet)) {
+            throw 'Strobe-Portable.exe does not run as the portable build.'
+          }
 
       - name: Upload smoke test screenshots
         if: always()
