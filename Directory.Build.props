@@ -9,5 +9,7 @@
     <Version Condition="'$(Version)' == ''">1.0.0</Version>
     <!-- Lets the Windows desktop app be compiled from Linux/macOS too (CI publishes on Windows). -->
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <!-- Symbols live inside each assembly so the published app is a single .exe. -->
+    <DebugType>embedded</DebugType>
   </PropertyGroup>
 </Project>

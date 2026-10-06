@@ -25,6 +25,7 @@ public sealed class MainViewModel : ObservableObject
         Instruments.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasInstruments));
 
         AddInstrumentCommand = new RelayCommand(AddInstrument);
+        ConnectInstrumentCommand = new RelayCommand<InstrumentItemViewModel>(item => item?.ConnectCommand.Execute(null));
         EditInstrumentCommand = new RelayCommand<InstrumentItemViewModel>(item => EditInstrument(item ?? _selected), item => (item ?? _selected) is not null);
         RemoveInstrumentCommand = new AsyncRelayCommand(RemoveSelectedAsync, () => _selected is not null);
         DuplicateInstrumentCommand = new RelayCommand(DuplicateSelected, () => _selected is not null);
@@ -61,6 +62,9 @@ public sealed class MainViewModel : ObservableObject
     public string ProfilesPath => _store.FilePath;
 
     public ICommand AddInstrumentCommand { get; }
+
+    /// <summary>Connects the given instrument (double-click in the list).</summary>
+    public ICommand ConnectInstrumentCommand { get; }
 
     public ICommand EditInstrumentCommand { get; }
 

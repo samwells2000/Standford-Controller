@@ -1,0 +1,146 @@
+<UserControl x:Class="StanfordController.App.Views.SessionView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:views="clr-namespace:StanfordController.App.Views"
+             xmlns:inf="clr-namespace:StanfordController.App.Infrastructure">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- ============================== Toolbar ============================== -->
+        <Border Background="{StaticResource SurfaceBrush}" Padding="24,10,24,10" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
+            <DockPanel>
+                <StackPanel Orientation="Horizontal">
+                    <Button Command="{Binding RefreshAllCommand}" ToolTip="Read every setting from the instrument again">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconRefresh}" FontSize="12" />
+                            <TextBlock Text="Refresh all" Margin="8,0,0,0" />
+                        </StackPanel>
+                    </Button>
+                    <Button Command="{Binding TriggerCommand}" Margin="8,0,0,0"
+                            ToolTip="Send *TRG: starts a delay cycle when the trigger source is one of the single-shot modes">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconTrigger}" FontSize="12" />
+                            <TextBlock Text="Single shot trigger" Margin="8,0,0,0" />
+                        </StackPanel>
+                    </Button>
+                    <Border Width="1" Background="{StaticResource BorderBrush}" Margin="14,4" />
+                    <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding IsPolling}" Content="Live status"
+                              ToolTip="Read the instrument status register in the background (Status &amp; diagnostics tab)" />
+                    <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding Log.IsPanelVisible}" Content="Show log"
+                              Margin="18,0,0,0" ToolTip="Show every command sent and reply received" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
+                            Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}">
+                    <ProgressBar IsIndeterminate="True" Width="120" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding BusyText}" Margin="10,0,0,0" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- ============================== Pages ============================== -->
+        <TabControl Grid.Row="1">
+            <TabItem Header="Delays &amp; timing">
+                <views:DelaysView />
+            </TabItem>
+            <TabItem Header="Outputs">
+                <views:OutputsView />
+            </TabItem>
+            <TabItem Header="Trigger">
+                <views:TriggerView />
+            </TabItem>
+            <TabItem Header="Burst">
+                <views:BurstView />
+            </TabItem>
+            <TabItem Header="Setups">
+                <views:SetupsView />
+            </TabItem>
+            <TabItem Header="Status &amp; diagnostics">
+                <views:StatusView />
+            </TabItem>
+            <TabItem Header="Interfaces">
+                <views:InterfacesView />
+            </TabItem>
+            <TabItem Header="Terminal">
+                <views:TerminalView />
+            </TabItem>
+        </TabControl>
+
+        <!-- ============================== Log ============================== -->
+        <Border Grid.Row="2" Height="170" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0"
+                Visibility="{Binding Log.IsPanelVisible, Converter={StaticResource BoolToVisibility}}">
+            <DockPanel>
+                <DockPanel DockPanel.Dock="Top" Margin="24,8,18,4">
+                    <TextBlock Text="Communication log" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <CheckBox IsChecked="{Binding Log.ShowTraffic}" Content="Show commands and replies" FontSize="12"
+                                  Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,12,0" VerticalAlignment="Center" />
+                        <Button Style="{StaticResource GhostButton}" Command="{Binding CopyLogCommand}" Padding="10,4" MinHeight="28" ToolTip="Copy the log to the clipboard">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconCopy}" FontSize="11" />
+                                <TextBlock Text="Copy" Margin="6,0,0,0" FontSize="12" />
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource GhostButton}" Command="{Binding SaveLogCommand}" Padding="10,4" MinHeight="28" ToolTip="Save the log to a text file">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconSave}" FontSize="11" />
+                                <TextBlock Text="Save…" Margin="6,0,0,0" FontSize="12" />
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource GhostButton}" Command="{Binding Log.ClearCommand}" Padding="10,4" MinHeight="28" ToolTip="Clear the log">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconClear}" FontSize="11" />
+                                <TextBlock Text="Clear" Margin="6,0,0,0" FontSize="12" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </DockPanel>
+                <ListBox ItemsSource="{Binding Log.Entries}" Style="{StaticResource PlainList}" Margin="16,0,16,6"
+                         inf:AutoScrollBehavior.IsEnabled="True">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem" BasedOn="{StaticResource PlainListItem}">
+                            <Setter Property="Padding" Value="8,1" />
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding TimeText}" Style="{StaticResource MonoText}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Width="96" />
+                                <TextBlock Text="{Binding Marker}" Style="{StaticResource MonoText}" FontSize="12" Width="20"
+                                           Foreground="{Binding Direction, Converter={StaticResource LogDirectionBrush}}" />
+                                <TextBlock Text="{Binding Text}" Style="{StaticResource MonoText}" FontSize="12"
+                                           Foreground="{Binding Direction, Converter={StaticResource LogDirectionBrush}}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+
+        <!-- ============================== Status bar ============================== -->
+        <Border Grid.Row="3" Background="{StaticResource SurfaceAltBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="24,6">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Right" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="16,0,0,0"
+                           Text="Edit a field, then press Enter (or move to another field) to apply it. Esc reverts." />
+                <TextBlock Text="{Binding StatusMessage}" FontSize="12" TextTrimming="CharacterEllipsis">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding StatusIsError}" Value="True">
+                                    <Setter Property="Foreground" Value="{StaticResource DangerBrush}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </DockPanel>
+        </Border>
+    </Grid>
+</UserControl>

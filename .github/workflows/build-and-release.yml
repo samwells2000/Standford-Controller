@@ -1,0 +1,127 @@
+name: Build and release
+
+# Every push and pull request is built, tested and smoke-tested on Windows.
+# Every push to main also publishes a new GitHub Release with the single-file StanfordController.exe.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Never cancel a main build mid-release; superseded branch builds can go.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+jobs:
+  build:
+    name: Build, test and package
+    runs-on: windows-latest
+    timeout-minutes: 30
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Work out version
+        id: version
+        shell: pwsh
+        run: |
+          $version = "1.0.${{ github.run_number }}"
+          "version=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "Version $version"
+
+      - name: Restore
+        run: dotnet restore StanfordController.sln
+
+      - name: Build
+        run: dotnet build StanfordController.sln --configuration Release --no-restore -p:Version=${{ steps.version.outputs.version }}
+
+      - name: Test
+        run: dotnet test tests/StanfordController.Tests --configuration Release --no-build --logger "console;verbosity=normal"
+
+      - name: Publish single-file exe
+        run: dotnet publish src/StanfordController.App --configuration Release --output publish -p:Version=${{ steps.version.outputs.version }}
+
+      - name: Check the package is a single file
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem publish
+          $files | Format-Table Name, Length
+          if ($files.Count -ne 1 -or $files[0].Name -ne 'StanfordController.exe') { throw 'Expected publish/ to contain only StanfordController.exe' }
+
+      # Starts the real app against its built-in simulated DG645, opens every page and dialog,
+      # and fails on any exception or WPF data-binding error.
+      - name: UI smoke test
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'smoke-test'
+          $process = Start-Process -FilePath (Resolve-Path publish/StanfordController.exe) -ArgumentList '--smoke-test', "`"$dir`"" -PassThru
+          if (-not $process.WaitForExit(240000)) {
+            $process.Kill()
+            throw 'The smoke test did not finish within 4 minutes.'
+          }
+          $log = Join-Path $dir 'smoke-test.log'
+          if (Test-Path $log) { Get-Content $log } else { Write-Warning 'No smoke test log was written.' }
+          if ($process.ExitCode -ne 0) { throw "The smoke test failed with exit code $($process.ExitCode)." }
+
+      - name: Upload smoke test screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: smoke-test-screenshots
+          path: ${{ runner.temp }}/smoke-test
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload exe
+        uses: actions/upload-artifact@v7
+        with:
+          path: publish/StanfordController.exe
+          archive: false
+          if-no-files-found: error
+          retention-days: 30
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download exe
+        uses: actions/download-artifact@v8
+        with:
+          name: StanfordController.exe
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          set -euo pipefail
+          sha256sum StanfordController.exe > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          gh release create "v${VERSION}" StanfordController.exe SHA256SUMS.txt \
+            --repo "${GITHUB_REPOSITORY}" \
+            --target "${GITHUB_SHA}" \
+            --title "Stanford DG645 Controller ${VERSION}" \
+            --generate-notes \
+            --latest

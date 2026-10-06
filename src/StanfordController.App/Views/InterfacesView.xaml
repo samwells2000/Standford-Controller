@@ -1,0 +1,121 @@
+<UserControl x:Class="StanfordController.App.Views.InterfacesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Margin="24,20,24,8" DataContext="{Binding Interface}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- ============================== LAN ============================== -->
+            <Border Style="{StaticResource Card}" VerticalAlignment="Top">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource CardTitle}" Text="LAN (TCP/IP)" />
+                    <TextBlock Style="{StaticResource CardSubtitle}" Text="Network settings stored in the instrument (IFCF)." />
+
+                    <Border Style="{StaticResource Banner}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconWarning}" Foreground="{StaticResource WarningBrush}"
+                                       VerticalAlignment="Top" Margin="0,2,10,0" />
+                            <TextBlock Grid.Column="1" TextWrapping="Wrap" Foreground="#92400E" FontSize="12.5"
+                                       Text="Changes are stored immediately but take effect only after the LAN interface is reset or the instrument is power-cycled. A wrong setting can make the instrument unreachable over the network; it can always be corrected from the front panel." />
+                        </Grid>
+                    </Border>
+
+                    <ContentControl Content="{Binding LanEnabled}" ContentTemplate="{StaticResource LabelledToggle}" Focusable="False" />
+                    <ContentControl Content="{Binding DhcpEnabled}" ContentTemplate="{StaticResource LabelledToggle}" Focusable="False" />
+                    <ContentControl Content="{Binding AutoIpEnabled}" ContentTemplate="{StaticResource LabelledToggle}" Focusable="False" />
+                    <ContentControl Content="{Binding StaticIpEnabled}" ContentTemplate="{StaticResource LabelledToggle}" Focusable="False" />
+                    <ContentControl Content="{Binding BareSocketEnabled}" ContentTemplate="{StaticResource LabelledToggle}" Focusable="False" />
+                    <ContentControl Content="{Binding TelnetEnabled}" ContentTemplate="{StaticResource LabelledToggle}" Focusable="False" />
+                    <ContentControl Content="{Binding Vxi11Enabled}" ContentTemplate="{StaticResource LabelledToggle}" Focusable="False" />
+
+                    <HeaderedContentControl Style="{StaticResource FormRow}" Header="Static IP address" Margin="0,8,0,10">
+                        <ContentControl Content="{Binding StaticIpAddress}" ContentTemplate="{StaticResource TextField}" Focusable="False" />
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Style="{StaticResource FormRow}" Header="Subnet mask">
+                        <ContentControl Content="{Binding SubnetMask}" ContentTemplate="{StaticResource TextField}" Focusable="False" />
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Style="{StaticResource FormRow}" Header="Default gateway">
+                        <ContentControl Content="{Binding DefaultGateway}" ContentTemplate="{StaticResource TextField}" Focusable="False" />
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Style="{StaticResource FormRow}" Header="MAC address">
+                        <TextBlock Text="{Binding MacAddress}" Style="{StaticResource MonoText}" Margin="0,7,0,0" />
+                    </HeaderedContentControl>
+
+                    <Button Style="{StaticResource DangerButton}" Command="{Binding ResetLanCommand}" HorizontalAlignment="Left" Margin="0,6,0,0"
+                            ToolTip="IFRS 2: applies pending network settings and closes this connection">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconReset}" FontSize="12" />
+                            <TextBlock Text="Reset LAN interface…" Margin="8,0,0,0" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Border>
+
+            <StackPanel Grid.Column="2">
+                <!-- ============================== RS-232 ============================== -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource CardTitle}" Text="RS-232" />
+                        <TextBlock Style="{StaticResource CardSubtitle}" Text="Rear-panel serial port." />
+                        <ContentControl Content="{Binding Rs232Enabled}" ContentTemplate="{StaticResource LabelledToggle}" Focusable="False" />
+                        <HeaderedContentControl Style="{StaticResource FormRow}" Header="Baud rate">
+                            <ContentControl Content="{Binding BaudRate}" ContentTemplate="{StaticResource ChoiceField}" Focusable="False" />
+                        </HeaderedContentControl>
+                        <Button Command="{Binding ResetRs232Command}" Content="Reset RS-232 interface" HorizontalAlignment="Left" ToolTip="IFRS 0" />
+                    </StackPanel>
+                </Border>
+
+                <!-- ============================== GPIB ============================== -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource CardTitle}" Text="GPIB" />
+                        <TextBlock Style="{StaticResource CardSubtitle}" Text="Rear-panel IEEE-488 interface." />
+                        <ContentControl Content="{Binding GpibEnabled}" ContentTemplate="{StaticResource LabelledToggle}" Focusable="False" />
+                        <HeaderedContentControl Style="{StaticResource FormRow}" Header="GPIB address">
+                            <ContentControl Content="{Binding GpibAddress}" ContentTemplate="{StaticResource TextField}" Focusable="False" />
+                        </HeaderedContentControl>
+                        <Button Command="{Binding ResetGpibCommand}" Content="Reset GPIB interface" HorizontalAlignment="Left" ToolTip="IFRS 1" />
+                    </StackPanel>
+                </Border>
+
+                <!-- ============================== Remote control ============================== -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource CardTitle}" Text="Remote control" />
+                        <TextBlock Style="{StaticResource CardSubtitle}"
+                                   Text="Local mode unlocks the front panel; remote mode locks it. The lock gives this connection exclusive control over other interfaces." />
+                        <WrapPanel>
+                            <Button Command="{Binding GoToLocalCommand}" Content="Go to local (LCAL)" Margin="0,0,8,8" />
+                            <Button Command="{Binding GoToRemoteCommand}" Content="Go to remote (REMT)" Margin="0,0,8,8" />
+                            <Button Command="{Binding RequestLockCommand}" Margin="0,0,8,8">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconLock}" FontSize="12" />
+                                    <TextBlock Text="Request lock" Margin="8,0,0,0" />
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding ReleaseLockCommand}" Margin="0,0,8,8">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconUnlock}" FontSize="12" />
+                                    <TextBlock Text="Release lock" Margin="8,0,0,0" />
+                                </StackPanel>
+                            </Button>
+                        </WrapPanel>
+                        <TextBlock Text="{Binding LockStatus}" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"
+                                   Visibility="{Binding LockStatus, Converter={StaticResource NullToVisibility}}" />
+                        <TextBlock Style="{StaticResource ErrorText}" Text="{Binding Error}"
+                                   Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

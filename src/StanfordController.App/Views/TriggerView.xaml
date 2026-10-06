@@ -1,0 +1,109 @@
+<UserControl x:Class="StanfordController.App.Views.TriggerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:StanfordController.Presentation.ViewModels;assembly=StanfordController.Presentation">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Margin="24,20,24,8" DataContext="{Binding Trigger}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MaxWidth="640" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" MaxWidth="640" />
+            </Grid.ColumnDefinitions>
+
+            <!-- ============================== Trigger ============================== -->
+            <Border Style="{StaticResource Card}" VerticalAlignment="Top">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource CardTitle}" Text="Trigger" />
+                    <TextBlock Style="{StaticResource CardSubtitle}" Text="Choose what starts each delay cycle." />
+
+                    <HeaderedContentControl Style="{StaticResource FormRow}" Header="Source">
+                        <ContentControl Content="{Binding Source}" ContentTemplate="{StaticResource ChoiceField}" Focusable="False" />
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Style="{StaticResource FormRow}" Header="Internal rate">
+                        <ContentControl Content="{Binding Rate}" ContentTemplate="{StaticResource TextField}" Focusable="False" />
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Style="{StaticResource FormRow}" Header="External threshold">
+                        <ContentControl Content="{Binding Level}" ContentTemplate="{StaticResource TextField}" Focusable="False" />
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Style="{StaticResource FormRow}" Header="Inhibit input">
+                        <ContentControl Content="{Binding Inhibit}" ContentTemplate="{StaticResource ChoiceField}" Focusable="False" />
+                    </HeaderedContentControl>
+
+                    <Border Background="{StaticResource AccentSoftBrush}" CornerRadius="8" Padding="14,12" Margin="0,8,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="Single shot" FontWeight="SemiBold" />
+                                <TextBlock Style="{StaticResource Caption}" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,10,0"
+                                           Text="Fires one delay cycle (*TRG) when the source is a single-shot mode." />
+                            </StackPanel>
+                            <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Command="{Binding TriggerNowCommand}"
+                                    IsEnabled="{Binding IsSingleShot}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconTrigger}" FontSize="12" Foreground="White" />
+                                    <TextBlock Text="Trigger now" Margin="8,0,0,0" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </Border>
+                    <TextBlock Style="{StaticResource ErrorText}" Text="{Binding Error}"
+                               Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
+            </Border>
+
+            <!-- ============================== Advanced ============================== -->
+            <Border Grid.Column="2" Style="{StaticResource Card}" VerticalAlignment="Top">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource CardTitle}" Text="Advanced triggering" />
+                    <TextBlock Style="{StaticResource CardSubtitle}"
+                               Text="Holdoff ignores triggers for a set time after each cycle. Prescalers divide the trigger input, and let each output fire on only every Nth cycle at a chosen phase." />
+
+                    <HeaderedContentControl Style="{StaticResource FormRow}" Header="Advanced triggering">
+                        <ContentControl Content="{Binding AdvancedTriggering}" ContentTemplate="{StaticResource ToggleField}" Focusable="False" />
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Style="{StaticResource FormRow}" Header="Holdoff">
+                        <ContentControl Content="{Binding Holdoff}" ContentTemplate="{StaticResource TextField}" Focusable="False" />
+                    </HeaderedContentControl>
+
+                    <Grid Margin="0,10,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource ColumnHeader}" Text="PRESCALER" />
+                        <TextBlock Grid.Column="1" Style="{StaticResource ColumnHeader}" Text="FACTOR (EVERY Nth)" />
+                        <TextBlock Grid.Column="3" Style="{StaticResource ColumnHeader}" Text="PHASE (0 … N−1)" />
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding Prescalers}" Focusable="False">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:PrescalerViewModel}">
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="150" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="12" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding Name}" Style="{StaticResource FieldLabel}" VerticalAlignment="Top" Margin="0,7,0,0" />
+                                    <ContentControl Grid.Column="1" Content="{Binding Factor}" ContentTemplate="{StaticResource TextField}" Focusable="False" />
+                                    <ContentControl Grid.Column="3" Content="{Binding Phase}" ContentTemplate="{StaticResource TextField}" Focusable="False"
+                                                    Visibility="{Binding HasPhase, Converter={StaticResource BoolToVisibility}}" />
+                                    <TextBlock Grid.Column="3" Text="—" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center"
+                                               Visibility="{Binding HasPhase, Converter={StaticResource BoolToVisibility}, ConverterParameter=Invert}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Style="{StaticResource Caption}" Margin="0,4,0,0"
+                               Text="Holdoff and prescalers only take effect while advanced triggering is on." />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

@@ -31,6 +31,7 @@ public sealed class LogViewModel : ObservableObject
 
     private readonly SynchronizationContext? _uiContext = SynchronizationContext.Current;
     private bool _showTraffic = true;
+    private bool _isPanelVisible = true;
 
     public LogViewModel()
     {
@@ -44,6 +45,13 @@ public sealed class LogViewModel : ObservableObject
     {
         get => _showTraffic;
         set => SetProperty(ref _showTraffic, value);
+    }
+
+    /// <summary>Whether the log panel is shown under the instrument pages.</summary>
+    public bool IsPanelVisible
+    {
+        get => _isPanelVisible;
+        set => SetProperty(ref _isPanelVisible, value);
     }
 
     public ICommand ClearCommand { get; }

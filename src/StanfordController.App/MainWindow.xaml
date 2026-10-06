@@ -1,0 +1,180 @@
+<Window x:Class="StanfordController.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:StanfordController.Presentation.ViewModels;assembly=StanfordController.Presentation"
+        xmlns:views="clr-namespace:StanfordController.App.Views"
+        xmlns:inf="clr-namespace:StanfordController.App.Infrastructure"
+        Title="Stanford DG645 Controller"
+        Width="1360" Height="880" MinWidth="1080" MinHeight="680"
+        WindowStartupLocation="CenterScreen"
+        FontFamily="{StaticResource UiFont}" FontSize="13"
+        Background="{StaticResource WindowBrush}"
+        Icon="Assets/app.ico"
+        Closing="OnClosing">
+
+    <Window.Resources>
+        <DataTemplate DataType="{x:Type vm:InstrumentItemViewModel}">
+            <views:InstrumentPage />
+        </DataTemplate>
+    </Window.Resources>
+
+    <Grid Background="{StaticResource WindowBrush}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="290" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- ================================ Sidebar ================================ -->
+        <Border Background="{StaticResource SidebarBrush}">
+            <DockPanel>
+                <!-- Brand -->
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="20,22,20,22">
+                    <Image Source="Assets/logo.png" Width="34" Height="34" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="DG645 Controller" Foreground="White" FontSize="16" FontWeight="SemiBold" />
+                        <TextBlock Text="Stanford Research Systems" Foreground="{StaticResource SidebarMutedBrush}" FontSize="11.5" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- List header -->
+                <Grid DockPanel.Dock="Top" Margin="22,0,14,8">
+                    <TextBlock Text="SAVED INSTRUMENTS" Foreground="{StaticResource SidebarMutedBrush}" FontSize="11" FontWeight="SemiBold"
+                               VerticalAlignment="Center" />
+                    <Button Style="{StaticResource SidebarButton}" HorizontalAlignment="Right" Padding="8,4"
+                            Command="{Binding AddInstrumentCommand}" ToolTip="Add an instrument by IP address">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconAdd}" FontSize="11" />
+                            <TextBlock Text="Add" Margin="6,0,0,0" FontSize="12" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+
+                <!-- Bottom actions -->
+                <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource SidebarDividerBrush}" BorderThickness="0,1,0,0" Padding="10,10,10,14">
+                    <StackPanel>
+                        <Button Style="{StaticResource SidebarButton}" Command="{Binding DiscoverCommand}"
+                                ToolTip="Scan your local network for DG645s">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconSearch}" Width="20" />
+                                <TextBlock Text="Find instruments on network…" Margin="8,0,0,0" />
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource SidebarButton}" Command="{Binding AddDemoInstrumentCommand}"
+                                ToolTip="Add a simulated DG645 to try the program without hardware">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconDemo}" Width="20" />
+                                <TextBlock Text="Add demo instrument" Margin="8,0,0,0" />
+                            </StackPanel>
+                        </Button>
+                        <UniformGrid Columns="2" Margin="0,2,0,0">
+                            <Button Style="{StaticResource SidebarButton}" Command="{Binding ImportInstrumentsCommand}"
+                                    ToolTip="Add instruments from a list exported on another PC">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconImport}" Width="20" />
+                                    <TextBlock Text="Import…" Margin="8,0,0,0" />
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource SidebarButton}" Command="{Binding ExportInstrumentsCommand}"
+                                    ToolTip="Save the instrument list to share with colleagues">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconExport}" Width="20" />
+                                    <TextBlock Text="Export…" Margin="8,0,0,0" />
+                                </StackPanel>
+                            </Button>
+                        </UniformGrid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Instruments -->
+                <Grid>
+                    <ListBox x:Name="InstrumentList"
+                             Style="{StaticResource SidebarList}"
+                             ItemContainerStyle="{StaticResource SidebarItem}"
+                             ItemsSource="{Binding Instruments}"
+                             SelectedItem="{Binding SelectedInstrument}"
+                             inf:DoubleClickBehavior.Command="{Binding ConnectInstrumentCommand}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:InstrumentItemViewModel}">
+                                <Grid ToolTip="{Binding LastSeen}" Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBox}}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="18" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Ellipse Width="9" Height="9" VerticalAlignment="Top" Margin="0,5,0,0" HorizontalAlignment="Left"
+                                             Fill="{Binding State, Converter={StaticResource StateBrush}}" />
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="{Binding Name}" Foreground="{StaticResource SidebarTextBrush}" FontWeight="SemiBold"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding Subtitle}" Foreground="{StaticResource SidebarMutedBrush}" FontSize="11.5"
+                                                   TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
+                                    </StackPanel>
+                                    <Grid.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Connect" Command="{Binding ConnectCommand}" />
+                                            <MenuItem Header="Disconnect" Command="{Binding DisconnectCommand}" />
+                                            <Separator />
+                                            <MenuItem Header="Edit…"
+                                                      Command="{Binding PlacementTarget.Tag.EditInstrumentCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                      CommandParameter="{Binding}" />
+                                            <MenuItem Header="Duplicate…"
+                                                      Command="{Binding PlacementTarget.Tag.DuplicateInstrumentCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                            <MenuItem Header="Move up"
+                                                      Command="{Binding PlacementTarget.Tag.MoveUpCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                            <MenuItem Header="Move down"
+                                                      Command="{Binding PlacementTarget.Tag.MoveDownCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                            <Separator />
+                                            <MenuItem Header="Remove…"
+                                                      Command="{Binding PlacementTarget.Tag.RemoveInstrumentCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                        </ContextMenu>
+                                    </Grid.ContextMenu>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <TextBlock Margin="24,8,24,0" TextWrapping="Wrap" Foreground="{StaticResource SidebarMutedBrush}" FontSize="12.5"
+                               Visibility="{Binding HasInstruments, Converter={StaticResource BoolToVisibility}, ConverterParameter=Invert}"
+                               Text="No instruments saved yet. Add one by IP address, find one on the network, or try the demo instrument." />
+                </Grid>
+            </DockPanel>
+        </Border>
+
+        <!-- ================================ Content ================================ -->
+        <Grid Grid.Column="1">
+            <ContentControl Content="{Binding SelectedInstrument}" Focusable="False" />
+
+            <!-- Welcome / nothing selected -->
+            <Grid Visibility="{Binding SelectedInstrument, Converter={StaticResource NullToVisibility}, ConverterParameter=Invert}">
+                <Border Style="{StaticResource Card}" Width="560" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="36,32">
+                    <StackPanel>
+                        <Image Source="Assets/logo.png" Width="56" Height="56" HorizontalAlignment="Left" RenderOptions.BitmapScalingMode="HighQuality" />
+                        <TextBlock Text="Welcome to DG645 Controller" Style="{StaticResource PageTitle}" Margin="0,18,0,6" />
+                        <TextBlock Style="{StaticResource CardSubtitle}" FontSize="13.5" Margin="0,0,0,22"
+                                   Text="Control Stanford Research Systems DG645 digital delay generators over Ethernet. Save each instrument once with a friendly name — you will never need to remember its IP address again." />
+                        <StackPanel Orientation="Horizontal">
+                            <Button Style="{StaticResource PrimaryButton}" Command="{Binding AddInstrumentCommand}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconAdd}" FontSize="12" Foreground="White" />
+                                    <TextBlock Text="Add instrument" Margin="8,0,0,0" />
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding DiscoverCommand}" Margin="10,0,0,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconSearch}" FontSize="12" />
+                                    <TextBlock Text="Find on network" Margin="8,0,0,0" />
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding AddDemoInstrumentCommand}" Margin="10,0,0,0" Style="{StaticResource GhostButton}">
+                                <TextBlock Text="Try the demo" />
+                            </Button>
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource Caption}" Margin="0,24,0,0">
+                            <Run Text="Saved instruments are stored in" />
+                            <Run Text="{Binding ProfilesPath, Mode=OneWay}" FontFamily="{StaticResource MonoFont}" />
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

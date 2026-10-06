@@ -1,0 +1,153 @@
+<UserControl x:Class="StanfordController.App.Views.StatusView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Margin="24,20,24,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- ============================== Left: registers ============================== -->
+            <StackPanel>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <Grid>
+                            <TextBlock Style="{StaticResource CardTitle}" Text="Instrument status" />
+                            <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding IsPolling}" Content="Live" HorizontalAlignment="Right"
+                                      ToolTip="Read the register every second" />
+                        </Grid>
+                        <TextBlock Style="{StaticResource CardSubtitle}">
+                            <Run Text="Events since the indicators were last cleared (INSR? / INSE)." />
+                            <Run Text="{Binding Status.LastPollText, Mode=OneWay}" Foreground="{StaticResource TextMutedBrush}" />
+                        </TextBlock>
+                        <ItemsControl ItemsSource="{Binding Status.InstrumentBits}" ItemTemplate="{StaticResource StatusBitRow}" Focusable="False" />
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                            <Button Command="{Binding Status.ReadStatusCommand}" Content="Read now" />
+                            <Button Command="{Binding Status.ClearIndicatorsCommand}" Content="Clear indicators" Margin="8,0,0,0" />
+                            <Button Command="{Binding Status.ApplyEnableMasksCommand}" Content="Apply enable masks" Margin="8,0,0,0"
+                                    ToolTip="Write the Enable check boxes on this page to INSE, *ESE and *SRE" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource CardTitle}" Text="Standard event status" />
+                        <TextBlock Style="{StaticResource CardSubtitle}" Text="IEEE-488.2 event register (*ESR? / *ESE)." />
+                        <ItemsControl ItemsSource="{Binding Status.EventBits}" ItemTemplate="{StaticResource StatusBitRow}" Focusable="False" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource CardTitle}" Text="Status byte" />
+                        <TextBlock Style="{StaticResource CardSubtitle}" Text="Serial poll status byte and service request enable (*STB? / *SRE)." />
+                        <ItemsControl ItemsSource="{Binding Status.StatusByteBits}" ItemTemplate="{StaticResource StatusBitRow}" Focusable="False" />
+                        <ContentControl Content="{Binding Status.PowerOnStatusClear}" ContentTemplate="{StaticResource LabelledToggle}"
+                                        Focusable="False" Margin="0,8,0,0" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- ============================== Right ============================== -->
+            <StackPanel Grid.Column="2">
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource CardTitle}" Text="Errors" />
+                        <TextBlock Style="{StaticResource CardSubtitle}" Text="Commands the instrument rejected, newest first." />
+                        <Border BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="6" Height="150">
+                            <Grid>
+                                <ListBox ItemsSource="{Binding Status.Errors}" Style="{StaticResource PlainList}"
+                                         ItemContainerStyle="{StaticResource PlainListItem}" Margin="2">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding TimeText}" Style="{StaticResource MonoText}" FontSize="12"
+                                                           Foreground="{StaticResource TextMutedBrush}" Width="70" />
+                                                <TextBlock Text="{Binding Summary}" FontSize="12.5" Foreground="{StaticResource DangerBrush}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                                <TextBlock Text="No errors" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Status.Errors.Count}" Value="0">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Grid>
+                        </Border>
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <Button Command="{Binding Status.ReadErrorsCommand}" Content="Read error queue" ToolTip="Read LERR? until the queue is empty" />
+                            <Button Command="{Binding Status.ClearStatusCommand}" Content="Clear status (*CLS)" Margin="8,0,0,0" />
+                            <Button Command="{Binding Status.ClearErrorListCommand}" Content="Clear list" Margin="8,0,0,0" Style="{StaticResource GhostButton}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource CardTitle}" Text="Diagnostics" />
+                        <TextBlock Style="{StaticResource CardSubtitle}" Text="Built-in self test and calibration." />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="170" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="10" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="12" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="Self test" />
+                            <Button Grid.Column="1" Command="{Binding Status.SelfTestCommand}" Content="Run (*TST?)" />
+                            <TextBlock Grid.Column="2" Text="{Binding Status.SelfTestResult}" Margin="12,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap" />
+
+                            <TextBlock Grid.Row="2" Style="{StaticResource FieldLabel}" Text="Auto calibration" />
+                            <Button Grid.Row="2" Grid.Column="1" Command="{Binding Status.AutoCalibrateCommand}" Content="Run (*CAL?)" />
+                            <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding Status.CalibrationResult}" Margin="12,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap" />
+
+                            <TextBlock Grid.Row="4" Style="{StaticResource FieldLabel}" Text="Timebase" />
+                            <TextBlock Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding Status.Timebase}" VerticalAlignment="Center" />
+                        </Grid>
+                        <TextBlock Style="{StaticResource ErrorText}" Text="{Binding Status.Error}" Margin="0,10,0,0"
+                                   Visibility="{Binding Status.HasError, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource CardTitle}" Text="Front-panel display" />
+                        <TextBlock Style="{StaticResource CardSubtitle}" Text="Choose what the instrument's own display shows (DISP)." />
+                        <HeaderedContentControl Style="{StaticResource FormRow}" Header="Display">
+                            <ComboBox ItemsSource="{Binding Status.DisplayModes}" SelectedItem="{Binding Status.DisplayMode}" DisplayMemberPath="Label" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Style="{StaticResource FormRow}" Header="Channel / output">
+                            <ComboBox ItemsSource="{Binding Status.DisplayChannelOptions}" SelectedItem="{Binding Status.DisplayChannel}" DisplayMemberPath="Label" />
+                        </HeaderedContentControl>
+                        <Button Command="{Binding Status.ApplyDisplayCommand}" Content="Show on instrument" HorizontalAlignment="Left" Margin="170,0,0,0" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource CardTitle}" Text="Identity" />
+                        <TextBlock Text="{Binding Identity}" Style="{StaticResource MonoText}" TextWrapping="Wrap" Margin="0,6,0,0" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

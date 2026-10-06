@@ -1,0 +1,52 @@
+name: Fetch DG645 manuals
+
+# Run by hand (Actions tab → "Fetch DG645 manuals" → Run workflow) to download the official
+# Stanford Research Systems documents into docs/manuals and commit them to the selected branch.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Download documents
+        run: |
+          set -uo pipefail
+          mkdir -p docs/manuals
+          failed=0
+          download() {
+            local file="docs/manuals/$1" url="$2"
+            if curl -fsSL --retry 3 --retry-delay 5 -A "Mozilla/5.0" -o "$file.tmp" "$url" && [ "$(head -c 4 "$file.tmp")" = "%PDF" ]; then
+              mv "$file.tmp" "$file"
+              echo "Downloaded $1 ($(stat -c %s "$file") bytes)"
+            else
+              rm -f "$file.tmp"
+              echo "::warning::Could not download $1 from $url"
+              failed=1
+            fi
+          }
+          download DG645m.pdf        "https://www.thinksrs.com/downloads/pdfs/manuals/DG645m.pdf"
+          download DG645c.pdf        "https://www.thinksrs.com/downloads/pdfs/catalog/DG645c.pdf"
+          download DG645_TCPIP.pdf   "https://www.thinksrs.com/downloads/pdfs/other%20stuff/DG645_TCPIP.pdf"
+          ls -la docs/manuals
+          [ -f docs/manuals/DG645m.pdf ] || { echo "::error::The DG645 manual could not be downloaded."; exit 1; }
+          exit 0
+
+      - name: Commit
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/manuals/*.pdf
+          if git diff --cached --quiet; then
+            echo "The manuals are already up to date."
+          else
+            git commit -m "Add Stanford Research Systems DG645 reference documents"
+            git push
+          fi
