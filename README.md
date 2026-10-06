@@ -7,6 +7,8 @@ Save each instrument once under a friendly name ("Laser lab DG645", "Beamline tr
 a list: there is no need to remember IP addresses. Every setting the DG645 exposes over its remote
 interface is available, laid out in clear pages with live feedback from the instrument.
 
+![Delays page with the saved-instrument list](docs/screenshots/delays.jpg)
+
 ## Download
 
 Get **`StanfordController.exe`** from the [latest release](../../releases/latest).
@@ -46,6 +48,18 @@ A new release is built automatically every time `main` changes (see [Releases](#
 * **Demo instrument.** A built-in simulated DG645 for trying the program without hardware.
 * Every value written is read back from the instrument, so the screen always shows what the DG645
   actually accepted. Rejected values are highlighted with the instrument's own error message.
+
+## Screenshots
+
+These are rendered by the CI smoke test against the built-in simulated DG645, at the program's minimum
+window size.
+
+| | |
+| --- | --- |
+| ![Timing diagram](docs/screenshots/timing-diagram.jpg) | ![Outputs](docs/screenshots/outputs.jpg) |
+| Timing diagram drawn from the channel delays | Output amplitude, offset, polarity and presets |
+| ![Trigger](docs/screenshots/trigger.jpg) | ![Terminal](docs/screenshots/terminal.jpg) |
+| Trigger source, levels, inhibit and prescalers | Command terminal with searchable reference |
 
 ## Using it
 
