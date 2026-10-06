@@ -441,7 +441,9 @@ The data folder is:
 
 The portable program needs to be able to write beside itself. If it cannot (for example on a read-only drive), it uses the normal data folder instead and says so in the status bar.
 
-Instruments saved by earlier versions of this program (named *DG645 Controller*, in `%APPDATA%\StanfordController`) are copied into the Default configuration the first time Tempo runs.
+Release 1.0.14 of this program was called *Strobe*. The first time Tempo runs, it copies Strobe's configurations and preferences from `%APPDATA%\Strobe`, `~/.config/Strobe` or the portable `Strobe-data` folder into its own data folder, renaming each `.strobe` file to `.tempo`; the old folder is left as it was. Configurations you saved elsewhere keep their `.strobe` names and open as they are (**File ▸ Open configuration…** lists both kinds).
+
+Instruments saved by earlier versions (named *DG645 Controller*, in `%APPDATA%\StanfordController`) are copied into the Default configuration the first time Tempo runs.
 
 ## Error codes
 

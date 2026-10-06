@@ -23,6 +23,9 @@ public sealed class ConfigurationStore(string path)
 {
     public const string FileExtension = ".tempo";
 
+    /// <summary>The extension used by release 1.0.14, when the program was called Strobe. The contents are the same.</summary>
+    public const string PreviousFileExtension = ".strobe";
+
     public const string FileFilterName = "Tempo configuration";
 
     private static readonly JsonSerializerOptions JsonOptions = new()

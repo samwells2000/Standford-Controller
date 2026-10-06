@@ -257,6 +257,61 @@ public sealed class ConfigurationTests : IDisposable
     }
 
     [Fact]
+    public async Task ConfigurationsAndPreferencesFromStrobeAreCopiedOnFirstRun()
+    {
+        var strobe = Path.Combine(_directory, "Strobe");
+        var strobeLab = Path.Combine(strobe, "Laser lab.strobe");
+        var elsewhere = Path.Combine(_directory, "Experiments", "Beamline.strobe");
+        new ConfigurationStore(Path.Combine(strobe, "Default.strobe")).Save([new InstrumentProfile { Name = "Bench DG645", Host = "10.0.0.2" }]);
+        new ConfigurationStore(strobeLab).Save([new InstrumentProfile { Name = "Lab DG645", Host = "10.0.0.20" }]);
+        new AppSettingsStore(Path.Combine(strobe, "settings.json")).Save(new AppSettings
+        {
+            Theme = AppTheme.Dark,
+            ConfigurationPath = strobeLab,
+            RecentConfigurations = [strobeLab, elsewhere],
+        });
+
+        var paths = new AppPaths(Path.Combine(_directory, "Tempo"), IsPortable: false);
+        Assert.Equal(strobe, paths.PreviousDataDirectory);
+        Assert.True(paths.MigrateFromStrobe());
+
+        var lab = Path.Combine(paths.DataDirectory, "Laser lab.tempo");
+        Assert.Equal("Bench DG645", Assert.Single(new ConfigurationStore(paths.DefaultConfigurationPath).Load()).Name);
+        Assert.Equal("Lab DG645", Assert.Single(new ConfigurationStore(lab).Load()).Name);
+        var settings = new AppSettingsStore(paths.SettingsPath).Load();
+        Assert.Equal(AppTheme.Dark, settings.Theme);
+        Assert.Equal(lab, settings.ConfigurationPath);
+        Assert.Equal(new[] { lab, elsewhere }, settings.RecentConfigurations);
+        Assert.True(File.Exists(strobeLab)); // the old folder is left as it was
+        Assert.False(paths.MigrateFromStrobe()); // only on the first run
+
+        var main = new MainViewModel(paths.DefaultConfigurationPath, new FakeDialogs(), new AppSettingsStore(paths.SettingsPath));
+        await main.LoadAsync();
+        Assert.Equal("Laser lab — Tempo", main.WindowTitle);
+        Assert.Equal("Lab DG645", Assert.Single(main.Instruments).Name);
+    }
+
+    [Fact]
+    public void PortableCopyTakesOverTheStrobeDataFolderBesideIt()
+    {
+        new ConfigurationStore(Path.Combine(_directory, "Strobe-data", "Default.strobe")).Save([new InstrumentProfile { Name = "Bench DG645", Host = "10.0.0.2" }]);
+
+        var paths = AppPaths.ForPortable(_directory);
+        Assert.NotNull(paths);
+        Assert.Equal(Path.Combine(_directory, "Strobe-data"), paths.PreviousDataDirectory);
+        Assert.True(paths.MigrateFromStrobe());
+        Assert.Equal("Bench DG645", Assert.Single(new ConfigurationStore(paths.DefaultConfigurationPath).Load()).Name);
+    }
+
+    [Fact]
+    public void NothingIsCopiedWithoutAStrobeFolder()
+    {
+        var paths = new AppPaths(Path.Combine(_directory, "Tempo"), IsPortable: false);
+        Assert.False(paths.MigrateFromStrobe());
+        Assert.False(Directory.Exists(paths.DataDirectory));
+    }
+
+    [Fact]
     public async Task StatusBarSummariesFollowTriggerAndBurst()
     {
         var (main, _) = await OpenAsync(settingsName: null);

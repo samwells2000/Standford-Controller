@@ -56,18 +56,26 @@ public partial class App : Application
             Directory.CreateDirectory(data);
             Paths = new AppPaths(data, IsPortableBuild);
         }
-        else if (IsPortableBuild)
+        else
         {
-            var programDirectory = Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
-            Paths = AppPaths.ForPortable(programDirectory) ?? AppPaths.ForUser();
-            if (!Paths.IsPortable)
+            if (IsPortableBuild)
             {
-                startupMessage = $"The folder beside the program cannot be written, so files are kept in {Paths.DataDirectory} instead.";
+                var programDirectory = Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
+                Paths = AppPaths.ForPortable(programDirectory) ?? AppPaths.ForUser();
+                if (!Paths.IsPortable)
+                {
+                    startupMessage = $"The folder beside the program cannot be written, so files are kept in {Paths.DataDirectory} instead.";
+                }
             }
-        }
-        else if (Paths.MigrateLegacyInstruments())
-        {
-            startupMessage = "Your saved instruments from the previous version have been copied into the Default configuration.";
+
+            if (Paths.MigrateFromStrobe())
+            {
+                startupMessage ??= $"Your configurations and preferences from Strobe, this program's previous name, have been copied from {Paths.PreviousDataDirectory}.";
+            }
+            else if (Paths.MigrateLegacyInstruments())
+            {
+                startupMessage ??= "Your saved instruments from the previous version have been copied into the Default configuration.";
+            }
         }
 
         Dispatcher.UIThread.UnhandledException += (_, e) =>
