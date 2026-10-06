@@ -9,8 +9,8 @@
     -->
 
     <Styles.Resources>
-        <FontFamily x:Key="UiFont">avares://Strobe/Assets/Fonts#IBM Plex Sans</FontFamily>
-        <FontFamily x:Key="MonoFont">avares://Strobe/Assets/Fonts#IBM Plex Mono</FontFamily>
+        <FontFamily x:Key="UiFont">avares://Tempo/Assets/Fonts#IBM Plex Sans</FontFamily>
+        <FontFamily x:Key="MonoFont">avares://Tempo/Assets/Fonts#IBM Plex Mono</FontFamily>
 
         <!-- Simple line icons (16×16 grid), drawn with Path so they look the same on every platform. -->
         <StreamGeometry x:Key="GlyphUp">M3.5,10.5 L8,6 L12.5,10.5</StreamGeometry>

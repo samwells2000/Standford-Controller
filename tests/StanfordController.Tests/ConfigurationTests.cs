@@ -9,7 +9,7 @@ namespace StanfordController.Tests;
 /// <summary>Configuration files, saved setups and what happens to them when an instrument connects.</summary>
 public sealed class ConfigurationTests : IDisposable
 {
-    private readonly string _directory = Path.Combine(Path.GetTempPath(), "strobe-tests-" + Guid.NewGuid().ToString("N"));
+    private readonly string _directory = Path.Combine(Path.GetTempPath(), "tempo-tests-" + Guid.NewGuid().ToString("N"));
 
     public void Dispose()
     {
@@ -19,7 +19,7 @@ public sealed class ConfigurationTests : IDisposable
         }
     }
 
-    private string DefaultPath => Path.Combine(_directory, "Default.strobe");
+    private string DefaultPath => Path.Combine(_directory, "Default.tempo");
 
     private async Task<(MainViewModel Main, FakeDialogs Dialogs)> OpenAsync(string? settingsName = "settings.json")
     {
@@ -50,7 +50,7 @@ public sealed class ConfigurationTests : IDisposable
         var item = await ConnectAndConfigureAsync(main);
         item.Session!.NotifySettingsChanged();
         Assert.True(main.HasUnsavedChanges);
-        Assert.EndsWith("*" + " — Strobe", main.WindowTitle);
+        Assert.EndsWith("*" + " — Tempo", main.WindowTitle);
 
         Assert.True(await main.SaveAllSetupsAsync());
         Assert.False(main.HasUnsavedChanges);
@@ -169,7 +169,7 @@ public sealed class ConfigurationTests : IDisposable
     [Fact]
     public async Task OpenedConfigurationIsReopenedAtStartupAndListedAsRecent()
     {
-        var lab = new ConfigurationStore(Path.Combine(_directory, "Laser lab.strobe"));
+        var lab = new ConfigurationStore(Path.Combine(_directory, "Laser lab.tempo"));
         lab.Save([new InstrumentProfile { Name = "Lab DG645", Host = "10.0.0.20" }]);
 
         var (main, _) = await OpenAsync();
@@ -181,7 +181,7 @@ public sealed class ConfigurationTests : IDisposable
 
         var (reopened, _) = await OpenAsync();
         Assert.Equal("Laser lab", reopened.ConfigurationName);
-        Assert.Equal("Laser lab — Strobe", reopened.WindowTitle);
+        Assert.Equal("Laser lab — Tempo", reopened.WindowTitle);
 
         // If that file disappears, the default configuration opens instead.
         File.Delete(lab.FilePath);
@@ -197,7 +197,7 @@ public sealed class ConfigurationTests : IDisposable
         main.AddDemoInstrumentCommand.Execute(null);
         await ConnectAndConfigureAsync(main);
 
-        dialogs.SaveFilePath = Path.Combine(_directory, "Experiment 7.strobe");
+        dialogs.SaveFilePath = Path.Combine(_directory, "Experiment 7.tempo");
         main.SaveConfigurationAsCommand.Execute(null);
         for (var i = 0; i < 200 && main.ConfigurationName != "Experiment 7"; i++)
         {
@@ -250,10 +250,65 @@ public sealed class ConfigurationTests : IDisposable
         var paths = AppPaths.ForPortable(_directory);
         Assert.NotNull(paths);
         Assert.True(paths.IsPortable);
-        Assert.Equal(Path.Combine(_directory, "Strobe-data"), paths.DataDirectory);
+        Assert.Equal(Path.Combine(_directory, "Tempo-data"), paths.DataDirectory);
         Assert.True(Directory.Exists(paths.DataDirectory));
-        Assert.Equal(Path.Combine(paths.DataDirectory, "Default.strobe"), paths.DefaultConfigurationPath);
+        Assert.Equal(Path.Combine(paths.DataDirectory, "Default.tempo"), paths.DefaultConfigurationPath);
         Assert.False(paths.MigrateLegacyInstruments());
+    }
+
+    [Fact]
+    public async Task ConfigurationsAndPreferencesFromStrobeAreCopiedOnFirstRun()
+    {
+        var strobe = Path.Combine(_directory, "Strobe");
+        var strobeLab = Path.Combine(strobe, "Laser lab.strobe");
+        var elsewhere = Path.Combine(_directory, "Experiments", "Beamline.strobe");
+        new ConfigurationStore(Path.Combine(strobe, "Default.strobe")).Save([new InstrumentProfile { Name = "Bench DG645", Host = "10.0.0.2" }]);
+        new ConfigurationStore(strobeLab).Save([new InstrumentProfile { Name = "Lab DG645", Host = "10.0.0.20" }]);
+        new AppSettingsStore(Path.Combine(strobe, "settings.json")).Save(new AppSettings
+        {
+            Theme = AppTheme.Dark,
+            ConfigurationPath = strobeLab,
+            RecentConfigurations = [strobeLab, elsewhere],
+        });
+
+        var paths = new AppPaths(Path.Combine(_directory, "Tempo"), IsPortable: false);
+        Assert.Equal(strobe, paths.PreviousDataDirectory);
+        Assert.True(paths.MigrateFromStrobe());
+
+        var lab = Path.Combine(paths.DataDirectory, "Laser lab.tempo");
+        Assert.Equal("Bench DG645", Assert.Single(new ConfigurationStore(paths.DefaultConfigurationPath).Load()).Name);
+        Assert.Equal("Lab DG645", Assert.Single(new ConfigurationStore(lab).Load()).Name);
+        var settings = new AppSettingsStore(paths.SettingsPath).Load();
+        Assert.Equal(AppTheme.Dark, settings.Theme);
+        Assert.Equal(lab, settings.ConfigurationPath);
+        Assert.Equal(new[] { lab, elsewhere }, settings.RecentConfigurations);
+        Assert.True(File.Exists(strobeLab)); // the old folder is left as it was
+        Assert.False(paths.MigrateFromStrobe()); // only on the first run
+
+        var main = new MainViewModel(paths.DefaultConfigurationPath, new FakeDialogs(), new AppSettingsStore(paths.SettingsPath));
+        await main.LoadAsync();
+        Assert.Equal("Laser lab — Tempo", main.WindowTitle);
+        Assert.Equal("Lab DG645", Assert.Single(main.Instruments).Name);
+    }
+
+    [Fact]
+    public void PortableCopyTakesOverTheStrobeDataFolderBesideIt()
+    {
+        new ConfigurationStore(Path.Combine(_directory, "Strobe-data", "Default.strobe")).Save([new InstrumentProfile { Name = "Bench DG645", Host = "10.0.0.2" }]);
+
+        var paths = AppPaths.ForPortable(_directory);
+        Assert.NotNull(paths);
+        Assert.Equal(Path.Combine(_directory, "Strobe-data"), paths.PreviousDataDirectory);
+        Assert.True(paths.MigrateFromStrobe());
+        Assert.Equal("Bench DG645", Assert.Single(new ConfigurationStore(paths.DefaultConfigurationPath).Load()).Name);
+    }
+
+    [Fact]
+    public void NothingIsCopiedWithoutAStrobeFolder()
+    {
+        var paths = new AppPaths(Path.Combine(_directory, "Tempo"), IsPortable: false);
+        Assert.False(paths.MigrateFromStrobe());
+        Assert.False(Directory.Exists(paths.DataDirectory));
     }
 
     [Fact]

@@ -98,7 +98,7 @@ public sealed class ProfileEditorViewModel : ObservableObject
     public static IReadOnlyList<ChoiceOption> SetupOnConnectOptions { get; } =
     [
         new((int)Core.Profiles.SetupOnConnect.Ask, "Ask which settings to use"),
-        new((int)Core.Profiles.SetupOnConnect.Restore, "Load the setup saved in Strobe"),
+        new((int)Core.Profiles.SetupOnConnect.Restore, "Load the setup saved in Tempo"),
         new((int)Core.Profiles.SetupOnConnect.KeepInstrument, "Keep the settings on the instrument"),
     ];
 

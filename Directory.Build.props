@@ -3,9 +3,9 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Product>Strobe</Product>
-    <Company>Strobe contributors</Company>
-    <Copyright>Copyright © Strobe contributors</Copyright>
+    <Product>Tempo</Product>
+    <Company>Tempo contributors</Company>
+    <Copyright>Copyright © Tempo contributors</Copyright>
     <Version Condition="'$(Version)' == ''">1.0.0</Version>
     <!-- Symbols live inside each assembly so the published app is a single file. -->
     <DebugType>embedded</DebugType>

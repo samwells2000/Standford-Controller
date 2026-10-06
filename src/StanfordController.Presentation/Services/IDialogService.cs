@@ -2,7 +2,7 @@ using StanfordController.Presentation.ViewModels;
 
 namespace StanfordController.Presentation.Services;
 
-/// <summary>A file type for open/save pickers, e.g. ("Strobe configuration", "*.strobe").</summary>
+/// <summary>A file type for open/save pickers, e.g. ("Tempo configuration", "*.tempo").</summary>
 public sealed record FileFilter(string Name, params string[] Patterns)
 {
     public static FileFilter AllFiles { get; } = new("All files", "*");

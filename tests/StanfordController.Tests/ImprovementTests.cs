@@ -61,7 +61,7 @@ public sealed class ImprovementTests : IDisposable
     [Fact]
     public async Task MainViewModelRemembersThemeSelectionAndLogVisibility()
     {
-        var configuration = Path.Combine(_directory, "Default.strobe");
+        var configuration = Path.Combine(_directory, "Default.tempo");
         var settings = new AppSettingsStore(Path.Combine(_directory, "settings.json"));
 
         var first = new MainViewModel(configuration, new FakeDialogs(), settings);
@@ -73,7 +73,7 @@ public sealed class ImprovementTests : IDisposable
         first.SetThemeCommand.Execute("Dark");
         first.ShowLog = false;
         Assert.All(first.Instruments, i => Assert.False(i.Log.IsPanelVisible));
-        Assert.Equal("Default — Strobe", first.WindowTitle);
+        Assert.Equal("Default — Tempo", first.WindowTitle);
 
         var reopened = new MainViewModel(configuration, new FakeDialogs(), settings);
         await reopened.LoadAsync();
@@ -160,7 +160,7 @@ public sealed class ImprovementTests : IDisposable
     [Fact]
     public async Task InstrumentsMarkedForStartupConnectAutomatically()
     {
-        var store = new ConfigurationStore(Path.Combine(_directory, "Default.strobe"));
+        var store = new ConfigurationStore(Path.Combine(_directory, "Default.tempo"));
         store.Save(
         [
             new InstrumentProfile { Name = "Auto", IsSimulator = true, ConnectOnStartup = true },

@@ -23,6 +23,10 @@ public sealed class MainViewModel : ObservableObject
 
     private static readonly FileFilter ConfigurationFilter = new(ConfigurationStore.FileFilterName, "*" + ConfigurationStore.FileExtension);
 
+    // Opening also lists files saved by release 1.0.14, when the program was called Strobe.
+    private static readonly FileFilter OpenConfigurationFilter = new(ConfigurationStore.FileFilterName,
+        "*" + ConfigurationStore.FileExtension, "*" + ConfigurationStore.PreviousFileExtension);
+
     private readonly string _defaultConfigurationPath;
     private readonly IDialogService _dialogs;
     private readonly AppSettingsStore? _settingsStore;
@@ -33,7 +37,7 @@ public sealed class MainViewModel : ObservableObject
     private bool _statusIsError;
     private bool _loading;
 
-    /// <param name="defaultConfigurationPath">The configuration used when none has been opened (Default.strobe).</param>
+    /// <param name="defaultConfigurationPath">The configuration used when none has been opened (Default.tempo).</param>
     public MainViewModel(string defaultConfigurationPath, IDialogService dialogs, AppSettingsStore? settingsStore = null)
     {
         _defaultConfigurationPath = Path.GetFullPath(defaultConfigurationPath);
@@ -116,7 +120,7 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
-    /// <summary>"Default — Strobe", with an asterisk while setups have unsaved changes.</summary>
+    /// <summary>"Default — Tempo", with an asterisk while setups have unsaved changes.</summary>
     public string WindowTitle => $"{ConfigurationName}{(HasUnsavedChanges ? " *" : string.Empty)} — {AppName}";
 
     /// <summary>Shown in the About box and status bar, e.g. "Version 1.0.42".</summary>
@@ -391,7 +395,7 @@ public sealed class MainViewModel : ObservableObject
 
     private async Task OpenConfigurationAsync()
     {
-        var path = await _dialogs.PickOpenFileAsync("Open configuration", ConfigurationFilter, FileFilter.AllFiles);
+        var path = await _dialogs.PickOpenFileAsync("Open configuration", OpenConfigurationFilter, FileFilter.AllFiles);
         if (path is not null)
         {
             await OpenConfigurationAsync(path);
@@ -701,7 +705,7 @@ public sealed class MainViewModel : ObservableObject
 
     private async Task ImportInstrumentsAsync()
     {
-        var path = await _dialogs.PickOpenFileAsync("Import instruments from configuration", ConfigurationFilter, new FileFilter("Instrument list", "*.json"), FileFilter.AllFiles);
+        var path = await _dialogs.PickOpenFileAsync("Import instruments from configuration", OpenConfigurationFilter, new FileFilter("Instrument list", "*.json"), FileFilter.AllFiles);
         if (path is null)
         {
             return;

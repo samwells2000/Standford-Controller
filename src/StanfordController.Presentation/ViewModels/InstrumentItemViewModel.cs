@@ -248,7 +248,7 @@ public sealed class InstrumentItemViewModel : ObservableObject
         var differences = stored.DescribeDifferences(current);
         if (differences.Count == 0)
         {
-            session.MarkSetupSaved("The instrument's settings match the setup saved in Strobe.");
+            session.MarkSetupSaved("The instrument's settings match the setup saved in Tempo.");
             return;
         }
 
@@ -264,7 +264,7 @@ public sealed class InstrumentItemViewModel : ObservableObject
 
             var answer = await _dialogs.AskAsync(
                 "Saved setup",
-                $"The settings on {Name} differ from the setup saved in Strobe on {stored.SavedUtc.ToLocalTime():yyyy-MM-dd HH:mm}:\n\n{list}\n\n" +
+                $"The settings on {Name} differ from the setup saved in Tempo on {stored.SavedUtc.ToLocalTime():yyyy-MM-dd HH:mm}:\n\n{list}\n\n" +
                 "Which settings do you want to use?",
                 "Load saved setup",
                 "Keep instrument settings",

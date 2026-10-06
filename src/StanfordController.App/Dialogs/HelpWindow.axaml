@@ -4,7 +4,7 @@
         xmlns:md="clr-namespace:StanfordController.App.Help"
         x:Class="StanfordController.App.Dialogs.HelpWindow"
         x:DataType="help:HelpViewModel"
-        Title="Strobe Help"
+        Title="Tempo Help"
         Width="1000" Height="720" MinWidth="640" MinHeight="420"
         WindowStartupLocation="CenterOwner"
         Icon="/Assets/app.ico">

@@ -47,12 +47,12 @@
             <HeaderedContentControl Theme="{StaticResource Section}" Header="Connection" Margin="0,8,0,4">
                 <StackPanel>
                     <HeaderedContentControl Theme="{StaticResource DialogRow}" Header="On opening">
-                        <CheckBox IsChecked="{Binding ConnectOnStartup}" Content="Connect when this configuration opens (and when Strobe starts)" />
+                        <CheckBox IsChecked="{Binding ConnectOnStartup}" Content="Connect when this configuration opens (and when Tempo starts)" />
                     </HeaderedContentControl>
                     <HeaderedContentControl Theme="{StaticResource DialogRow}" Header="Saved setup">
                         <StackPanel Spacing="4">
                             <ComboBox ItemsSource="{x:Static vm:ProfileEditorViewModel.SetupOnConnectOptions}" SelectedItem="{Binding SetupOnConnectChoice}"
-                                      ToolTip.Tip="What to do on connecting when the instrument's settings differ from the setup saved in Strobe" />
+                                      ToolTip.Tip="What to do on connecting when the instrument's settings differ from the setup saved in Tempo" />
                             <TextBlock Classes="caption" Text="{Binding StoredSetupText}" />
                         </StackPanel>
                     </HeaderedContentControl>

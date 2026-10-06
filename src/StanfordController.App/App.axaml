@@ -3,7 +3,7 @@
              xmlns:vm="clr-namespace:StanfordController.Presentation.ViewModels;assembly=StanfordController.Presentation"
              xmlns:inf="clr-namespace:StanfordController.App.Infrastructure"
              x:Class="StanfordController.App.App"
-             Name="Strobe"
+             Name="Tempo"
              RequestedThemeVariant="Default">
 
     <Application.Resources>
