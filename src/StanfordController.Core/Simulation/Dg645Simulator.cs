@@ -36,8 +36,16 @@ public sealed class Dg645Simulator
 
     public Timebase Timebase { get; set; } = Timebase.Internal;
 
-    /// <summary>Every line received, for tests.</summary>
+    /// <summary>Every line received, for tests. Use <see cref="GetReceivedLines"/> from other threads.</summary>
     public List<string> ReceivedLines { get; } = [];
+
+    public IReadOnlyList<string> GetReceivedLines()
+    {
+        lock (_sync)
+        {
+            return ReceivedLines.ToArray();
+        }
+    }
 
     /// <summary>Processes one line (which may hold several ';'-separated commands) and returns the reply lines.</summary>
     public IReadOnlyList<string> Process(string line)

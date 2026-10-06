@@ -121,7 +121,12 @@ public class TcpTransportTests
         Assert.Equal((Dg645Channel.C, 42e-9), await client.GetDelayAsync(Dg645Channel.D));
 
         await client.DisconnectAsync();
-        Assert.Equal("LCAL", server.Simulator.ReceivedLines[^1]);
+        for (var i = 0; i < 100 && !server.Simulator.GetReceivedLines().Contains("LCAL"); i++)
+        {
+            await Task.Delay(10);
+        }
+
+        Assert.Equal("LCAL", server.Simulator.GetReceivedLines()[^1]);
     }
 
     [Fact]
