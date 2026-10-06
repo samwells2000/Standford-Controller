@@ -17,6 +17,7 @@ public sealed class ProfileEditorViewModel : ObservableObject
     private string _location;
     private string _notes;
     private bool _returnToLocal;
+    private bool _connectOnStartup;
     private IReadOnlyList<string> _problems = [];
     private bool _showProblems;
     private string? _testResult;
@@ -34,6 +35,7 @@ public sealed class ProfileEditorViewModel : ObservableObject
         _location = profile.Location ?? string.Empty;
         _notes = profile.Notes ?? string.Empty;
         _returnToLocal = profile.ReturnToLocalOnDisconnect;
+        _connectOnStartup = profile.ConnectOnStartup;
         TestConnectionCommand = new AsyncRelayCommand(TestConnectionAsync, () => IsSimulator || !string.IsNullOrWhiteSpace(_host));
     }
 
@@ -83,6 +85,12 @@ public sealed class ProfileEditorViewModel : ObservableObject
     {
         get => _notes;
         set => Set(ref _notes, value);
+    }
+
+    public bool ConnectOnStartup
+    {
+        get => _connectOnStartup;
+        set => Set(ref _connectOnStartup, value);
     }
 
     public bool ReturnToLocalOnDisconnect
@@ -152,6 +160,7 @@ public sealed class ProfileEditorViewModel : ObservableObject
         profile.Location = string.IsNullOrWhiteSpace(_location) ? null : _location.Trim();
         profile.Notes = string.IsNullOrWhiteSpace(_notes) ? null : _notes.Trim();
         profile.ReturnToLocalOnDisconnect = _returnToLocal;
+        profile.ConnectOnStartup = _connectOnStartup;
         return profile;
     }
 

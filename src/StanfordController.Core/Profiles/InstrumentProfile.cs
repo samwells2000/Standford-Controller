@@ -28,6 +28,9 @@ public sealed class InstrumentProfile
     /// <summary>Send LCAL on disconnect so the front panel is usable again.</summary>
     public bool ReturnToLocalOnDisconnect { get; set; } = true;
 
+    /// <summary>Connect as soon as the program starts.</summary>
+    public bool ConnectOnStartup { get; set; }
+
     public string? LastKnownIdentity { get; set; }
 
     public DateTime? LastConnectedUtc { get; set; }

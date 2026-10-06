@@ -8,6 +8,7 @@
         Width="1360" Height="880" MinWidth="1080" MinHeight="680"
         WindowStartupLocation="CenterScreen"
         FontFamily="{StaticResource UiFont}" FontSize="13"
+        Foreground="{DynamicResource TextBrush}"
         Background="{DynamicResource WindowBrush}"
         Icon="Assets/app.ico"
         Closing="OnClosing"

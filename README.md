@@ -27,10 +27,10 @@ A new release is built automatically every time `main` changes (see [Releases](#
   reads their identity, or checks a single address. Add one with a click.
 * **Connection test** before saving, and several instruments connected at once.
 * **Delays & timing.** Channels A–H with reference channel (T0, A–H) and delay, step size and ▲/▼ step
-  buttons, time from T0, and a live timing diagram of the AB, CD, EF and GH pulses. Values accept
-  units: `1.5 us`, `250 ns`, `2 ms`, `1e-6`.
+  buttons, time from T0, and a live timing diagram of the AB, CD, EF and GH pulses with pulse widths
+  and a hover read-out of exact edge times. Values accept units: `1.5 us`, `250 ns`, `2 ms`, `1e-6`.
 * **Outputs.** Amplitude, offset, polarity and their step sizes for T0, AB, CD, EF and GH, with
-  one-click TTL and NIM presets and a readout of the idle and pulse levels.
+  one-click TTL and NIM presets, a readout of the idle and pulse levels, and when each output pulses.
 * **Trigger.** Source (internal, external rising/falling, single-shot, line), internal rate, threshold,
   inhibit, single-shot trigger, advanced triggering, holdoff, and prescale factors and phases.
 * **Burst mode.** Enable, count, period, delay and T0 behaviour, with a plain-English summary.
@@ -44,8 +44,13 @@ A new release is built automatically every time `main` changes (see [Releases](#
   and the control lock.
 * **Terminal.** Send any command by hand, with history, automatic error checking and a searchable
   command reference.
-* **Communication log** of every command and reply, which can be copied or saved.
+* **Communication log** of every command and reply, which can be copied or saved. Background status
+  polling is kept out of it so your own commands stay easy to follow.
 * **Demo instrument.** A built-in simulated DG645 for trying the program without hardware.
+* **Light, dark or system theme.** Dark mode suits dimmed laser labs; System follows the Windows
+  light/dark setting. Text meets WCAG AA contrast in both themes, and the channel colours were
+  validated to stay distinguishable with colour-blindness.
+* **Remembers your layout:** window size and position, theme, last instrument and log visibility.
 * Every value written is read back from the instrument, so the screen always shows what the DG645
   actually accepted. Rejected values are highlighted with the instrument's own error message.
 
@@ -71,10 +76,26 @@ window size.
 4. Change a value and press **Enter**, or move to another field, to apply it. **Esc** reverts an edit.
    Fields with unapplied edits are outlined in amber; rejected values are outlined in red.
 
-Saved instruments are stored in `%APPDATA%\StanfordController\instruments.json`.
+Saved instruments are stored in `%APPDATA%\StanfordController\instruments.json` and preferences in
+`settings.json` next to it (**About → Open folder** opens it).
 
 When you disconnect or close the program, the instrument's front panel is returned to local control
 (this can be turned off per instrument).
+
+### Keyboard shortcuts
+
+| Keys | Action |
+| --- | --- |
+| Ctrl+N | Add an instrument |
+| Ctrl+F | Find instruments on the network |
+| Enter or Ctrl+K / Ctrl+Shift+K | Connect / disconnect the selected instrument |
+| F2 / Delete | Edit / remove the selected instrument |
+| F5 | Read every setting from the instrument |
+| Ctrl+T | Single-shot trigger (`*TRG`), when the trigger source is a single-shot mode |
+| Ctrl+S / Ctrl+O | Save / load a settings file |
+| Ctrl+L | Show or hide the communication log |
+| Enter / Esc | Apply / revert an edited field |
+| F1 | About, version and these shortcuts |
 
 ## Documentation
 

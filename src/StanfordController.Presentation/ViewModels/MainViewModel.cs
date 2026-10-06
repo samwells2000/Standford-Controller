@@ -271,6 +271,15 @@ public sealed class MainViewModel : ObservableObject
         RaiseSelectionCommands();
     }
 
+    /// <summary>Connects the instruments marked "connect automatically", one after another.</summary>
+    public async Task ConnectStartupInstrumentsAsync()
+    {
+        foreach (var item in Instruments.Where(i => i.Profile.ConnectOnStartup).ToList())
+        {
+            await item.ConnectAsync();
+        }
+    }
+
     /// <summary>Disconnects every instrument (returning front panels to local control).</summary>
     public async Task ShutdownAsync()
     {

@@ -240,7 +240,11 @@ public sealed class TimingDiagram : FrameworkElement
             var x = Math.Round(mouse.X) + 0.5;
             dc.DrawLine(Pen(TextBrush, 1, dashed: true), new Point(x, rowsTop), new Point(x, rowsBottom));
 
-            var lines = new List<(string Text, Brush Brush)> { ($"t = T0 + {EngineeringUnits.Format(Math.Max(0, time), Quantity.Time)}", TextBrush) };
+            // Round the cursor time to what one pixel can resolve, so the read-out doesn't show false precision.
+            var perPixel = span / plotWidth;
+            var resolution = Math.Pow(10, Math.Ceiling(Math.Log10(perPixel)));
+            var rounded = Math.Round(Math.Max(0, time) / resolution) * resolution;
+            var lines = new List<(string Text, Brush Brush)> { ($"t ≈ T0 + {EngineeringUnits.Format(rounded, Quantity.Time)}", TextBrush) };
             if (hoveredRow >= 1 && hoveredRow <= pulses.Count)
             {
                 var pulse = pulses[hoveredRow - 1];

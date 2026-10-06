@@ -5,6 +5,7 @@
         Width="560" SizeToContent="Height" ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
         FontFamily="{StaticResource UiFont}" FontSize="13"
+        Foreground="{DynamicResource TextBrush}"
         Background="{DynamicResource SurfaceBrush}"
         FocusManager.FocusedElement="{Binding ElementName=NameBox}">
 
@@ -40,8 +41,11 @@
         <HeaderedContentControl Style="{StaticResource FormRow}" Header="Notes">
             <TextBox Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MultiLineTextBox}" />
         </HeaderedContentControl>
-        <HeaderedContentControl Style="{StaticResource FormRow}" Header="On disconnect">
-            <CheckBox IsChecked="{Binding ReturnToLocalOnDisconnect}" Content="Return the front panel to local control" Margin="0,7,0,0" />
+        <HeaderedContentControl Style="{StaticResource FormRow}" Header="Options">
+            <StackPanel Margin="0,7,0,0">
+                <CheckBox IsChecked="{Binding ConnectOnStartup}" Content="Connect automatically when the program starts" />
+                <CheckBox IsChecked="{Binding ReturnToLocalOnDisconnect}" Content="Return the front panel to local control on disconnect" Margin="0,8,0,0" />
+            </StackPanel>
         </HeaderedContentControl>
 
         <!-- Connection test -->

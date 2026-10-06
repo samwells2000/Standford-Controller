@@ -157,6 +157,24 @@ public sealed class ImprovementTests : IDisposable
         Assert.Equal("Fires at the start of every delay cycle.", session.Outputs.Single(o => o.Output == Dg645Output.T0).TimingText);
     }
 
+    [Fact]
+    public async Task InstrumentsMarkedForStartupConnectAutomatically()
+    {
+        var profiles = new ProfileStore(Path.Combine(_directory, "instruments.json"));
+        profiles.Save(
+        [
+            new InstrumentProfile { Name = "Auto", IsSimulator = true, ConnectOnStartup = true },
+            new InstrumentProfile { Name = "Manual", IsSimulator = true },
+        ]);
+
+        var main = new MainViewModel(profiles, new FakeDialogs());
+        main.Load();
+        await main.ConnectStartupInstrumentsAsync();
+
+        Assert.True(main.Instruments.Single(i => i.Name == "Auto").IsConnected);
+        Assert.False(main.Instruments.Single(i => i.Name == "Manual").IsConnected);
+    }
+
     [Theory]
     [InlineData("192.168.1.300", false)]
     [InlineData("10.0.1", false)]

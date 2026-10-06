@@ -5,6 +5,7 @@
         Width="560" SizeToContent="Height" ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
         FontFamily="{StaticResource UiFont}" FontSize="13"
+        Foreground="{DynamicResource TextBrush}"
         Background="{DynamicResource SurfaceBrush}">
 
     <Border Background="{DynamicResource SurfaceBrush}" Padding="28,24,28,22">

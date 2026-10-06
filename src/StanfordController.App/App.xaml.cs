@@ -72,6 +72,7 @@ public partial class App : Application
         }
 
         window.Show();
+        _ = viewModel.ConnectStartupInstrumentsAsync();
     }
 
     private void OnUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

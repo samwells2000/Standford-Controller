@@ -136,7 +136,9 @@ public static class EngineeringUnits
             return "0 " + unit;
         }
 
-        var (scale, prefix) = quantity == Quantity.Time ? PickTimePrefix(Math.Abs(value)) : PickFrequencyPrefix(Math.Abs(value));
+        // A hair of tolerance so 5 µs − 4 µs (0.99999999999999989 µs in binary) reads "1 µs", not "1000 ns".
+        var magnitude = Math.Abs(value) * (1 + 1e-12);
+        var (scale, prefix) = quantity == Quantity.Time ? PickTimePrefix(magnitude) : PickFrequencyPrefix(magnitude);
 
         // Time is resolved to 1 ps and frequency to 1 µHz, matching the instrument's readback precision.
         var resolution = quantity == Quantity.Time ? 1e-12 : 1e-6;

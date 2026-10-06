@@ -70,6 +70,8 @@ public class EngineeringUnitsTests
     [InlineData(12345.678, Quantity.Frequency, "12.345678 kHz")]
     [InlineData(-0.8, Quantity.Voltage, "-0.80 V")]
     [InlineData(42, Quantity.Integer, "42")]
+    [InlineData(5e-6 - 4e-6, Quantity.Time, "1 µs")]
+    [InlineData(1e3 - 1e-9, Quantity.Frequency, "1 kHz")]
     public void FormatsWithPrefixes(double value, Quantity quantity, string expected)
     {
         Assert.Equal(expected, EngineeringUnits.Format(value, quantity));

@@ -61,7 +61,7 @@ public sealed class OutputViewModel : ParameterViewModel
 
     public string Description => Output == Dg645Output.T0
         ? "Marks the start of each delay cycle."
-        : $"High from {Output.ToString()[0]} to {Output.ToString()[1]} (positive polarity).";
+        : $"Pulses from channel {Output.ToString()[0]} to channel {Output.ToString()[1]}.";
 
     /// <summary>When this output pulses, from the channel delays (kept up to date by the session).</summary>
     public string TimingText
