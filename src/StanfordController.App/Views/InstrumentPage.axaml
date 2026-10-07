@@ -38,8 +38,15 @@
                     <Border Classes="vrule" />
                     <Button Classes="tool" Content="Refresh" Command="{Binding Session?.RefreshAllCommand, FallbackValue={x:Null}}" IsEnabled="{Binding IsConnected}"
                             ToolTip.Tip="Read every setting from the instrument again (F5)" />
-                    <Button Classes="tool" Content="Trigger" Command="{Binding Session?.TriggerCommand, FallbackValue={x:Null}}" IsEnabled="{Binding IsConnected}"
-                            ToolTip.Tip="Start one delay cycle (*TRG, Ctrl+T). Available when the trigger source is a single-shot mode." />
+                    <!-- Trigger, or Arm and then Ready in the single-shot external modes; on show from every page. -->
+                    <Button Classes="tool" Classes.ready="{Binding Session?.IsArmed, FallbackValue=False, TargetNullValue=False}" MinWidth="70"
+                            Command="{Binding Session?.TriggerCommand, FallbackValue={x:Null}}" IsEnabled="{Binding IsConnected}"
+                            ToolTip.Tip="{Binding Session?.TriggerActionHint, FallbackValue='Available when the trigger source is a single-shot mode.', TargetNullValue='Available when the trigger source is a single-shot mode.'}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse Classes="led on" IsVisible="{Binding Session?.IsArmed, FallbackValue=False, TargetNullValue=False}" />
+                            <TextBlock Text="{Binding Session?.TriggerActionText, FallbackValue=Trigger, TargetNullValue=Trigger}" />
+                        </StackPanel>
+                    </Button>
                     <Border Classes="vrule" />
                     <Button Classes="tool" Content="Save setup" Command="{Binding SaveSetupCommand}"
                             ToolTip.Tip="Store this instrument's complete setup in the configuration on this computer" />

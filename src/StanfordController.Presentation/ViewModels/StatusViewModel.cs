@@ -189,6 +189,12 @@ public sealed class StatusViewModel : ParameterViewModel
         }
     });
 
+    /// <summary>
+    /// Raised with the bits each time the instrument status register is read. Reading clears the register,
+    /// so this is the only place its events (such as the end of a triggered delay cycle) can be seen.
+    /// </summary>
+    public event EventHandler<InstrumentStatusFlags>? InstrumentStatusRead;
+
     /// <summary>Background poll of the instrument status register. Throws on communication failure.</summary>
     public async Task PollAsync()
     {
@@ -201,6 +207,7 @@ public sealed class StatusViewModel : ParameterViewModel
         Latch(InstrumentBits, (int)status, enable: false);
         _lastPoll = DateTime.Now;
         OnPropertyChanged(nameof(LastPollText));
+        InstrumentStatusRead?.Invoke(this, status);
     }
 
     /// <summary>Records an error the instrument reported for one of our commands.</summary>

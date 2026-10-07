@@ -51,6 +51,9 @@ public sealed class Dg645Client(IDg645Transport transport) : IAsyncDisposable
 
     public string Description => transport.Description;
 
+    /// <summary>The connection in use; for the simulator, its <see cref="SimulatorTransport.Simulator"/>.</summary>
+    public IDg645Transport Transport => transport;
+
     public bool IsConnected => transport.IsConnected;
 
     public string? Identity { get; private set; }

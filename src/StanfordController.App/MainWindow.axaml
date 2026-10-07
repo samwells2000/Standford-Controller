@@ -65,7 +65,8 @@
                 <MenuItem Header="_Import setup from file…" Command="{Binding ImportSetupCommand}" />
                 <Separator />
                 <MenuItem Header="Re_fresh all" Command="{Binding RefreshCommand}" InputGesture="F5" />
-                <MenuItem Header="Single-shot _trigger" Command="{Binding TriggerCommand}" InputGesture="Ctrl+T" />
+                <MenuItem Header="{Binding SelectedInstrument?.Session?.TriggerMenuText, FallbackValue='Single-shot _trigger', TargetNullValue='Single-shot _trigger'}"
+                          Command="{Binding TriggerCommand}" InputGesture="Ctrl+T" />
                 <Separator />
                 <MenuItem Header="_Edit…" Command="{Binding EditInstrumentCommand}" InputGesture="F2" />
                 <MenuItem Header="Du_plicate…" Command="{Binding DuplicateInstrumentCommand}" />
@@ -117,6 +118,12 @@
                             <Run Text="Trigger" FontWeight="SemiBold" />
                             <Run Text="{Binding SelectedInstrument?.Session?.TriggerSummary, FallbackValue=''}" />
                         </TextBlock>
+                        <StackPanel Orientation="Horizontal" Spacing="5" Margin="8,0,0,0"
+                                    IsVisible="{Binding SelectedInstrument?.Session?.IsArmed, FallbackValue=False, TargetNullValue=False}"
+                                    ToolTip.Tip="Armed: the next edge at the trigger input starts one delay cycle">
+                            <Ellipse Classes="led on" Width="8" Height="8" />
+                            <TextBlock Text="Ready" Classes="caption" FontWeight="SemiBold" Foreground="{DynamicResource SuccessTextBrush}" VerticalAlignment="Center" />
+                        </StackPanel>
                         <Border Classes="vrule" />
                         <TextBlock Classes="caption" VerticalAlignment="Center" ToolTip.Tip="Burst mode (Burst page)">
                             <Run Text="Burst" FontWeight="SemiBold" />

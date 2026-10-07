@@ -87,6 +87,41 @@ public static class FieldBehavior
     }
 }
 
+/// <summary>
+/// Clicking somewhere that cannot take the keyboard focus (a page's background, a label, the timing diagram)
+/// ends text editing: the field loses the focus, which applies its value, and the caret goes away. Without this,
+/// a field keeps the focus until Enter is pressed or another control is clicked.
+/// </summary>
+public static class ClickAwayBehavior
+{
+    /// <summary>Applies to every window, dialogs included. Call once at start-up.</summary>
+    public static void Install() =>
+        InputElement.PointerPressedEvent.AddClassHandler<Window>(OnPointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
+
+    /// <summary>True if pressing <paramref name="source"/> ends editing: neither it nor a parent can take the focus.</summary>
+    public static bool EndsEditing(Visual? source)
+    {
+        for (var element = source; element is not null and not TopLevel; element = element.GetVisualParent())
+        {
+            if (element is InputElement { Focusable: true, IsEffectivelyEnabled: true, IsEffectivelyVisible: true })
+            {
+                // That control takes the focus itself, which ends editing in the usual way.
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static void OnPointerPressed(Window window, PointerPressedEventArgs e)
+    {
+        if (window.FocusManager is { } focus && focus.GetFocusedElement() is TextBox && EndsEditing(e.Source as Visual))
+        {
+            focus.Focus(null);
+        }
+    }
+}
+
 /// <summary>List helpers: keep the newest item in view, and run a command on double-click.</summary>
 public static class ListBehavior
 {

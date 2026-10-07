@@ -55,10 +55,10 @@ Easiest of all is **Find on network**, which asks every address on this computer
 
 - **Menu bar.** *File* handles configurations and saving setups, *Instrument* works on the instrument selected in the list, *View* shows or hides the communication log and changes the theme, and *Help* opens this guide.
 - **Instrument list** (left). Every instrument in the open configuration. The dot shows the connection: hollow when not connected, green when connected, amber while connecting, red if the connection failed. The second line is the address and location. Double-click to connect; right-click for the other actions.
-- **Header and command bar** (top of the instrument). The instrument's name, address, model, serial number and firmware, then buttons for the common actions: **Connect / Disconnect**, **Edit…**, **Refresh**, **Trigger**, **Save setup**, **Restore saved…**, and the **Live status** and **Log** check boxes.
+- **Header and command bar** (top of the instrument). The instrument's name, address, model, serial number and firmware, then buttons for the common actions: **Connect / Disconnect**, **Edit…**, **Refresh**, **Trigger** (which reads **Arm** or **Ready** in the [single-shot external modes](#single-shot-and-arming)), **Save setup**, **Restore saved…**, and the **Live status** and **Log** check boxes.
 - **Pages.** Delays, Outputs, Trigger, Burst, Setups, Status, Interfaces and Terminal, one tab each. Each is described below.
 - **Communication log** (bottom). Every command sent and reply received, with the time; see [Communication log](#communication-log).
-- **Status bar.** The connection state, the trigger source and rate, whether burst mode is on, **Setup not saved** when the instrument's settings have changed since its setup was last saved, the latest message, and the name of the open configuration. **Portable** appears when you are running the portable program.
+- **Status bar.** The connection state, the trigger source and rate (with a green **Ready** while a single shot is armed), whether burst mode is on, **Setup not saved** when the instrument's settings have changed since its setup was last saved, the latest message, and the name of the open configuration. **Portable** appears when you are running the portable program.
 
 If commands typed in the [Terminal](#terminal) may have changed settings shown on the other pages, an amber **Pages may be out of date** button appears at the right of the command bar; press it (or F5) to read everything again.
 
@@ -181,7 +181,7 @@ With an Ethernet cable straight from the computer to the DG645 and no network in
 
 Every value field works the same way:
 
-- Type the new value and press **Enter** (or move to another field) to send it to the instrument. **Esc** puts the instrument's value back.
+- Type the new value and press **Enter** to send it to the instrument. Moving to another field, or clicking anywhere outside the field, sends it too. **Esc** puts the instrument's value back.
 - While you are typing, the field is amber: the value has not been sent yet.
 - After sending, Tempo reads the value back, so the field always shows what the instrument actually holds, including any rounding it applied.
 - If the instrument rejects the value, the field turns red and the reason appears under it, for example *Illegal delay (error 12)*.
@@ -258,13 +258,20 @@ The source decides what starts each delay cycle:
 | --- | --- |
 | Internal | At the internal rate, from 100 µHz to 10 MHz. |
 | External, rising edge / falling edge | On each edge at the rear-panel trigger input crossing the threshold. |
-| Single-shot external, rising / falling edge | On the next edge after the instrument is armed with *Trigger now*. |
+| Single shot, external rising / falling | On the next edge at the trigger input after you **Arm** the instrument; see [Single shot and arming](#single-shot-and-arming). |
 | Single shot | Each time you press **Trigger** (Ctrl+T). |
 | Line (AC mains) | Once per mains cycle. |
 
 **External threshold** sets the trigger input level, between −3.5 V and +3.5 V. **Inhibit input** chooses what the rear-panel INHIBIT input blocks while it is high: nothing, all triggers, or one or more outputs.
 
-**Trigger now**, the **Trigger** button on the command bar and Ctrl+T send `*TRG`; they are available only when the source is a single-shot mode.
+### Single shot and arming
+
+The trigger button on the command bar, the button under **Single shot** on this page and Ctrl+T all send `*TRG`. They are available only when the source is a single-shot mode, and what they do depends on which:
+
+- **Single shot.** The button reads **Trigger** (**Trigger now** on this page) and starts one delay cycle straight away.
+- **Single shot, external rising** or **falling.** The button reads **Arm**. Arming tells the DG645 to start one delay cycle on the next edge at its trigger input. While it waits, the button reads **Ready** in green, on the command bar above every page, and the status bar shows **Ready** beside the trigger source. When the edge arrives and the delay cycle has run, the button goes back to **Arm** for the next shot. Clicking **Ready** arms the instrument again.
+
+Tempo notices the shot by reading the instrument's status register about once a second, even when **Live status** is off, so **Ready** can stay on for up to a second afterwards. Choosing another trigger source, resetting the instrument, recalling or restoring a setup, or disconnecting clears **Ready**. If the instrument is armed from its front panel, Tempo cannot tell, and the button stays at **Arm**.
 
 ### Advanced triggering
 
@@ -371,7 +378,7 @@ Tempo remembers the theme, the window's size and position, whether the log is sh
 | Ctrl+O | Open a configuration |
 | Ctrl+Shift+S | Save the configuration under a new name |
 | F5 | Read every setting from the instrument again |
-| Ctrl+T | Single-shot trigger (`*TRG`) |
+| Ctrl+T | Trigger a single shot, or arm a single shot on the next external edge (`*TRG`) |
 | Ctrl+L | Show or hide the communication log |
 | Enter / Esc | In a value field: send the value / put the instrument's value back |
 | Up / Down | In the Terminal: previous / next command |

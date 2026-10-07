@@ -234,6 +234,23 @@
         <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
 
+    <!-- A single-shot external trigger that is armed and waiting for its edge ("Ready"). -->
+    <Style Selector="Button.ready">
+        <Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource SuccessTextBrush}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button.ready:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SuccessTextBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource SuccessTextBrush}" />
+    </Style>
+    <Style Selector="Button.ready:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource SuccessTextBrush}" />
+    </Style>
+
     <!-- Text that behaves like a link. -->
     <Style Selector="Button.link">
         <Setter Property="Background" Value="Transparent" />

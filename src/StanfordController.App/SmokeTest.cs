@@ -2,6 +2,7 @@ using System.Text;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Input;
 using Avalonia.Logging;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
@@ -11,7 +12,9 @@ using StanfordController.App.Dialogs;
 using StanfordController.App.Services;
 using StanfordController.Core.Profiles;
 using StanfordController.Core.Protocol;
+using StanfordController.Core.Transport;
 using StanfordController.Presentation.Help;
+using StanfordController.Presentation.Mvvm;
 using StanfordController.Presentation.Services;
 using StanfordController.Presentation.ViewModels;
 
@@ -143,6 +146,9 @@ internal sealed class SmokeTest
                 $"Refresh all did not pick up the terminal change (rate shows {session.Trigger.Rate.Text}).");
             Check(!session.StatusIsError, $"The session reported an error: {session.StatusMessage}");
 
+            await CheckSingleShotExternalAsync(session);
+            await CheckClickAwayAsync(session);
+
             await item.DisconnectAsync();
             await IdleAsync();
             Capture(_window, "95-disconnected");
@@ -153,6 +159,107 @@ internal sealed class SmokeTest
         }
 
         Finish();
+    }
+
+    /// <summary>
+    /// In a single-shot external mode the trigger button arms the instrument and shows Ready, on the command bar,
+    /// the Trigger page and the status bar, until the external edge has started a delay cycle.
+    /// </summary>
+    private async Task CheckSingleShotExternalAsync(InstrumentSessionViewModel session)
+    {
+        var tabs = Tabs();
+        tabs.SelectedIndex = 2;
+        await SetTriggerSourceAsync(session, TriggerSource.SingleShotExternalRising);
+        Check(TriggerButtonText(onCommandBar: true) == "Arm" && TriggerButtonText(onCommandBar: false) == "Arm",
+            $"In single-shot external mode the trigger buttons should read Arm, not {TriggerButtonText(true)} and {TriggerButtonText(false)}.");
+
+        await ((AsyncRelayCommand)session.TriggerCommand).ExecuteAsync();
+        await IdleAsync();
+        var shown = VisibleTexts("Ready");
+        Check(session.IsArmed && TriggerButtonText(onCommandBar: true) == "Ready" && TriggerButtonText(onCommandBar: false) == "Ready" && shown == 3,
+            $"After arming, the command bar, Trigger page and status bar should show Ready (armed: {session.IsArmed}, Ready shown {shown} times).");
+        foreach (var theme in new[] { AppTheme.Light, AppTheme.Dark })
+        {
+            _viewModel.Theme = theme;
+            await IdleAsync();
+            Capture(_window, "05-trigger-ready" + (theme == AppTheme.Dark ? "-dark" : string.Empty));
+        }
+
+        _viewModel.Theme = AppTheme.Light;
+        tabs.SelectedIndex = 0;
+        await IdleAsync();
+        Check(TriggerButtonText(onCommandBar: true) == "Ready", "Ready is not shown on the command bar on other pages.");
+
+        (session.Client.Transport as SimulatorTransport)?.Simulator.ExternalTrigger();
+        Check(await WaitAsync(() => !session.IsArmed), "The external trigger did not end the Ready state.");
+        await IdleAsync();
+        Check(TriggerButtonText(onCommandBar: true) == "Arm" && VisibleTexts("Ready") == 0,
+            $"After the external trigger the button should read Arm again, not {TriggerButtonText(true)}.");
+
+        await SetTriggerSourceAsync(session, TriggerSource.Internal);
+        Check(TriggerButtonText(onCommandBar: true) == "Trigger", "Back on the internal trigger the button should read Trigger.");
+    }
+
+    /// <summary>Clicking a page's background ends editing: the field loses the focus and its value is applied.</summary>
+    private async Task CheckClickAwayAsync(InstrumentSessionViewModel session)
+    {
+        var tabs = Tabs();
+        tabs.SelectedIndex = 2;
+        await IdleAsync();
+        var page = tabs.SelectedContent as Control ?? throw new InvalidOperationException("The Trigger page is not on show.");
+        var field = page.GetVisualDescendants().OfType<TextBox>().First(t => ReferenceEquals(t.DataContext, session.Trigger.Rate));
+        field.Focus();
+        field.Text = "5 kHz";
+        await IdleAsync();
+        Check(field.IsFocused && session.Trigger.Rate.IsDirty, "Could not start editing the internal rate.");
+
+        var background = page.GetVisualDescendants().OfType<TextBlock>().First(t => t.Classes.Contains("caption") && t.IsEffectivelyVisible);
+        Click(background);
+        Check(await WaitAsync(() => !session.Trigger.Rate.IsDirty), "Clicking the page background did not apply the edited value.");
+        Check(!field.IsFocused && _window.FocusManager?.GetFocusedElement() is not TextBox,
+            "Clicking the page background left the field focused.");
+        Check(Math.Abs(await session.Client.GetTriggerRateAsync() - 5000) < 1e-6, "The instrument did not receive the edited rate.");
+        tabs.SelectedIndex = 0;
+        await IdleAsync();
+    }
+
+    private async Task SetTriggerSourceAsync(InstrumentSessionViewModel session, TriggerSource source)
+    {
+        session.Trigger.Source.Selected = session.Trigger.Source.Options.Single(o => o.Value == (int)source);
+        Check(await WaitAsync(() => session.Trigger.Source.SelectedValue == (int)source && !session.Trigger.Source.IsBusy),
+            $"The trigger source did not change to {source}.");
+        await IdleAsync();
+    }
+
+    /// <summary>The text on the command bar's trigger button, or on the Trigger page's.</summary>
+    private string? TriggerButtonText(bool onCommandBar) =>
+        _window.GetVisualDescendants().OfType<Button>()
+            .Where(b => b.Classes.Contains("tool") == onCommandBar && b.IsEffectivelyVisible
+                        && ReferenceEquals(b.Command, _viewModel.SelectedInstrument?.Session?.TriggerCommand))
+            .SelectMany(b => b.GetVisualDescendants().OfType<TextBlock>())
+            .Select(t => t.Text)
+            .FirstOrDefault(t => !string.IsNullOrEmpty(t));
+
+    private int VisibleTexts(string text) =>
+        _window.GetVisualDescendants().OfType<TextBlock>().Count(t => t.Text == text && t.IsEffectivelyVisible);
+
+    /// <summary>A left-button press on <paramref name="target"/>, routed as the input system routes one.</summary>
+    private void Click(Control target)
+    {
+        var pointer = new Pointer(Pointer.GetNextFreeId(), PointerType.Mouse, isPrimary: true);
+        var position = target.TranslatePoint(new Point(2, 2), _window) ?? default;
+        var properties = new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed);
+        target.RaiseEvent(new PointerPressedEventArgs(target, pointer, _window, position, (ulong)Environment.TickCount64, properties, KeyModifiers.None));
+    }
+
+    private static async Task<bool> WaitAsync(Func<bool> condition, int timeoutMilliseconds = 5000)
+    {
+        for (var waited = 0; !condition() && waited < timeoutMilliseconds; waited += 50)
+        {
+            await Task.Delay(50);
+        }
+
+        return condition();
     }
 
     private TabControl Tabs() =>

@@ -51,7 +51,9 @@ A new release is built automatically every time `main` changes (see
 * **Outputs.** Amplitude, offset and polarity for T0, AB, CD, EF and GH in one table, with TTL and NIM
   presets and the resulting idle and pulse levels.
 * **Trigger and burst.** Source, rate, threshold, inhibit, single-shot trigger, advanced triggering,
-  holdoff, prescalers and phases; burst count, period, delay and T0 behaviour.
+  holdoff, prescalers and phases; burst count, period, delay and T0 behaviour. In the single-shot
+  external modes the trigger button reads **Arm**, then a green **Ready** (shown on every page and in
+  the status bar) until the external edge has fired the shot.
 * **Setups page.** Saved setup, `.dg645.json` setup files, the instrument's nine memory locations, and
   reset.
 * **Status, interfaces and terminal.** Live status registers with enable masks, error list, self test,
