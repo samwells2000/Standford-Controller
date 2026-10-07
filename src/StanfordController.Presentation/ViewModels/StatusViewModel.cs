@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using StanfordController.Core;
+using StanfordController.Core.Audit;
 using StanfordController.Core.Protocol;
 using StanfordController.Presentation.Mvvm;
 
@@ -189,6 +190,12 @@ public sealed class StatusViewModel : ParameterViewModel
         }
     });
 
+    /// <summary>
+    /// Raised with the bits each time the instrument status register is read. Reading clears the register,
+    /// so this is the only place its events (such as the end of a triggered delay cycle) can be seen.
+    /// </summary>
+    public event EventHandler<InstrumentStatusFlags>? InstrumentStatusRead;
+
     /// <summary>Background poll of the instrument status register. Throws on communication failure.</summary>
     public async Task PollAsync()
     {
@@ -201,6 +208,7 @@ public sealed class StatusViewModel : ParameterViewModel
         Latch(InstrumentBits, (int)status, enable: false);
         _lastPoll = DateTime.Now;
         OnPropertyChanged(nameof(LastPollText));
+        InstrumentStatusRead?.Invoke(this, status);
     }
 
     /// <summary>Records an error the instrument reported for one of our commands.</summary>
@@ -253,14 +261,25 @@ public sealed class StatusViewModel : ParameterViewModel
 
     private async Task ApplyEnableMasksAsync()
     {
-        await Client.SetInstrumentStatusEnableAsync((InstrumentStatusFlags)Mask(InstrumentBits));
-        await Client.SetStandardEventEnableAsync((StandardEventFlags)Mask(EventBits));
-        await Client.SetServiceRequestEnableAsync((StatusByteFlags)Mask(StatusByteBits));
+        using (Context.BeginChange())
+        {
+            await Client.SetInstrumentStatusEnableAsync((InstrumentStatusFlags)Mask(InstrumentBits));
+            await Client.SetStandardEventEnableAsync((StandardEventFlags)Mask(EventBits));
+            await Client.SetServiceRequestEnableAsync((StatusByteFlags)Mask(StatusByteBits));
+        }
+
+        Context.Audit(AuditActions.Changed, "Status enable registers",
+            newValue: $"INSE {Mask(InstrumentBits)}, *ESE {Mask(EventBits)}, *SRE {Mask(StatusByteBits)}");
     }
 
     private async Task ClearStatusAsync()
     {
-        await Client.ClearStatusAsync();
+        using (Context.BeginChange())
+        {
+            await Client.ClearStatusAsync();
+        }
+
+        Context.Audit(AuditActions.StatusCleared, details: "Status registers and error queue cleared (*CLS)");
         ClearIndicators();
         await ReadRegistersAsync();
     }
@@ -284,6 +303,7 @@ public sealed class StatusViewModel : ParameterViewModel
         SelfTestResult = "Running self test…";
         var code = await Client.SelfTestAsync();
         SelfTestResult = code == 0 ? $"Passed ({DateTime.Now:HH:mm})" : $"Failed: {Dg645Names.DescribeError(code)} (error {code})";
+        Context.Audit(AuditActions.SelfTest, details: code == 0 ? "Passed" : $"Failed: {Dg645Names.DescribeError(code)} (error {code})");
     }
 
     private async Task AutoCalibrateAsync()
@@ -297,6 +317,7 @@ public sealed class StatusViewModel : ParameterViewModel
         CalibrationResult = "Calibrating…";
         var code = await Client.AutoCalibrateAsync();
         CalibrationResult = code == 0 ? $"Passed ({DateTime.Now:HH:mm})" : $"Failed: {Dg645Names.DescribeError(code)} (error {code})";
+        Context.Audit(AuditActions.AutoCalibration, details: code == 0 ? "Passed" : $"Failed: {Dg645Names.DescribeError(code)} (error {code})");
     }
 
     private async Task ReadDisplayAsync()
@@ -313,7 +334,12 @@ public sealed class StatusViewModel : ParameterViewModel
             return;
         }
 
-        await Client.SetDisplayAsync((DisplayMode)_displayMode.Value, _displayChannel.Value);
+        using (Context.BeginChange())
+        {
+            await Client.SetDisplayAsync((DisplayMode)_displayMode.Value, _displayChannel.Value);
+        }
+
+        Context.Audit(AuditActions.Changed, "Front-panel display", newValue: $"{_displayMode.Label}, {_displayChannel.Label}");
     }
 
     private void UpdateDisplayChannelOptions()

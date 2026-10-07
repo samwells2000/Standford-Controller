@@ -17,11 +17,12 @@ public static class HelpTopics
     public const string Status = "status-and-diagnostics";
     public const string Interfaces = "interfaces";
     public const string Terminal = "terminal";
+    public const string AuditTrail = "audit-trail";
     public const string Shortcuts = "keyboard-shortcuts";
     public const string Troubleshooting = "troubleshooting";
 
     public static IReadOnlyList<string> All { get; } =
-        [GettingStarted, Instruments, Configurations, Connecting, Delays, Outputs, Trigger, Burst, Setups, Status, Interfaces, Terminal, Shortcuts, Troubleshooting];
+        [GettingStarted, Instruments, Configurations, Connecting, Delays, Outputs, Trigger, Burst, Setups, Status, Interfaces, Terminal, AuditTrail, Shortcuts, Troubleshooting];
 }
 
 /// <summary>A heading inside a topic (a level-3 heading).</summary>

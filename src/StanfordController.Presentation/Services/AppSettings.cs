@@ -41,6 +41,9 @@ public sealed class AppSettings
 
     /// <summary>Recently opened configuration files, most recent first.</summary>
     public List<string> RecentConfigurations { get; set; } = [];
+
+    /// <summary>Where the audit trail is written, or null for the "Audit trail" folder in the data folder.</summary>
+    public string? AuditFolder { get; set; }
 }
 
 /// <summary>Loads and saves <see cref="AppSettings"/> as JSON. A missing or unreadable file gives the defaults.</summary>

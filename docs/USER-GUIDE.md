@@ -55,10 +55,10 @@ Easiest of all is **Find on network**, which asks every address on this computer
 
 - **Menu bar.** *File* handles configurations and saving setups, *Instrument* works on the instrument selected in the list, *View* shows or hides the communication log and changes the theme, and *Help* opens this guide.
 - **Instrument list** (left). Every instrument in the open configuration. The dot shows the connection: hollow when not connected, green when connected, amber while connecting, red if the connection failed. The second line is the address and location. Double-click to connect; right-click for the other actions.
-- **Header and command bar** (top of the instrument). The instrument's name, address, model, serial number and firmware, then buttons for the common actions: **Connect / Disconnect**, **Edit…**, **Refresh**, **Trigger**, **Save setup**, **Restore saved…**, and the **Live status** and **Log** check boxes.
+- **Header and command bar** (top of the instrument). The instrument's name, address, model, serial number and firmware, then buttons for the common actions: **Connect / Disconnect**, **Edit…**, **Refresh**, **Trigger** (which reads **Arm** or **Ready** in the [single-shot external modes](#single-shot-and-arming)), **Save setup**, **Restore saved…**, and the **Live status** and **Log** check boxes.
 - **Pages.** Delays, Outputs, Trigger, Burst, Setups, Status, Interfaces and Terminal, one tab each. Each is described below.
 - **Communication log** (bottom). Every command sent and reply received, with the time; see [Communication log](#communication-log).
-- **Status bar.** The connection state, the trigger source and rate, whether burst mode is on, **Setup not saved** when the instrument's settings have changed since its setup was last saved, the latest message, and the name of the open configuration. **Portable** appears when you are running the portable program.
+- **Status bar.** The connection state, the trigger source and rate (with a green **Ready** while a single shot is armed), whether burst mode is on, **Setup not saved** when the instrument's settings have changed since its setup was last saved, the latest message, and the name of the open configuration. **Portable** appears when you are running the portable program.
 
 If commands typed in the [Terminal](#terminal) may have changed settings shown on the other pages, an amber **Pages may be out of date** button appears at the right of the command bar; press it (or F5) to read everything again.
 
@@ -181,7 +181,7 @@ With an Ethernet cable straight from the computer to the DG645 and no network in
 
 Every value field works the same way:
 
-- Type the new value and press **Enter** (or move to another field) to send it to the instrument. **Esc** puts the instrument's value back.
+- Type the new value and press **Enter** to send it to the instrument. Moving to another field, or clicking anywhere outside the field, sends it too. **Esc** puts the instrument's value back.
 - While you are typing, the field is amber: the value has not been sent yet.
 - After sending, Tempo reads the value back, so the field always shows what the instrument actually holds, including any rounding it applied.
 - If the instrument rejects the value, the field turns red and the reason appears under it, for example *Illegal delay (error 12)*.
@@ -258,13 +258,20 @@ The source decides what starts each delay cycle:
 | --- | --- |
 | Internal | At the internal rate, from 100 µHz to 10 MHz. |
 | External, rising edge / falling edge | On each edge at the rear-panel trigger input crossing the threshold. |
-| Single-shot external, rising / falling edge | On the next edge after the instrument is armed with *Trigger now*. |
+| Single shot, external rising / falling | On the next edge at the trigger input after you **Arm** the instrument; see [Single shot and arming](#single-shot-and-arming). |
 | Single shot | Each time you press **Trigger** (Ctrl+T). |
 | Line (AC mains) | Once per mains cycle. |
 
 **External threshold** sets the trigger input level, between −3.5 V and +3.5 V. **Inhibit input** chooses what the rear-panel INHIBIT input blocks while it is high: nothing, all triggers, or one or more outputs.
 
-**Trigger now**, the **Trigger** button on the command bar and Ctrl+T send `*TRG`; they are available only when the source is a single-shot mode.
+### Single shot and arming
+
+The trigger button on the command bar, the button under **Single shot** on this page and Ctrl+T all send `*TRG`. They are available only when the source is a single-shot mode, and what they do depends on which:
+
+- **Single shot.** The button reads **Trigger** (**Trigger now** on this page) and starts one delay cycle straight away.
+- **Single shot, external rising** or **falling.** The button reads **Arm**. Arming tells the DG645 to start one delay cycle on the next edge at its trigger input. While it waits, the button reads **Ready** in green, on the command bar above every page, and the status bar shows **Ready** beside the trigger source. When the edge arrives and the delay cycle has run, the button goes back to **Arm** for the next shot. Clicking **Ready** arms the instrument again.
+
+Tempo notices the shot by reading the instrument's status register about once a second, even when **Live status** is off, so **Ready** can stay on for up to a second afterwards. Choosing another trigger source, resetting the instrument, recalling or restoring a setup, or disconnecting clears **Ready**. If the instrument is armed from its front panel, Tempo cannot tell, and the button stays at **Arm**.
 
 ### Advanced triggering
 
@@ -349,6 +356,50 @@ The log under the pages records every command sent (→), reply received (←), 
 
 Show or hide the log with the **Log** check box, **View ▸ Communication log** or Ctrl+L. The status register reads made by *Live status* are not logged, to keep the log readable.
 
+## Audit trail
+
+Tempo keeps a permanent record of every change it makes to an instrument, and to the saved instruments, for quality systems such as ISO 9001 (records of changes, clause 7.5.3; control of changes, clause 8.5.6). Each record says:
+
+- **when**, to the millisecond, with the time zone;
+- **who**: the computer account, for example `LAB\jsmith`, and the computer's name;
+- **which instrument**: its saved name, serial number and address;
+- **what**: the action and, for a change, the setting with its old and new values;
+- **why**: the reason for the change, if one was given (see below);
+- **which program**: the Tempo version that made the change.
+
+ISO 9001 certifies an organisation's quality management system rather than any program, so the audit trail does not make a laboratory compliant by itself. It gives your procedures a dependable record to point to.
+
+### What is recorded
+
+| Recorded | How |
+| --- | --- |
+| A value changed on any page | One record with the old and new value, for example *Delay C: A + 1.5 µs → A + 2 µs*. This covers delays, step buttons, output levels and presets, trigger, burst, prescalers, interfaces, the front-panel display and the status enable registers. |
+| Many settings changed at once | Restoring or importing a setup, recalling from the instrument's memory and resetting give one record per setting that changed. Tempo reads the setup before and after, so the record shows what really changed, even if the operation fails part-way. |
+| Actions on the instrument | Triggering and arming, saving to the instrument's memory, clearing status, self test and auto calibration (with the result), interface resets, local and remote control, and the interface lock. |
+| Commands typed in the Terminal | Every command that can change something, as typed, with any error the instrument reported. Queries are not recorded. |
+| Connections | Connecting (with the instrument's identity), disconnecting, losing the connection, and keeping the instrument's own settings when they differ from the saved setup. |
+| The saved instruments | Adding, importing and removing an instrument; each detail changed in the instrument editor; and saving a setup, with each setting that differs from the setup saved before. |
+
+As a safety net, anything else Tempo sends that could change the instrument is recorded as a command, so no change Tempo makes goes unrecorded. Reading values is not recorded. Neither are changes made at the instrument's front panel or by other programs, which Tempo cannot see. When an instrument with a saved setup connects, though, Tempo does show any differences from the saved setup ([When an instrument connects](#when-an-instrument-connects)).
+
+### Reason for changes
+
+While an instrument is connected, a **Reason for changes** box appears in its header, at the top of every page. Whatever you type there, for example a job, batch or change request number, is recorded with each change until you change or clear it. It is optional.
+
+### Viewing the audit trail
+
+**View ▸ Audit trail…** shows one month at a time, newest first. Choose an instrument to see only its records, or type in the search box to find a setting, value, user or reason. Select a record to see it in full below the list, including its details and hash. **F5** reads the files again; Tempo also does so whenever it records something. **Ctrl+F** goes to the search box.
+
+### Where it is kept
+
+The audit trail is a set of CSV files, one per computer per month, for example `Tempo audit trail 2026-10 LABPC1.csv`. They are in the **Audit trail** folder inside the [data folder](#files-and-folders), or in a folder you choose with **Change folder…** in the audit trail window. A shared network folder that is backed up is a good choice. Each computer writes its own file, so several computers can share one folder. The files open in any spreadsheet program, and Tempo marks them read-only between writes.
+
+If the folder cannot be written, for example because the network share is offline, records wait in Tempo and are written as soon as the folder is back. Meanwhile the status bar shows **Audit trail not written** in red. If they still cannot be written when Tempo closes, they are written to the default folder instead, and Tempo says so if even that fails.
+
+### Checking that records have not been altered
+
+Each record ends with a hash: a fingerprint of the record and of the record before it in the same file. **Check integrity** recomputes the chain for the month on show. It reports the first line where a record was changed, or where a record was added or removed before it. Two things it cannot catch: deleting the latest records from the end of a file, and someone recomputing every hash after editing. The files are protected against accidental change, not determined tampering, so keep them in a folder where only authorised people can delete files, and back them up.
+
 ## Appearance
 
 **View ▸ Theme** chooses **Light**, **Dark** or **System**, which follows your operating system's light or dark setting. Both themes meet the WCAG AA contrast guidelines, and the four output colours were chosen to stay distinguishable with the common forms of colour blindness; every coloured mark also has a text label beside it.
@@ -371,11 +422,12 @@ Tempo remembers the theme, the window's size and position, whether the log is sh
 | Ctrl+O | Open a configuration |
 | Ctrl+Shift+S | Save the configuration under a new name |
 | F5 | Read every setting from the instrument again |
-| Ctrl+T | Single-shot trigger (`*TRG`) |
+| Ctrl+T | Trigger a single shot, or arm a single shot on the next external edge (`*TRG`) |
 | Ctrl+L | Show or hide the communication log |
 | Enter / Esc | In a value field: send the value / put the instrument's value back |
 | Up / Down | In the Terminal: previous / next command |
 | Alt+Left / Alt+Right | In this guide: back / forward |
+| F5 / Ctrl+F | In the audit trail: read the files again / search |
 
 ## Troubleshooting
 
@@ -415,7 +467,7 @@ The program is not code-signed. In the *Windows protected your PC* box choose **
 
 ### Starting again from scratch
 
-Close Tempo and delete (or rename) the [data folder](#files-and-folders). Tempo starts with an empty Default configuration and default preferences.
+Close Tempo, then delete `Default.tempo` and `settings.json` from the [data folder](#files-and-folders), or rename the whole folder. Tempo starts with an empty Default configuration and default preferences. Keep the **Audit trail** folder inside it: it is your record of changes.
 
 ### Reporting a problem
 
@@ -428,6 +480,7 @@ Include the Tempo version (**Help ▸ About Tempo**), what you did, and the save
 | Configurations (`*.tempo`) | `Default.tempo` in the data folder, and any others wherever you save them |
 | Preferences (`settings.json`) | The data folder |
 | Exported setups (`*.dg645.json`) | Wherever you save them |
+| Audit trail (`Tempo audit trail *.csv`) | The **Audit trail** folder in the data folder, or the folder chosen in the [audit trail](#where-it-is-kept) window |
 
 The data folder is:
 

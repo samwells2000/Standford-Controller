@@ -1,5 +1,6 @@
 using System.Windows.Input;
 using StanfordController.Core;
+using StanfordController.Core.Audit;
 using StanfordController.Core.Profiles;
 using StanfordController.Presentation.Mvvm;
 using StanfordController.Presentation.Services;
@@ -19,16 +20,22 @@ public sealed class InstrumentItemViewModel : ObservableObject
 {
     private readonly IDialogService _dialogs;
     private readonly Action<InstrumentItemViewModel> _profileChanged;
+    private readonly AuditLog? _audit;
+    private readonly Func<string>? _configurationName;
     private InstrumentProfile _profile;
     private ConnectionState _state;
     private string? _lastError;
     private InstrumentSessionViewModel? _session;
 
-    public InstrumentItemViewModel(InstrumentProfile profile, IDialogService dialogs, Action<InstrumentItemViewModel> profileChanged)
+    /// <param name="configurationName">The name of the configuration this instrument is saved in, for the audit trail.</param>
+    public InstrumentItemViewModel(InstrumentProfile profile, IDialogService dialogs, Action<InstrumentItemViewModel> profileChanged,
+        AuditLog? audit = null, Func<string>? configurationName = null)
     {
         _profile = profile;
         _dialogs = dialogs;
         _profileChanged = profileChanged;
+        _audit = audit;
+        _configurationName = configurationName;
         ConnectCommand = new AsyncRelayCommand(ConnectAsync, () => _state is ConnectionState.Disconnected or ConnectionState.Failed);
         DisconnectCommand = new AsyncRelayCommand(() => DisconnectAsync(), () => _state == ConnectionState.Connected);
         SaveSetupCommand = new AsyncRelayCommand(SaveSetupAsync, () => _session is { IsBusy: false });
@@ -187,8 +194,9 @@ public sealed class InstrumentItemViewModel : ObservableObject
         OnPropertyChanged(nameof(LastSeen));
         _profileChanged(this);
 
-        var session = new InstrumentSessionViewModel(_profile, client, _dialogs, Log) { Owner = this };
+        var session = new InstrumentSessionViewModel(_profile, client, _dialogs, Log, _audit) { Owner = this };
         session.DisconnectRequested += async (_, reason) => await DisconnectAsync(reason);
+        session.Audit(AuditActions.Connected, details: client.Identity);
         Session = session;
         State = ConnectionState.Connected;
         await session.InitializeAsync();
@@ -205,10 +213,29 @@ public sealed class InstrumentItemViewModel : ObservableObject
             return false;
         }
 
+        var previous = _profile.StoredSetup;
         _profile.StoredSetup = setup;
         _profileChanged(this);
         OnStoredSetupChanged();
         session.MarkSetupSaved($"Setup saved to the configuration at {DateTime.Now:HH:mm:ss}.");
+
+        // Record what the saved setup now says, compared with the one it replaces.
+        var details = $"Saved in the configuration {_configurationName?.Invoke() ?? string.Empty}".TrimEnd();
+        var changes = previous?.Compare(setup) ?? [];
+        if (previous is null)
+        {
+            session.Audit(AuditActions.SetupSaved, details: details + ", the first saved setup for this instrument");
+        }
+        else if (changes.Count == 0)
+        {
+            session.Audit(AuditActions.SetupSaved, details: details + ". It matches the setup saved before");
+        }
+
+        foreach (var change in changes)
+        {
+            session.Audit(AuditActions.SetupSaved, change.Setting, change.Before, change.After, details);
+        }
+
         return true;
     }
 
@@ -273,6 +300,8 @@ public sealed class InstrumentItemViewModel : ObservableObject
             if (answer.Choice == DialogChoice.Cancel || _session != session)
             {
                 session.MarkInstrumentDiffers();
+                session.Audit(AuditActions.SetupKept,
+                    details: $"On connecting, the instrument's own settings were kept. They differ from the setup saved {stored.SavedUtc.ToLocalTime():yyyy-MM-dd HH:mm} in: {string.Join(", ", differences)}");
                 return;
             }
 
@@ -286,11 +315,13 @@ public sealed class InstrumentItemViewModel : ObservableObject
 
         if (restore)
         {
-            await session.ApplySetupAsync(stored, $"the setup saved {stored.SavedUtc.ToLocalTime():yyyy-MM-dd HH:mm}");
+            await session.ApplySetupAsync(stored, $"the setup saved {stored.SavedUtc.ToLocalTime():yyyy-MM-dd HH:mm}, on connecting", before: current);
         }
         else
         {
             session.MarkInstrumentDiffers();
+            session.Audit(AuditActions.SetupKept,
+                details: $"On connecting, the instrument's own settings were kept. They differ from the setup saved {stored.SavedUtc.ToLocalTime():yyyy-MM-dd HH:mm} in: {string.Join(", ", differences)}");
         }
     }
 
@@ -334,14 +365,21 @@ public sealed class InstrumentItemViewModel : ObservableObject
 
         session.StopPolling();
         Session = null;
+        var returnToLocal = failureReason is null && _profile.ReturnToLocalOnDisconnect;
         try
         {
-            await session.Client.DisconnectAsync(returnToLocal: failureReason is null && _profile.ReturnToLocalOnDisconnect);
+            using (session.BeginChange())
+            {
+                await session.Client.DisconnectAsync(returnToLocal);
+            }
         }
         catch (Exception ex)
         {
             Log.Add(CommunicationDirection.Error, $"Error while disconnecting: {ex.Message}");
         }
+
+        session.Audit(failureReason is null ? AuditActions.Disconnected : AuditActions.ConnectionLost,
+            details: failureReason ?? (returnToLocal ? "Front panel returned to local control" : "Front panel left under remote control"));
 
         LastError = failureReason;
         State = failureReason is null ? ConnectionState.Disconnected : ConnectionState.Failed;

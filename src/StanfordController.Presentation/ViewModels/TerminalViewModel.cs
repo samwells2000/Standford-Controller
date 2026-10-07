@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
+using StanfordController.Core;
+using StanfordController.Core.Audit;
 using StanfordController.Core.Protocol;
 using StanfordController.Presentation.Mvvm;
 
@@ -123,12 +125,19 @@ public sealed class TerminalViewModel : ParameterViewModel
 
         await RunAsync(async () =>
         {
-            var result = await Client.ExecuteRawAsync(line, _checkErrors);
+            RawCommandResult result;
+            using (Context.BeginChange())
+            {
+                result = await Client.ExecuteRawAsync(line, _checkErrors);
+            }
 
-            // Any set command may have changed what the other pages show.
-            if (line.Split(';').Any(part => part.Trim().Length > 0 && !part.Contains('?')))
+            // Any set command may have changed what the other pages show, and is recorded as typed.
+            if (Dg645Client.IsSetCommand(line))
             {
                 Context.NotifyExternalChange();
+                Context.Audit(AuditActions.Command, "Terminal", newValue: line, details: result.Errors.Count > 0
+                    ? "The instrument reported: " + string.Join("; ", result.Errors.Select(c => $"{Dg645Names.DescribeError(c)} (error {c})"))
+                    : _checkErrors ? "No errors reported" : "Sent without checking for errors");
             }
 
             foreach (var response in result.Responses)

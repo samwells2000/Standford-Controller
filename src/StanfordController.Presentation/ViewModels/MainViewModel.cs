@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows.Input;
+using StanfordController.Core.Audit;
 using StanfordController.Core.Discovery;
 using StanfordController.Core.Profiles;
 using StanfordController.Presentation.Mvvm;
@@ -44,6 +45,7 @@ public sealed class MainViewModel : ObservableObject
         _store = new ConfigurationStore(_defaultConfigurationPath);
         _dialogs = dialogs;
         _settingsStore = settingsStore;
+        Audit = new AuditLog(Path.Combine(Path.GetDirectoryName(_defaultConfigurationPath) ?? ".", "Audit trail"), $"{AppName} {Help.AppInfo.Version}");
         Instruments.CollectionChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(HasInstruments));
@@ -91,7 +93,11 @@ public sealed class MainViewModel : ObservableObject
         });
         HelpCommand = new RelayCommand<string>(topic => _dialogs.ShowHelp(topic));
         AboutCommand = new AsyncRelayCommand(_dialogs.ShowAboutAsync);
+        AuditTrailCommand = new RelayCommand(() => _dialogs.ShowAuditTrail(new AuditTrailViewModel(Audit, _dialogs, SetAuditFolder)));
     }
+
+    /// <summary>The audit trail: every change made to an instrument or to the saved instruments.</summary>
+    public AuditLog Audit { get; }
 
     public ObservableCollection<InstrumentItemViewModel> Instruments { get; } = [];
 
@@ -270,6 +276,9 @@ public sealed class MainViewModel : ObservableObject
 
     public ICommand AboutCommand { get; }
 
+    /// <summary>Opens the audit trail window.</summary>
+    public ICommand AuditTrailCommand { get; }
+
     /// <summary>Reads preferences and opens the configuration used last time (or the default one).</summary>
     public async Task LoadAsync()
     {
@@ -279,6 +288,7 @@ public sealed class MainViewModel : ObservableObject
             if (_settingsStore is not null)
             {
                 _settings = _settingsStore.Load();
+                Audit.SetFolder(_settings.AuditFolder);
                 RaiseThemeProperties();
                 OnPropertyChanged(nameof(ShowLog));
                 RefreshRecent();
@@ -318,12 +328,22 @@ public sealed class MainViewModel : ObservableObject
     /// </summary>
     public async Task<bool> ConfirmCloseAsync() => await OfferToSaveSetupsAsync("closing");
 
-    /// <summary>Disconnects every instrument (returning front panels to local control).</summary>
+    /// <summary>
+    /// Disconnects every instrument (returning front panels to local control) and writes any audit trail records
+    /// still waiting, saying so if some could not be written.
+    /// </summary>
     public async Task ShutdownAsync()
     {
         foreach (var item in Instruments.Where(i => i.Session is not null).ToList())
         {
             await item.DisconnectAsync();
+        }
+
+        var unwritten = await Audit.FlushOnExitAsync();
+        if (unwritten > 0)
+        {
+            await _dialogs.ShowErrorAsync("Audit trail",
+                $"{Plural(unwritten, "audit trail record")} could not be written to {Audit.Folder} or {Audit.DefaultFolder}, and will be lost.\n\n{Audit.Problem}");
         }
     }
 
@@ -332,6 +352,7 @@ public sealed class MainViewModel : ObservableObject
         var item = CreateItem(profile);
         Instruments.Add(item);
         Save();
+        RecordConfigurationChange(profile, AuditActions.InstrumentAdded, $"Added to {ConfigurationName}: {DescribeProfile(profile)}");
         SelectedInstrument = item;
         return item;
     }
@@ -537,7 +558,7 @@ public sealed class MainViewModel : ObservableObject
 
     private InstrumentItemViewModel CreateItem(InstrumentProfile profile)
     {
-        var item = new InstrumentItemViewModel(profile, _dialogs, _ => Save());
+        var item = new InstrumentItemViewModel(profile, _dialogs, _ => Save(), Audit, () => ConfigurationName);
         item.Log.IsPanelVisible = _settings.ShowLog;
         item.Log.PropertyChanged += (_, e) =>
         {
@@ -585,6 +606,42 @@ public sealed class MainViewModel : ObservableObject
 
     private void SaveSettings() => _settingsStore?.Save(_settings);
 
+    /// <summary>Writes the audit trail to <paramref name="folder"/> from now on (null: the default folder) and remembers it.</summary>
+    private void SetAuditFolder(string? folder)
+    {
+        _settings.AuditFolder = folder;
+        SaveSettings();
+        StatusMessage = $"The audit trail is now written to {Audit.Folder}.";
+    }
+
+    private void RecordConfigurationChange(InstrumentProfile profile, string action, string details) =>
+        Audit.Record(profile, null, action, details: details);
+
+    private static string DescribeProfile(InstrumentProfile profile) =>
+        (profile.IsSimulator ? "simulated instrument" : profile.Address)
+        + (string.IsNullOrWhiteSpace(profile.Location) ? string.Empty : $", {profile.Location}");
+
+    /// <summary>The instrument details changed in the editor, for the audit trail.</summary>
+    private static IEnumerable<(string Setting, string? Before, string? After)> CompareProfiles(InstrumentProfile before, InstrumentProfile after)
+    {
+        static string OnOff(bool on) => on ? "On" : "Off";
+        static string Describe(SetupOnConnect choice) =>
+            ProfileEditorViewModel.SetupOnConnectOptions.FirstOrDefault(o => o.Value == (int)choice)?.Label ?? choice.ToString();
+        var fields = new (string Setting, string? Before, string? After)[]
+        {
+            ("Name", before.Name, after.Name),
+            ("Address", before.Host, after.Host),
+            ("Port", before.Port.ToString(System.Globalization.CultureInfo.InvariantCulture), after.Port.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+            ("Timeout", $"{before.TimeoutMs} ms", $"{after.TimeoutMs} ms"),
+            ("Location", before.Location, after.Location),
+            ("Notes", before.Notes, after.Notes),
+            ("Connect when the configuration opens", OnOff(before.ConnectOnStartup), OnOff(after.ConnectOnStartup)),
+            ("Return to local control on disconnecting", OnOff(before.ReturnToLocalOnDisconnect), OnOff(after.ReturnToLocalOnDisconnect)),
+            ("Saved setup on connecting", Describe(before.SetupOnConnect), Describe(after.SetupOnConnect)),
+        };
+        return fields.Where(f => !string.Equals(f.Before ?? string.Empty, f.After ?? string.Empty, StringComparison.Ordinal));
+    }
+
     private void Save()
     {
         try
@@ -623,8 +680,14 @@ public sealed class MainViewModel : ObservableObject
         }
 
         var addressChanged = editor.Result.Host != item.Profile.Host || editor.Result.Port != item.Profile.Port;
+        var before = item.Profile;
         item.UpdateProfile(editor.Result);
         Save();
+        foreach (var (setting, oldValue, newValue) in CompareProfiles(before, editor.Result))
+        {
+            Audit.Record(editor.Result, null, AuditActions.InstrumentEdited, setting, oldValue, newValue, details: $"Saved in {ConfigurationName}");
+        }
+
         StatusMessage = addressChanged && item.IsConnected
             ? $"Saved {item.Name}. Reconnect to use the new address."
             : $"Saved {item.Name}.";
@@ -648,6 +711,8 @@ public sealed class MainViewModel : ObservableObject
         item.PropertyChanged -= OnItemPropertyChanged;
         Instruments.Remove(item);
         Save();
+        RecordConfigurationChange(item.Profile, AuditActions.InstrumentRemoved,
+            $"Removed from {ConfigurationName}{(item.Profile.StoredSetup is null ? string.Empty : ", with its saved setup")}");
         SelectedInstrument = Instruments.Count == 0 ? null : Instruments[Math.Min(index, Instruments.Count - 1)];
         StatusMessage = $"Removed {item.Name}.";
     }
@@ -725,6 +790,8 @@ public sealed class MainViewModel : ObservableObject
                 profile.Name = UniqueName(profile.Name);
                 Instruments.Add(CreateItem(profile));
                 added++;
+                RecordConfigurationChange(profile, AuditActions.InstrumentAdded,
+                    $"Imported into {ConfigurationName} from {Path.GetFileName(path)}: {DescribeProfile(profile)}");
             }
 
             Save();

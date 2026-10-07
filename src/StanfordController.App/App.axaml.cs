@@ -25,6 +25,7 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        ClickAwayBehavior.Install();
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             Start(desktop);

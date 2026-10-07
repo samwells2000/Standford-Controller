@@ -1,0 +1,172 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:StanfordController.Presentation.ViewModels;assembly=StanfordController.Presentation"
+        xmlns:audit="clr-namespace:StanfordController.Core.Audit;assembly=StanfordController.Core"
+        xmlns:help="clr-namespace:StanfordController.Presentation.Help;assembly=StanfordController.Presentation"
+        xmlns:inf="clr-namespace:StanfordController.App.Infrastructure"
+        x:Class="StanfordController.App.Dialogs.AuditTrailWindow"
+        x:DataType="vm:AuditTrailViewModel"
+        inf:HelpContext.Topic="{x:Static help:HelpTopics.AuditTrail}"
+        Title="Audit trail — Tempo"
+        Width="1240" Height="720" MinWidth="1080" MinHeight="460"
+        WindowStartupLocation="CenterOwner">
+    <DockPanel>
+        <!-- ============================== Toolbar ============================== -->
+        <Border DockPanel.Dock="Top" Classes="chrome" BorderThickness="0,0,0,1" Padding="12,8">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4">
+                    <Button Classes="tool" Content="Refresh" Command="{Binding RefreshCommand}" ToolTip.Tip="Read the audit trail files again (F5)" />
+                    <Button Classes="tool" Content="Check integrity" Command="{Binding CheckIntegrityCommand}"
+                            ToolTip.Tip="Check that no record for this month has been changed, and none added or removed" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="Month" Classes="label" VerticalAlignment="Center" />
+                    <ComboBox ItemsSource="{Binding Months}" SelectedItem="{Binding SelectedMonth}" Width="110" />
+                    <TextBlock Text="Instrument" Classes="label" VerticalAlignment="Center" Margin="10,0,0,0" />
+                    <ComboBox ItemsSource="{Binding Instruments}" SelectedItem="{Binding SelectedInstrument}" Width="210" />
+                    <TextBox x:Name="SearchBox" Text="{Binding SearchText}" Width="230" Margin="10,0,0,0"
+                             PlaceholderText="Search setting, value, user, reason…" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- ============================== Folder and summary ============================== -->
+        <Border DockPanel.Dock="Bottom" Classes="chrome" BorderThickness="0,1,0,0" Padding="12,5">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
+                    <Button Classes="tool" Content="Open folder" Command="{Binding OpenFolderCommand}" />
+                    <Button Classes="tool" Content="Change folder…" Command="{Binding ChangeFolderCommand}"
+                            ToolTip.Tip="Write the audit trail somewhere else, for example a shared folder that is backed up" />
+                    <Button Classes="tool" Content="Use default folder" Command="{Binding UseDefaultFolderCommand}" IsVisible="{Binding !UsesDefaultFolder}" />
+                </StackPanel>
+                <TextBlock Classes="caption" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Folder}">
+                    <Run Text="{Binding Summary}" FontWeight="SemiBold" />
+                    <Run Text="  ·  " />
+                    <Run Text="{Binding Folder}" />
+                </TextBlock>
+            </DockPanel>
+        </Border>
+
+        <StackPanel DockPanel.Dock="Top" Margin="12,10,12,0" Spacing="8">
+            <Border Classes="infobar error" IsVisible="{Binding HasProblem}">
+                <DockPanel>
+                    <Path DockPanel.Dock="Left" Classes="glyph error" Data="{StaticResource GlyphError}" Margin="0,1,9,0" VerticalAlignment="Top" />
+                    <TextBlock Text="{Binding Problem}" TextWrapping="Wrap" Foreground="{DynamicResource DangerStrongTextBrush}" />
+                </DockPanel>
+            </Border>
+            <Border Classes="infobar" Classes.error="{Binding IntegrityIsProblem}" IsVisible="{Binding HasIntegrityText}">
+                <DockPanel>
+                    <Path DockPanel.Dock="Left" Classes="glyph" Classes.error="{Binding IntegrityIsProblem}" Classes.ok="{Binding !IntegrityIsProblem}"
+                          Data="{StaticResource GlyphInfo}" Margin="0,1,9,0" VerticalAlignment="Top" />
+                    <TextBlock Text="{Binding IntegrityText}" TextWrapping="Wrap" />
+                </DockPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- ============================== Selected record ============================== -->
+        <Border DockPanel.Dock="Bottom" Classes="framed" Margin="12,0,12,10" Padding="12,10" IsVisible="{Binding HasSelectedRecord}" MaxHeight="230">
+            <ContentControl Content="{Binding SelectedRecord}">
+                <ContentControl.ContentTemplate>
+                    <DataTemplate x:DataType="audit:AuditRecord">
+                        <ScrollViewer>
+                            <Grid ColumnDefinitions="110,*,24,110,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+                                <Grid.Styles>
+                                    <Style Selector="TextBlock.key">
+                                        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+                                        <Setter Property="Margin" Value="0,2" />
+                                    </Style>
+                                    <Style Selector="SelectableTextBlock">
+                                        <Setter Property="Margin" Value="0,2" />
+                                        <Setter Property="TextWrapping" Value="Wrap" />
+                                    </Style>
+                                </Grid.Styles>
+                                <TextBlock Classes="key" Text="Time" />
+                                <SelectableTextBlock Grid.Column="1" Text="{Binding Time, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss.fff zzz}'}" />
+                                <TextBlock Grid.Column="3" Classes="key" Text="Action" />
+                                <SelectableTextBlock Grid.Column="4" Text="{Binding Action}" FontWeight="SemiBold" />
+
+                                <TextBlock Grid.Row="1" Classes="key" Text="User" />
+                                <SelectableTextBlock Grid.Row="1" Grid.Column="1" Text="{Binding User}" />
+                                <TextBlock Grid.Row="1" Grid.Column="3" Classes="key" Text="Setting" />
+                                <SelectableTextBlock Grid.Row="1" Grid.Column="4" Text="{Binding Setting, TargetNullValue='—'}" />
+
+                                <TextBlock Grid.Row="2" Classes="key" Text="Computer" />
+                                <SelectableTextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Computer}" />
+                                <TextBlock Grid.Row="2" Grid.Column="3" Classes="key" Text="Old → new" />
+                                <SelectableTextBlock Grid.Row="2" Grid.Column="4">
+                                    <Run Text="{Binding OldValue, TargetNullValue='—'}" />
+                                    <Run Text="  →  " />
+                                    <Run Text="{Binding NewValue, TargetNullValue='—'}" />
+                                </SelectableTextBlock>
+
+                                <TextBlock Grid.Row="3" Classes="key" Text="Instrument" />
+                                <SelectableTextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Instrument}" />
+                                <TextBlock Grid.Row="3" Grid.Column="3" Classes="key" Text="Reason" />
+                                <SelectableTextBlock Grid.Row="3" Grid.Column="4" Text="{Binding Reason, TargetNullValue='—'}" />
+
+                                <TextBlock Grid.Row="4" Classes="key" Text="Serial, address" />
+                                <SelectableTextBlock Grid.Row="4" Grid.Column="1">
+                                    <Run Text="{Binding Serial, TargetNullValue='—'}" />
+                                    <Run Text="  ·  " />
+                                    <Run Text="{Binding Address, TargetNullValue='—'}" />
+                                </SelectableTextBlock>
+                                <TextBlock Grid.Row="4" Grid.Column="3" Classes="key" Text="Details" />
+                                <SelectableTextBlock Grid.Row="4" Grid.Column="4" Text="{Binding Details, TargetNullValue='—'}" />
+
+                                <TextBlock Grid.Row="5" Classes="key" Text="Software" />
+                                <SelectableTextBlock Grid.Row="5" Grid.Column="1" Text="{Binding Software}" />
+                                <TextBlock Grid.Row="6" Classes="key" Text="Record hash" />
+                                <SelectableTextBlock Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="4" Text="{Binding Hash, TargetNullValue='—'}" Classes="mono" FontSize="11.5" />
+                            </Grid>
+                        </ScrollViewer>
+                    </DataTemplate>
+                </ContentControl.ContentTemplate>
+            </ContentControl>
+        </Border>
+
+        <!-- ============================== Records ============================== -->
+        <Border Classes="framed" Margin="12,10,12,10">
+            <Panel>
+                <DockPanel>
+                    <Border DockPanel.Dock="Top" Classes="table-header" BorderThickness="0,0,0,1">
+                        <Grid ColumnDefinitions="150,120,150,130,150,150,150,*">
+                            <TextBlock Classes="header" Text="Time" />
+                            <TextBlock Grid.Column="1" Classes="header" Text="User" />
+                            <TextBlock Grid.Column="2" Classes="header" Text="Instrument" />
+                            <TextBlock Grid.Column="3" Classes="header" Text="Action" />
+                            <TextBlock Grid.Column="4" Classes="header" Text="Setting" />
+                            <TextBlock Grid.Column="5" Classes="header" Text="Old value" />
+                            <TextBlock Grid.Column="6" Classes="header" Text="New value" />
+                            <TextBlock Grid.Column="7" Classes="header" Text="Reason" />
+                        </Grid>
+                    </Border>
+                    <ListBox x:Name="RecordList" ItemsSource="{Binding Records}" SelectedItem="{Binding SelectedRecord}" Classes="plain" Background="Transparent">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="audit:AuditRecord">
+                                <Grid ColumnDefinitions="150,120,150,130,150,150,150,*" Margin="0,1">
+                                    <Grid.Styles>
+                                        <Style Selector="TextBlock">
+                                            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+                                            <Setter Property="Margin" Value="0,0,10,0" />
+                                        </Style>
+                                    </Grid.Styles>
+                                    <TextBlock Text="{Binding Time, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}" Classes="mono" FontSize="12" />
+                                    <TextBlock Grid.Column="1" Text="{Binding User}" />
+                                    <TextBlock Grid.Column="2" Text="{Binding Instrument}" ToolTip.Tip="{Binding Instrument}" />
+                                    <TextBlock Grid.Column="3" Text="{Binding Action}" />
+                                    <TextBlock Grid.Column="4" Text="{Binding Setting}" ToolTip.Tip="{Binding Setting}" />
+                                    <TextBlock Grid.Column="5" Text="{Binding OldValue}" ToolTip.Tip="{Binding OldValue}" />
+                                    <TextBlock Grid.Column="6" Text="{Binding NewValue}" ToolTip.Tip="{Binding NewValue}" />
+                                    <TextBlock Grid.Column="7" Text="{Binding Reason}" ToolTip.Tip="{Binding Reason}" Classes="secondary" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+                <TextBlock IsVisible="{Binding IsEmpty}" HorizontalAlignment="Center" VerticalAlignment="Center" Classes="secondary"
+                           TextAlignment="Center" TextWrapping="Wrap" MaxWidth="420"
+                           Text="No records yet. Every change Tempo makes to an instrument, and to the saved instruments, is recorded here." />
+            </Panel>
+        </Border>
+    </DockPanel>
+</Window>

@@ -16,11 +16,17 @@
                         <HeaderedContentControl Theme="{StaticResource FormRow}" Header="Internal rate" Content="{Binding Rate}" />
                         <HeaderedContentControl Theme="{StaticResource FormRow}" Header="External threshold" Content="{Binding Level}" />
                         <HeaderedContentControl Theme="{StaticResource FormRow}" Header="Inhibit input" Content="{Binding Inhibit}" />
-                        <HeaderedContentControl Theme="{StaticResource FormRow}" Header="Single shot">
+                        <HeaderedContentControl Theme="{StaticResource FormRow}" Header="Single shot"
+                                                DataContext="{Binding $parent[UserControl].DataContext}" x:DataType="vm:InstrumentSessionViewModel">
                             <StackPanel Spacing="4">
-                                <Button Command="{Binding TriggerNowCommand}" IsEnabled="{Binding IsSingleShot}" Content="Trigger now" HorizontalAlignment="Left"
-                                        ToolTip.Tip="Send *TRG to start one delay cycle (Ctrl+T)" />
-                                <TextBlock Classes="caption" Text="Available when the source is a single-shot mode." />
+                                <Button Command="{Binding TriggerCommand}" Classes.ready="{Binding IsArmed}" HorizontalAlignment="Left" MinWidth="96"
+                                        ToolTip.Tip="{Binding TriggerActionHint}">
+                                    <StackPanel Orientation="Horizontal" Spacing="7">
+                                        <Ellipse Classes="led on" IsVisible="{Binding IsArmed}" />
+                                        <TextBlock Text="{Binding TriggerNowText}" />
+                                    </StackPanel>
+                                </Button>
+                                <TextBlock Classes="caption" Text="{Binding TriggerActionHint}" TextWrapping="Wrap" />
                             </StackPanel>
                         </HeaderedContentControl>
                         <TextBlock Classes="error" Text="{Binding Error}" IsVisible="{Binding HasError}" />

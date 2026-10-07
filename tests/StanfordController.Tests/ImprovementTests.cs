@@ -15,10 +15,7 @@ public sealed class ImprovementTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_directory))
-        {
-            Directory.Delete(_directory, recursive: true);
-        }
+        TestFolders.Delete(_directory);
     }
 
     private static async Task<(InstrumentSessionViewModel Session, LogViewModel Log)> CreateSessionAsync()

@@ -1,7 +1,9 @@
 using System.IO;
 using System.Net.Sockets;
 using System.Windows.Input;
+using System.Runtime.ExceptionServices;
 using StanfordController.Core;
+using StanfordController.Core.Audit;
 using StanfordController.Core.Profiles;
 using StanfordController.Core.Protocol;
 using StanfordController.Core.Units;
@@ -24,6 +26,7 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
     private static readonly FileFilter SetupFilter = new("DG645 setup", "*" + Dg645Settings.FileExtension);
 
     private readonly LogViewModel _log;
+    private readonly AuditLog? _audit;
     private CancellationTokenSource? _pollCancellation;
     private bool _isPolling;
     private double _pollIntervalSeconds = 1;
@@ -38,13 +41,20 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
     private bool _disconnectRequested;
     private bool _settingsMayBeStale;
     private bool _hasUnsavedChanges;
+    private bool _isArmed;
+    private int? _armedSource;
+    private string _changeReason = string.Empty;
 
-    public InstrumentSessionViewModel(InstrumentProfile profile, Dg645Client client, IDialogService dialogs, LogViewModel log)
+    public InstrumentSessionViewModel(InstrumentProfile profile, Dg645Client client, IDialogService dialogs, LogViewModel log, AuditLog? audit = null)
     {
         Profile = profile;
         Client = client;
         Dialogs = dialogs;
         _log = log;
+        _audit = audit;
+
+        // A safety net: anything that changes the instrument without recording itself is recorded as sent.
+        Client.UnrecordedCommandSent += (_, line) => Audit(AuditActions.Command, newValue: line, details: "Sent by Tempo");
 
         Channels = Dg645Names.DelayChannels.Select(c => new ChannelDelayViewModel(this, c)).ToList();
         Outputs = Dg645Names.Outputs.Select(o => new OutputViewModel(this, o)).ToList();
@@ -60,7 +70,7 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         _recallSlot = RecallSlots[1];
 
         RefreshAllCommand = new AsyncRelayCommand(RefreshAllAsync, () => !IsBusy);
-        TriggerCommand = new AsyncRelayCommand(() => RunAsync("Trigger", () => Client.TriggerAsync()), () => Trigger.IsSingleShot);
+        TriggerCommand = new AsyncRelayCommand(TriggerOrArmAsync, () => Trigger.IsSingleShot);
         Trigger.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(TriggerViewModel.IsSingleShot))
@@ -77,8 +87,13 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         SaveLogCommand = new AsyncRelayCommand(SaveLogAsync);
 
         // The status bar summarises the trigger and burst settings, like the instrument's own display.
-        Trigger.Source.ValueChanged += (_, _) => OnPropertyChanged(nameof(TriggerSummary));
+        Trigger.Source.ValueChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(TriggerSummary));
+            OnTriggerSourceRead();
+        };
         Trigger.Rate.ValueChanged += (_, _) => OnPropertyChanged(nameof(TriggerSummary));
+        Status.InstrumentStatusRead += (_, status) => OnInstrumentStatusRead(status);
         Burst.Enabled.ValueChanged += (_, _) => OnPropertyChanged(nameof(BurstSummary));
         Burst.Count.ValueChanged += (_, _) => OnPropertyChanged(nameof(BurstSummary));
         Burst.Period.ValueChanged += (_, _) => OnPropertyChanged(nameof(BurstSummary));
@@ -173,6 +188,52 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
             ? $"{source.Label}, {Trigger.Rate.Text}"
             : source.Label;
 
+    /// <summary>
+    /// True from arming a single-shot external trigger (*TRG) until the delay cycle that the next external edge
+    /// starts has run. While armed, the status register is read in the background even if Live status is off.
+    /// </summary>
+    public bool IsArmed
+    {
+        get => _isArmed;
+        private set
+        {
+            if (SetProperty(ref _isArmed, value))
+            {
+                OnTriggerActionChanged();
+                UpdatePollLoop();
+            }
+        }
+    }
+
+    /// <summary>The command bar's trigger button: "Trigger", or "Arm" and then "Ready" in the single-shot external modes.</summary>
+    public string TriggerActionText => !Trigger.IsExternalSingleShot ? "Trigger" : _isArmed ? "Ready" : "Arm";
+
+    /// <summary>The Trigger page's button: "Trigger now", "Arm" or "Ready".</summary>
+    public string TriggerNowText => Trigger.IsExternalSingleShot ? TriggerActionText : "Trigger now";
+
+    /// <summary>The Instrument menu entry for Ctrl+T.</summary>
+    public string TriggerMenuText => !Trigger.IsExternalSingleShot ? "Single-shot _trigger" : _isArmed ? "_Arm again" : "_Arm external trigger";
+
+    /// <summary>What the trigger button does at the moment, for its tooltip and the Trigger page.</summary>
+    public string TriggerActionHint => Trigger.Source.SelectedValue switch
+    {
+        (int)TriggerSource.SingleShot => "Starts one delay cycle (*TRG, Ctrl+T).",
+        (int)TriggerSource.SingleShotExternalRising or (int)TriggerSource.SingleShotExternalFalling when _isArmed =>
+            $"Ready: the next {TriggerEdge} edge at the trigger input starts one delay cycle. Click to arm again (*TRG, Ctrl+T).",
+        (int)TriggerSource.SingleShotExternalRising or (int)TriggerSource.SingleShotExternalFalling =>
+            $"Arms the instrument, so that the next {TriggerEdge} edge at the trigger input starts one delay cycle (*TRG, Ctrl+T).",
+        _ => "Available when the trigger source is a single-shot mode.",
+    };
+
+    private string TriggerEdge => Trigger.Source.SelectedValue == (int)TriggerSource.SingleShotExternalFalling ? "falling" : "rising";
+
+    /// <summary>The reason for the changes being made, recorded with each of them in the audit trail.</summary>
+    public string ChangeReason
+    {
+        get => _changeReason;
+        set => SetProperty(ref _changeReason, value ?? string.Empty);
+    }
+
     /// <summary>e.g. "Off" or "10 × 1 µs".</summary>
     public string BurstSummary => !Burst.Enabled.IsChecked
         ? "Off"
@@ -192,14 +253,7 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         {
             if (SetProperty(ref _isPolling, value))
             {
-                if (value)
-                {
-                    StartPolling();
-                }
-                else
-                {
-                    StopPolling();
-                }
+                UpdatePollLoop();
             }
         }
     }
@@ -209,10 +263,10 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         get => _pollIntervalSeconds;
         set
         {
-            if (SetProperty(ref _pollIntervalSeconds, Math.Clamp(value, 0.2, 60)) && _isPolling)
+            if (SetProperty(ref _pollIntervalSeconds, Math.Clamp(value, 0.2, 60)) && _pollCancellation is not null)
             {
-                StopPolling();
-                StartPolling();
+                StopPollLoop();
+                UpdatePollLoop();
             }
         }
     }
@@ -299,15 +353,17 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         }
     }
 
+    /// <summary>Stops all background reading, e.g. on disconnecting.</summary>
     public void StopPolling()
     {
-        _pollCancellation?.Cancel();
-        _pollCancellation = null;
         if (_isPolling)
         {
             _isPolling = false;
             OnPropertyChanged(nameof(IsPolling));
         }
+
+        IsArmed = false;
+        StopPollLoop();
     }
 
     // ---- IInstrumentContext ----
@@ -342,6 +398,11 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         HasUnsavedChanges = true;
     }
 
+    public IDisposable BeginChange() => Client.BeginAuditedChange();
+
+    public void Audit(string action, string? setting = null, string? oldValue = null, string? newValue = null, string? details = null) =>
+        _audit?.Record(Profile, SerialNumber.Length > 0 ? SerialNumber : null, action, setting, oldValue, newValue, _changeReason, details);
+
     // ---- Saved setups ----
 
     /// <summary>Reads the instrument's complete setup, or returns null (with the error reported) if it could not be read.</summary>
@@ -356,15 +417,17 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         return captured;
     }
 
-    /// <summary>Writes a complete setup to the instrument and reads every page back. Returns true if it was applied.</summary>
-    public async Task<bool> ApplySetupAsync(Dg645Settings settings, string description)
+    /// <summary>
+    /// Writes a complete setup to the instrument and reads every page back. Each setting it changes is recorded in the
+    /// audit trail; <paramref name="before"/> is the instrument's setup beforehand, if it has just been read.
+    /// Returns true if it was applied.
+    /// </summary>
+    public async Task<bool> ApplySetupAsync(Dg645Settings settings, string description, Dg645Settings? before = null)
     {
-        var applied = false;
-        await BusyAsync("Applying setup…", async () =>
-        {
-            await Client.ApplySettingsAsync(settings, new Progress<string>(step => BusyText = $"Applying {step.ToLowerInvariant()}…"));
-            applied = true;
-        });
+        IsArmed = false;
+        var applied = await ReplaceSettingsAsync("Applying setup…", AuditActions.SetupApplied, $"Applied {description}",
+            () => Client.ApplySettingsAsync(settings, new Progress<string>(step => BusyText = $"Applying {step.ToLowerInvariant()}…")),
+            before);
 
         await RefreshAllAsync();
         if (applied)
@@ -456,6 +519,74 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
 
     // ---- Commands ----
 
+    /// <summary>
+    /// *TRG. In single-shot mode it starts a delay cycle; in the single-shot external modes it arms the instrument,
+    /// and the button shows Ready until the next external edge has started the cycle.
+    /// </summary>
+    private async Task TriggerOrArmAsync()
+    {
+        using var change = BeginChange();
+        if (!Trigger.IsExternalSingleShot)
+        {
+            if (await RunAsync("Trigger", () => Client.TriggerAsync()))
+            {
+                Audit(AuditActions.Triggered, details: "One delay cycle started (*TRG)");
+                SetStatus($"Triggered at {DateTime.Now:HH:mm:ss}.");
+            }
+
+            return;
+        }
+
+        var source = Trigger.Source.SelectedValue;
+        var armed = await RunAsync("Arm", async () =>
+        {
+            // Read (and so clear) the status register first, so only a delay cycle started after arming ends Ready.
+            await Status.PollAsync();
+            _armedSource = source;
+            IsArmed = true;
+            await Client.TriggerAsync();
+        });
+
+        if (armed)
+        {
+            Audit(AuditActions.Armed, details: $"Armed for one delay cycle on the next {TriggerEdge} edge at the trigger input (*TRG)");
+            SetStatus($"Armed at {DateTime.Now:HH:mm:ss}: waiting for a {TriggerEdge} edge at the trigger input.");
+        }
+        else
+        {
+            IsArmed = false;
+        }
+    }
+
+    private void OnInstrumentStatusRead(InstrumentStatusFlags status)
+    {
+        // End of delay (or burst), not TRIG: the cycle the external edge started has run, so the shot is spent.
+        if (_isArmed && (status & (InstrumentStatusFlags.EndOfDelay | InstrumentStatusFlags.EndOfBurst)) != 0)
+        {
+            IsArmed = false;
+            SetStatus($"Triggered at {DateTime.Now:HH:mm:ss}. Arm again for the next shot.");
+        }
+    }
+
+    private void OnTriggerSourceRead()
+    {
+        // Choosing another source cancels an armed single shot. (The source is read again after every change.)
+        if (_isArmed && Trigger.Source.SelectedValue != _armedSource)
+        {
+            IsArmed = false;
+        }
+
+        OnTriggerActionChanged();
+    }
+
+    private void OnTriggerActionChanged()
+    {
+        OnPropertyChanged(nameof(TriggerActionText));
+        OnPropertyChanged(nameof(TriggerNowText));
+        OnPropertyChanged(nameof(TriggerMenuText));
+        OnPropertyChanged(nameof(TriggerActionHint));
+    }
+
     private async Task SaveToSlotAsync()
     {
         var slot = SaveSlot;
@@ -464,9 +595,15 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
             return;
         }
 
-        await RunAsync($"Save to location {slot}", () => Client.SaveSettingsAsync(slot));
-        if (!_statusIsError)
+        bool saved;
+        using (BeginChange())
         {
+            saved = await RunAsync($"Save to location {slot}", () => Client.SaveSettingsAsync(slot));
+        }
+
+        if (saved)
+        {
+            Audit(AuditActions.SavedToMemory, $"Location {slot}", details: "The instrument's settings were stored in its own memory (*SAV)");
             SetStatus($"Settings saved to instrument location {slot}.");
         }
     }
@@ -486,8 +623,10 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
             return;
         }
 
-        if (await RunAsync($"Recall location {slot.Value}", () => Client.RecallSettingsAsync(slot.Value)))
+        if (await ReplaceSettingsAsync("Recalling settings…", AuditActions.Recalled, $"Recalled {slot.Label.ToLowerInvariant()} (*RCL {slot.Value})",
+                () => Client.RecallSettingsAsync(slot.Value)))
         {
+            IsArmed = false;
             await RefreshAllAsync();
             HasUnsavedChanges = true;
             SetStatus($"Recalled {slot.Label.ToLowerInvariant()}.");
@@ -501,8 +640,9 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
             return;
         }
 
-        if (await RunAsync("Reset", () => Client.ResetAsync()))
+        if (await ReplaceSettingsAsync("Resetting…", AuditActions.Reset, "Reset to the default settings (*RST)", () => Client.ResetAsync()))
         {
+            IsArmed = false;
             await RefreshAllAsync();
             HasUnsavedChanges = true;
             SetStatus("Instrument reset to default settings.");
@@ -579,6 +719,65 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
 
     // ---- Helpers ----
 
+    /// <summary>
+    /// Runs an operation that replaces many settings at once (applying a setup, recalling, resetting). The setup is read
+    /// before and after, and each setting that changed is recorded in the audit trail, also when the operation fails
+    /// part-way. Returns true if the operation succeeded.
+    /// </summary>
+    private async Task<bool> ReplaceSettingsAsync(string busyText, string action, string details, Func<Task> operation, Dg645Settings? before = null)
+    {
+        Exception? failure = null;
+        Dg645Settings? after = null;
+        await BusyAsync(busyText, async () =>
+        {
+            using var change = BeginChange();
+            before ??= await Client.ReadSettingsAsync();
+            try
+            {
+                await operation();
+            }
+            catch (Exception ex)
+            {
+                failure = ex;
+            }
+
+            try
+            {
+                after = await Client.ReadSettingsAsync();
+            }
+            catch when (failure is not null)
+            {
+                // Report the operation's own failure.
+            }
+
+            if (failure is not null)
+            {
+                ExceptionDispatchInfo.Throw(failure);
+            }
+        });
+
+        if (before is not null)
+        {
+            if (failure is not null)
+            {
+                details += $". Failed part-way: {ParameterViewModel.DescribeError(failure)}";
+            }
+
+            var changes = after is null ? [] : before.Compare(after);
+            if (changes.Count == 0)
+            {
+                Audit(action, details: after is null ? details : details + ". No settings changed");
+            }
+
+            foreach (var change in changes)
+            {
+                Audit(action, change.Setting, change.Before, change.After, details);
+            }
+        }
+
+        return failure is null && before is not null;
+    }
+
     private async Task<bool> RunAsync(string what, Func<Task> action)
     {
         try
@@ -615,12 +814,27 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         StatusIsError = isError;
     }
 
-    private void StartPolling()
+    // The status register is read while Live status is on, and while a single shot is armed so its trigger is noticed.
+    private void UpdatePollLoop()
+    {
+        if (!(_isPolling || _isArmed) || _disconnectRequested)
+        {
+            StopPollLoop();
+            return;
+        }
+
+        if (_pollCancellation is null)
+        {
+            var cancellation = new CancellationTokenSource();
+            _pollCancellation = cancellation;
+            _ = PollLoopAsync(TimeSpan.FromSeconds(_pollIntervalSeconds), cancellation.Token);
+        }
+    }
+
+    private void StopPollLoop()
     {
         _pollCancellation?.Cancel();
-        var cancellation = new CancellationTokenSource();
-        _pollCancellation = cancellation;
-        _ = PollLoopAsync(TimeSpan.FromSeconds(_pollIntervalSeconds), cancellation.Token);
+        _pollCancellation = null;
     }
 
     private async Task PollLoopAsync(TimeSpan interval, CancellationToken token)

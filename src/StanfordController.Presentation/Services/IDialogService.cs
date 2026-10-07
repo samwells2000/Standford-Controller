@@ -45,6 +45,12 @@ public interface IDialogService
 
     Task<string?> PickOpenFileAsync(string title, params FileFilter[] filters);
 
+    /// <summary>Asks for a folder. Returns null if the user cancelled.</summary>
+    Task<string?> PickFolderAsync(string title);
+
+    /// <summary>Opens a folder in the system's file manager.</summary>
+    Task OpenFolderAsync(string path);
+
     Task CopyToClipboardAsync(string text);
 
     /// <summary>Shows the About window (version, data folder, links).</summary>
@@ -52,4 +58,7 @@ public interface IDialogService
 
     /// <summary>Opens the user guide, at <paramref name="topic"/> (a heading anchor) if given.</summary>
     void ShowHelp(string? topic = null);
+
+    /// <summary>Opens the audit trail window, or brings it to the front.</summary>
+    void ShowAuditTrail(AuditTrailViewModel auditTrail);
 }

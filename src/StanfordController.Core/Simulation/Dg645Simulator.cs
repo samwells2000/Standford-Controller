@@ -17,6 +17,7 @@ public sealed class Dg645Simulator
     private readonly State?[] _savedSetups = new State?[10];
     private State _state = new();
     private int _insr;
+    private bool _armed;
     private int _esr = (int)StandardEventFlags.PowerOn;
     private int _inse;
     private int _ese;
@@ -36,6 +37,18 @@ public sealed class Dg645Simulator
 
     public Timebase Timebase { get; set; } = Timebase.Internal;
 
+    /// <summary>True after *TRG has armed a single-shot external trigger mode, until an external edge arrives.</summary>
+    public bool IsArmed
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _armed;
+            }
+        }
+    }
+
     /// <summary>Every line received, for tests. Use <see cref="GetReceivedLines"/> from other threads.</summary>
     public List<string> ReceivedLines { get; } = [];
 
@@ -44,6 +57,24 @@ public sealed class Dg645Simulator
         lock (_sync)
         {
             return ReceivedLines.ToArray();
+        }
+    }
+
+    /// <summary>
+    /// An edge at the rear-panel trigger input, for tests and demonstrations. It starts a delay cycle when the
+    /// source is external, or when a single-shot external mode has been armed (which it then disarms).
+    /// </summary>
+    public void ExternalTrigger()
+    {
+        lock (_sync)
+        {
+            var source = (TriggerSource)_state.TriggerSource;
+            if (source is TriggerSource.ExternalRising or TriggerSource.ExternalFalling
+                || (_armed && source is TriggerSource.SingleShotExternalRising or TriggerSource.SingleShotExternalFalling))
+            {
+                _armed = false;
+                RunDelayCycle();
+            }
         }
     }
 
@@ -106,7 +137,7 @@ public sealed class Dg645Simulator
         {
             // ---- IEEE-488.2 common commands ----
             case "*IDN": RequireQuery(isQuery); return Identity;
-            case "*RST": RequireSet(isQuery); _state = new State(); return null;
+            case "*RST": RequireSet(isQuery); _state = new State(); _armed = false; return null;
             case "*CLS": RequireSet(isQuery); _insr = 0; _esr = 0; _errors.Clear(); return null;
             case "*TRG": RequireSet(isQuery); FireTrigger(); return null;
             case "*WAI": RequireSet(isQuery); return null;
@@ -128,6 +159,7 @@ public sealed class Dg645Simulator
                 {
                     RequireSet(isQuery);
                     var slot = Int(args, 0, 0, 9);
+                    _armed = false;
                     if (slot == 0)
                     {
                         _state = new State();
@@ -172,7 +204,17 @@ public sealed class Dg645Simulator
                 return null;
 
             // ---- Trigger ----
-            case "TSRC": return IntSetting(ref s.TriggerSource, isQuery, args, 0, 6);
+            case "TSRC":
+                {
+                    var reply = IntSetting(ref s.TriggerSource, isQuery, args, 0, 6);
+                    if (!isQuery)
+                    {
+                        // Choosing a trigger source, even the same one, cancels an armed single shot.
+                        _armed = false;
+                    }
+
+                    return reply;
+                }
             case "TRAT": return DoubleSetting(ref s.TriggerRate, isQuery, args, 100e-6, 10e6, "0.000000");
             case "TLVL": return DoubleSetting(ref s.TriggerLevel, isQuery, args, -3.5, 3.5, "0.00");
             case "HOLD": return DoubleSetting(ref s.Holdoff, isQuery, args, 0, 2000, "0.000000000000");
@@ -455,14 +497,24 @@ public sealed class Dg645Simulator
         }
     }
 
+    /// <summary>*TRG: one delay cycle in single-shot mode; in the single-shot external modes it arms the instrument.</summary>
     private void FireTrigger()
     {
-        var source = (TriggerSource)_state.TriggerSource;
-        if (source is not (TriggerSource.SingleShot or TriggerSource.SingleShotExternalRising or TriggerSource.SingleShotExternalFalling))
+        switch ((TriggerSource)_state.TriggerSource)
         {
-            throw new SimulatedError(11);
+            case TriggerSource.SingleShot:
+                RunDelayCycle();
+                break;
+            case TriggerSource.SingleShotExternalRising or TriggerSource.SingleShotExternalFalling:
+                _armed = true;
+                break;
+            default:
+                throw new SimulatedError(11);
         }
+    }
 
+    private void RunDelayCycle()
+    {
         _insr |= (int)(InstrumentStatusFlags.Trigger | InstrumentStatusFlags.EndOfDelay);
         if (_state.BurstMode == 1)
         {

@@ -2,6 +2,7 @@ using System.Text;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Input;
 using Avalonia.Logging;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
@@ -11,7 +12,9 @@ using StanfordController.App.Dialogs;
 using StanfordController.App.Services;
 using StanfordController.Core.Profiles;
 using StanfordController.Core.Protocol;
+using StanfordController.Core.Transport;
 using StanfordController.Presentation.Help;
+using StanfordController.Presentation.Mvvm;
 using StanfordController.Presentation.Services;
 using StanfordController.Presentation.ViewModels;
 
@@ -67,17 +70,22 @@ internal sealed class SmokeTest
                 throw new InvalidOperationException($"Could not connect to the simulator: {item.LastError}");
             }
 
-            // A realistic setup so the screenshots show something meaningful.
+            // A realistic setup so the screenshots show something meaningful. (Set up behind the pages' backs, so
+            // left out of the audit trail; everything after this goes through the program and must record itself.)
             var client = session.Client;
-            await client.SetDelayAsync(Dg645Channel.A, Dg645Channel.T0, 1e-6);
-            await client.SetDelayAsync(Dg645Channel.B, Dg645Channel.A, 2.5e-6);
-            await client.SetDelayAsync(Dg645Channel.C, Dg645Channel.A, 1.5e-6);
-            await client.SetDelayAsync(Dg645Channel.D, Dg645Channel.C, 500e-9);
-            await client.SetDelayAsync(Dg645Channel.E, Dg645Channel.T0, 4e-6);
-            await client.SetDelayAsync(Dg645Channel.F, Dg645Channel.E, 1e-6);
-            await client.SetDelayAsync(Dg645Channel.G, Dg645Channel.T0, 6e-6);
-            await client.SetDelayAsync(Dg645Channel.H, Dg645Channel.G, 250e-9);
-            await client.SetPolarityAsync(Dg645Output.EF, OutputPolarity.Negative);
+            using (session.BeginChange())
+            {
+                await client.SetDelayAsync(Dg645Channel.A, Dg645Channel.T0, 1e-6);
+                await client.SetDelayAsync(Dg645Channel.B, Dg645Channel.A, 2.5e-6);
+                await client.SetDelayAsync(Dg645Channel.C, Dg645Channel.A, 1.5e-6);
+                await client.SetDelayAsync(Dg645Channel.D, Dg645Channel.C, 500e-9);
+                await client.SetDelayAsync(Dg645Channel.E, Dg645Channel.T0, 4e-6);
+                await client.SetDelayAsync(Dg645Channel.F, Dg645Channel.E, 1e-6);
+                await client.SetDelayAsync(Dg645Channel.G, Dg645Channel.T0, 6e-6);
+                await client.SetDelayAsync(Dg645Channel.H, Dg645Channel.G, 250e-9);
+                await client.SetPolarityAsync(Dg645Output.EF, OutputPolarity.Negative);
+            }
+
             await session.RefreshAllAsync();
             session.Terminal.Input = "*IDN?";
             await session.Terminal.SendAsync();
@@ -143,6 +151,10 @@ internal sealed class SmokeTest
                 $"Refresh all did not pick up the terminal change (rate shows {session.Trigger.Rate.Text}).");
             Check(!session.StatusIsError, $"The session reported an error: {session.StatusMessage}");
 
+            await CheckSingleShotExternalAsync(session);
+            await CheckClickAwayAsync(session);
+            await CheckAuditTrailAsync(session);
+
             await item.DisconnectAsync();
             await IdleAsync();
             Capture(_window, "95-disconnected");
@@ -153,6 +165,154 @@ internal sealed class SmokeTest
         }
 
         Finish();
+    }
+
+    /// <summary>
+    /// Every change made above is in the audit trail, with old and new values and the reason given; none fell
+    /// through to the raw-command safety net; the window shows them; and the file's hash chain is intact.
+    /// </summary>
+    private async Task CheckAuditTrailAsync(InstrumentSessionViewModel session)
+    {
+        session.ChangeReason = "Smoke test, run 1";
+        session.Burst.Count.Text = "5";
+        await ((AsyncRelayCommand)session.Burst.Count.CommitCommand).ExecuteAsync();
+        Check(await _viewModel.Audit.FlushAsync() == 0, $"The audit trail could not be written: {_viewModel.Audit.Problem}");
+
+        _viewModel.AuditTrailCommand.Execute(null);
+        await IdleAsync();
+        if (_dialogs.AuditTrail is not { ViewModel: { } trail } window)
+        {
+            Check(false, "The audit trail window did not open.");
+            return;
+        }
+
+        var records = trail.Records;
+        Check(records.Any(r => r is { Action: "Changed", Setting: "Internal rate", OldValue: "2.5 kHz", NewValue: "5 kHz" }),
+            "The audit trail does not show the internal rate changed from 2.5 kHz to 5 kHz.");
+        Check(records.Any(r => r is { Action: "Changed", Setting: "Trigger source", NewValue: "Single shot, external rising" }),
+            "The audit trail does not show the trigger source change.");
+        Check(records.Any(r => r.Action == "Armed") && records.Any(r => r is { Action: "Command", Setting: "Terminal", NewValue: "TRAT 2500" }),
+            "The audit trail does not show arming or the terminal command.");
+        Check(records.Any(r => r is { Setting: "Burst count", NewValue: "5", Reason: "Smoke test, run 1" }),
+            "The audit trail does not show the reason given for a change.");
+        var unrecorded = records.Where(r => r is { Action: "Command", Details: "Sent by Tempo" }).Select(r => r.NewValue).ToList();
+        Check(unrecorded.Count == 0, $"Changes reached the instrument without recording themselves: {string.Join(", ", unrecorded)}");
+
+        trail.SelectedRecord = records.FirstOrDefault(r => r.Setting == "Internal rate");
+        trail.CheckIntegrity();
+        Check(!trail.IntegrityIsProblem && trail.HasIntegrityText, $"The audit trail failed its integrity check: {trail.IntegrityText}");
+        foreach (var theme in new[] { AppTheme.Light, AppTheme.Dark })
+        {
+            _viewModel.Theme = theme;
+            await IdleAsync();
+            Capture(window, "99-audit-trail" + (theme == AppTheme.Dark ? "-dark" : string.Empty));
+        }
+
+        _viewModel.Theme = AppTheme.Light;
+        window.Close();
+        await IdleAsync();
+        session.ChangeReason = string.Empty;
+    }
+
+    /// <summary>
+    /// In a single-shot external mode the trigger button arms the instrument and shows Ready, on the command bar,
+    /// the Trigger page and the status bar, until the external edge has started a delay cycle.
+    /// </summary>
+    private async Task CheckSingleShotExternalAsync(InstrumentSessionViewModel session)
+    {
+        var tabs = Tabs();
+        tabs.SelectedIndex = 2;
+        await SetTriggerSourceAsync(session, TriggerSource.SingleShotExternalRising);
+        Check(TriggerButtonText(onCommandBar: true) == "Arm" && TriggerButtonText(onCommandBar: false) == "Arm",
+            $"In single-shot external mode the trigger buttons should read Arm, not {TriggerButtonText(true)} and {TriggerButtonText(false)}.");
+
+        await ((AsyncRelayCommand)session.TriggerCommand).ExecuteAsync();
+        await IdleAsync();
+        var shown = VisibleTexts("Ready");
+        Check(session.IsArmed && TriggerButtonText(onCommandBar: true) == "Ready" && TriggerButtonText(onCommandBar: false) == "Ready" && shown == 3,
+            $"After arming, the command bar, Trigger page and status bar should show Ready (armed: {session.IsArmed}, Ready shown {shown} times).");
+        foreach (var theme in new[] { AppTheme.Light, AppTheme.Dark })
+        {
+            _viewModel.Theme = theme;
+            await IdleAsync();
+            Capture(_window, "05-trigger-ready" + (theme == AppTheme.Dark ? "-dark" : string.Empty));
+        }
+
+        _viewModel.Theme = AppTheme.Light;
+        tabs.SelectedIndex = 0;
+        await IdleAsync();
+        Check(TriggerButtonText(onCommandBar: true) == "Ready", "Ready is not shown on the command bar on other pages.");
+
+        (session.Client.Transport as SimulatorTransport)?.Simulator.ExternalTrigger();
+        Check(await WaitAsync(() => !session.IsArmed), "The external trigger did not end the Ready state.");
+        await IdleAsync();
+        Check(TriggerButtonText(onCommandBar: true) == "Arm" && VisibleTexts("Ready") == 0,
+            $"After the external trigger the button should read Arm again, not {TriggerButtonText(true)}.");
+
+        await SetTriggerSourceAsync(session, TriggerSource.Internal);
+        Check(TriggerButtonText(onCommandBar: true) == "Trigger", "Back on the internal trigger the button should read Trigger.");
+    }
+
+    /// <summary>Clicking a page's background ends editing: the field loses the focus and its value is applied.</summary>
+    private async Task CheckClickAwayAsync(InstrumentSessionViewModel session)
+    {
+        var tabs = Tabs();
+        tabs.SelectedIndex = 2;
+        await IdleAsync();
+        var page = tabs.SelectedContent as Control ?? throw new InvalidOperationException("The Trigger page is not on show.");
+        var field = page.GetVisualDescendants().OfType<TextBox>().First(t => ReferenceEquals(t.DataContext, session.Trigger.Rate));
+        field.Focus();
+        field.Text = "5 kHz";
+        await IdleAsync();
+        Check(field.IsFocused && session.Trigger.Rate.IsDirty, "Could not start editing the internal rate.");
+
+        var background = page.GetVisualDescendants().OfType<TextBlock>().First(t => t.Classes.Contains("caption") && t.IsEffectivelyVisible);
+        Click(background);
+        Check(await WaitAsync(() => !session.Trigger.Rate.IsDirty), "Clicking the page background did not apply the edited value.");
+        Check(!field.IsFocused && _window.FocusManager?.GetFocusedElement() is not TextBox,
+            "Clicking the page background left the field focused.");
+        Check(Math.Abs(await session.Client.GetTriggerRateAsync() - 5000) < 1e-6, "The instrument did not receive the edited rate.");
+        tabs.SelectedIndex = 0;
+        await IdleAsync();
+    }
+
+    private async Task SetTriggerSourceAsync(InstrumentSessionViewModel session, TriggerSource source)
+    {
+        session.Trigger.Source.Selected = session.Trigger.Source.Options.Single(o => o.Value == (int)source);
+        Check(await WaitAsync(() => session.Trigger.Source.SelectedValue == (int)source && !session.Trigger.Source.IsBusy),
+            $"The trigger source did not change to {source}.");
+        await IdleAsync();
+    }
+
+    /// <summary>The text on the command bar's trigger button, or on the Trigger page's.</summary>
+    private string? TriggerButtonText(bool onCommandBar) =>
+        _window.GetVisualDescendants().OfType<Button>()
+            .Where(b => b.Classes.Contains("tool") == onCommandBar && b.IsEffectivelyVisible
+                        && ReferenceEquals(b.Command, _viewModel.SelectedInstrument?.Session?.TriggerCommand))
+            .SelectMany(b => b.GetVisualDescendants().OfType<TextBlock>())
+            .Select(t => t.Text)
+            .FirstOrDefault(t => !string.IsNullOrEmpty(t));
+
+    private int VisibleTexts(string text) =>
+        _window.GetVisualDescendants().OfType<TextBlock>().Count(t => t.Text == text && t.IsEffectivelyVisible);
+
+    /// <summary>A left-button press on <paramref name="target"/>, routed as the input system routes one.</summary>
+    private void Click(Control target)
+    {
+        var pointer = new Pointer(Pointer.GetNextFreeId(), PointerType.Mouse, isPrimary: true);
+        var position = target.TranslatePoint(new Point(2, 2), _window) ?? default;
+        var properties = new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed);
+        target.RaiseEvent(new PointerPressedEventArgs(target, pointer, _window, position, (ulong)Environment.TickCount64, properties, KeyModifiers.None));
+    }
+
+    private static async Task<bool> WaitAsync(Func<bool> condition, int timeoutMilliseconds = 5000)
+    {
+        for (var waited = 0; !condition() && waited < timeoutMilliseconds; waited += 50)
+        {
+            await Task.Delay(50);
+        }
+
+        return condition();
     }
 
     private TabControl Tabs() =>

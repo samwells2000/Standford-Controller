@@ -8,10 +8,7 @@ public sealed class ConfigurationStoreTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_directory))
-        {
-            Directory.Delete(_directory, recursive: true);
-        }
+        TestFolders.Delete(_directory);
     }
 
     [Fact]

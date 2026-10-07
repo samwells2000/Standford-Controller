@@ -1,7 +1,5 @@
-using System.Windows.Input;
 using StanfordController.Core.Protocol;
 using StanfordController.Core.Units;
-using StanfordController.Presentation.Mvvm;
 
 namespace StanfordController.Presentation.ViewModels;
 
@@ -44,8 +42,11 @@ public sealed class TriggerViewModel : ParameterViewModel
         TriggerPrescaler = Prescalers[0];
         OutputPrescalers = Prescalers.Skip(1).ToList();
 
-        Source.ValueChanged += (_, _) => OnPropertyChanged(nameof(IsSingleShot));
-        TriggerNowCommand = new AsyncRelayCommand(TriggerNowAsync);
+        Source.ValueChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(IsSingleShot));
+            OnPropertyChanged(nameof(IsExternalSingleShot));
+        };
     }
 
     public ChoiceParameterViewModel Source { get; }
@@ -68,12 +69,12 @@ public sealed class TriggerViewModel : ParameterViewModel
     /// <summary>The AB, CD, EF and GH prescalers (factor and phase).</summary>
     public IReadOnlyList<PrescalerViewModel> OutputPrescalers { get; }
 
-    /// <summary>True when *TRG (the Trigger button) starts a cycle.</summary>
-    public bool IsSingleShot => Source.SelectedValue is (int)TriggerSource.SingleShot
-        or (int)TriggerSource.SingleShotExternalRising
-        or (int)TriggerSource.SingleShotExternalFalling;
+    /// <summary>True when *TRG (the Trigger button) starts a cycle, or arms the instrument for one.</summary>
+    public bool IsSingleShot => Source.SelectedValue is (int)TriggerSource.SingleShot || IsExternalSingleShot;
 
-    public ICommand TriggerNowCommand { get; }
+    /// <summary>True for the single-shot external modes, where *TRG arms the instrument and the next edge at the trigger input starts the cycle.</summary>
+    public bool IsExternalSingleShot => Source.SelectedValue is (int)TriggerSource.SingleShotExternalRising
+        or (int)TriggerSource.SingleShotExternalFalling;
 
     public override async Task RefreshAsync()
     {
@@ -88,8 +89,6 @@ public sealed class TriggerViewModel : ParameterViewModel
             await prescaler.RefreshAsync();
         }
     }
-
-    private Task TriggerNowAsync() => RunAsync(() => Client.TriggerAsync());
 }
 
 /// <summary>A prescaler: divides the trigger input (index 0) or gates an output pair (AB-GH) to every Nth cycle.</summary>

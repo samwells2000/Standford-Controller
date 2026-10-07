@@ -51,13 +51,19 @@ A new release is built automatically every time `main` changes (see
 * **Outputs.** Amplitude, offset and polarity for T0, AB, CD, EF and GH in one table, with TTL and NIM
   presets and the resulting idle and pulse levels.
 * **Trigger and burst.** Source, rate, threshold, inhibit, single-shot trigger, advanced triggering,
-  holdoff, prescalers and phases; burst count, period, delay and T0 behaviour.
+  holdoff, prescalers and phases; burst count, period, delay and T0 behaviour. In the single-shot
+  external modes the trigger button reads **Arm**, then a green **Ready** (shown on every page and in
+  the status bar) until the external edge has fired the shot.
 * **Setups page.** Saved setup, `.dg645.json` setup files, the instrument's nine memory locations, and
   reset.
 * **Status, interfaces and terminal.** Live status registers with enable masks, error list, self test,
   auto calibration and timebase; every LAN, RS-232 and GPIB setting; a command terminal with history,
   error checking and a searchable command reference.
 * **Communication log** of every command and reply, which can be copied or saved.
+* **Audit trail** for quality systems such as ISO 9001. It records every change Tempo makes, with who,
+  when, which instrument (name and serial number), the setting's old and new values and an optional
+  reason. Records go in CSV files, one per computer per month, in a folder you choose. A hash chain shows
+  any record that has been altered or removed (**View ▸ Audit trail**).
 * **Built-in user guide**: F1 opens it at the page you are on.
 * **Demo instrument**: a simulated DG645 for trying everything without hardware.
 * **Light, dark or system theme**, meeting WCAG AA contrast, with output colours validated to stay
@@ -76,6 +82,10 @@ Rendered by the CI smoke test against the built-in simulated DG645.
 | Output levels with TTL and NIM presets | Saved setup, setup files and instrument memory |
 | ![Setup check on connect](docs/screenshots/setup-question.jpg) | ![User guide](docs/screenshots/help.jpg) |
 | The question asked when an instrument differs from its saved setup | The built-in user guide |
+
+![Audit trail window with the integrity check](docs/screenshots/audit-trail.jpg)
+
+The audit trail: every change with its old and new values, the reason given, and a check that no record has been altered.
 
 ## Documentation
 
