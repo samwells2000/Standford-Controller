@@ -1,4 +1,5 @@
 using System.Windows.Input;
+using StanfordController.Core.Audit;
 using StanfordController.Core.Protocol;
 using StanfordController.Presentation.Mvvm;
 
@@ -41,12 +42,14 @@ public sealed class InterfaceViewModel : ParameterViewModel
         ResetRs232Command = new AsyncRelayCommand(() => ResetAsync(InterfaceKind.Rs232));
         ResetGpibCommand = new AsyncRelayCommand(() => ResetAsync(InterfaceKind.Gpib));
         ResetLanCommand = new AsyncRelayCommand(() => ResetAsync(InterfaceKind.Lan));
-        GoToLocalCommand = new AsyncRelayCommand(() => RunAsync(() => Client.GoToLocalAsync()));
-        GoToRemoteCommand = new AsyncRelayCommand(() => RunAsync(() => Client.GoToRemoteAsync()));
-        RequestLockCommand = new AsyncRelayCommand(() => RunAsync(async () =>
-            LockStatus = await Client.RequestLockAsync() ? "Lock granted: other interfaces cannot change settings." : "Lock refused: another interface holds it."));
-        ReleaseLockCommand = new AsyncRelayCommand(() => RunAsync(async () =>
-            LockStatus = await Client.ReleaseLockAsync() ? "Lock released." : "This connection did not hold the lock."));
+        GoToLocalCommand = new AsyncRelayCommand(() => ActAsync(() => Client.GoToLocalAsync(), AuditActions.LocalControl, details: () => "Front panel returned to local control"));
+        GoToRemoteCommand = new AsyncRelayCommand(() => ActAsync(() => Client.GoToRemoteAsync(), AuditActions.RemoteControl, details: () => "Front panel locked for remote control"));
+        RequestLockCommand = new AsyncRelayCommand(() => ActAsync(async () =>
+            LockStatus = await Client.RequestLockAsync() ? "Lock granted: other interfaces cannot change settings." : "Lock refused: another interface holds it.",
+            AuditActions.Lock, details: () => LockStatus));
+        ReleaseLockCommand = new AsyncRelayCommand(() => ActAsync(async () =>
+            LockStatus = await Client.ReleaseLockAsync() ? "Lock released." : "This connection did not hold the lock.",
+            AuditActions.Lock, details: () => LockStatus));
     }
 
     public ToggleParameterViewModel Rs232Enabled { get; }
@@ -145,7 +148,7 @@ public sealed class InterfaceViewModel : ParameterViewModel
                 return;
             }
 
-            if (await RunAsync(() => Client.ResetInterfaceAsync(kind)))
+            if (await ActAsync(() => Client.ResetInterfaceAsync(kind), AuditActions.InterfaceReset, Describe(kind)))
             {
                 Context.RequestDisconnect("The LAN interface was reset. Reconnect once the instrument is back on the network.");
             }
@@ -153,6 +156,13 @@ public sealed class InterfaceViewModel : ParameterViewModel
             return;
         }
 
-        await RunAsync(() => Client.ResetInterfaceAsync(kind));
+        await ActAsync(() => Client.ResetInterfaceAsync(kind), AuditActions.InterfaceReset, Describe(kind));
     }
+
+    private static string Describe(InterfaceKind kind) => kind switch
+    {
+        InterfaceKind.Rs232 => "RS-232",
+        InterfaceKind.Gpib => "GPIB",
+        _ => "LAN",
+    };
 }

@@ -1,7 +1,9 @@
 using System.IO;
 using System.Net.Sockets;
 using System.Windows.Input;
+using System.Runtime.ExceptionServices;
 using StanfordController.Core;
+using StanfordController.Core.Audit;
 using StanfordController.Core.Profiles;
 using StanfordController.Core.Protocol;
 using StanfordController.Core.Units;
@@ -24,6 +26,7 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
     private static readonly FileFilter SetupFilter = new("DG645 setup", "*" + Dg645Settings.FileExtension);
 
     private readonly LogViewModel _log;
+    private readonly AuditLog? _audit;
     private CancellationTokenSource? _pollCancellation;
     private bool _isPolling;
     private double _pollIntervalSeconds = 1;
@@ -40,13 +43,18 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
     private bool _hasUnsavedChanges;
     private bool _isArmed;
     private int? _armedSource;
+    private string _changeReason = string.Empty;
 
-    public InstrumentSessionViewModel(InstrumentProfile profile, Dg645Client client, IDialogService dialogs, LogViewModel log)
+    public InstrumentSessionViewModel(InstrumentProfile profile, Dg645Client client, IDialogService dialogs, LogViewModel log, AuditLog? audit = null)
     {
         Profile = profile;
         Client = client;
         Dialogs = dialogs;
         _log = log;
+        _audit = audit;
+
+        // A safety net: anything that changes the instrument without recording itself is recorded as sent.
+        Client.UnrecordedCommandSent += (_, line) => Audit(AuditActions.Command, newValue: line, details: "Sent by Tempo");
 
         Channels = Dg645Names.DelayChannels.Select(c => new ChannelDelayViewModel(this, c)).ToList();
         Outputs = Dg645Names.Outputs.Select(o => new OutputViewModel(this, o)).ToList();
@@ -219,6 +227,13 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
 
     private string TriggerEdge => Trigger.Source.SelectedValue == (int)TriggerSource.SingleShotExternalFalling ? "falling" : "rising";
 
+    /// <summary>The reason for the changes being made, recorded with each of them in the audit trail.</summary>
+    public string ChangeReason
+    {
+        get => _changeReason;
+        set => SetProperty(ref _changeReason, value ?? string.Empty);
+    }
+
     /// <summary>e.g. "Off" or "10 × 1 µs".</summary>
     public string BurstSummary => !Burst.Enabled.IsChecked
         ? "Off"
@@ -383,6 +398,11 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         HasUnsavedChanges = true;
     }
 
+    public IDisposable BeginChange() => Client.BeginAuditedChange();
+
+    public void Audit(string action, string? setting = null, string? oldValue = null, string? newValue = null, string? details = null) =>
+        _audit?.Record(Profile, SerialNumber.Length > 0 ? SerialNumber : null, action, setting, oldValue, newValue, _changeReason, details);
+
     // ---- Saved setups ----
 
     /// <summary>Reads the instrument's complete setup, or returns null (with the error reported) if it could not be read.</summary>
@@ -397,16 +417,17 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         return captured;
     }
 
-    /// <summary>Writes a complete setup to the instrument and reads every page back. Returns true if it was applied.</summary>
-    public async Task<bool> ApplySetupAsync(Dg645Settings settings, string description)
+    /// <summary>
+    /// Writes a complete setup to the instrument and reads every page back. Each setting it changes is recorded in the
+    /// audit trail; <paramref name="before"/> is the instrument's setup beforehand, if it has just been read.
+    /// Returns true if it was applied.
+    /// </summary>
+    public async Task<bool> ApplySetupAsync(Dg645Settings settings, string description, Dg645Settings? before = null)
     {
-        var applied = false;
         IsArmed = false;
-        await BusyAsync("Applying setup…", async () =>
-        {
-            await Client.ApplySettingsAsync(settings, new Progress<string>(step => BusyText = $"Applying {step.ToLowerInvariant()}…"));
-            applied = true;
-        });
+        var applied = await ReplaceSettingsAsync("Applying setup…", AuditActions.SetupApplied, $"Applied {description}",
+            () => Client.ApplySettingsAsync(settings, new Progress<string>(step => BusyText = $"Applying {step.ToLowerInvariant()}…")),
+            before);
 
         await RefreshAllAsync();
         if (applied)
@@ -504,10 +525,12 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
     /// </summary>
     private async Task TriggerOrArmAsync()
     {
+        using var change = BeginChange();
         if (!Trigger.IsExternalSingleShot)
         {
             if (await RunAsync("Trigger", () => Client.TriggerAsync()))
             {
+                Audit(AuditActions.Triggered, details: "One delay cycle started (*TRG)");
                 SetStatus($"Triggered at {DateTime.Now:HH:mm:ss}.");
             }
 
@@ -526,6 +549,7 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
 
         if (armed)
         {
+            Audit(AuditActions.Armed, details: $"Armed for one delay cycle on the next {TriggerEdge} edge at the trigger input (*TRG)");
             SetStatus($"Armed at {DateTime.Now:HH:mm:ss}: waiting for a {TriggerEdge} edge at the trigger input.");
         }
         else
@@ -571,9 +595,15 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
             return;
         }
 
-        await RunAsync($"Save to location {slot}", () => Client.SaveSettingsAsync(slot));
-        if (!_statusIsError)
+        bool saved;
+        using (BeginChange())
         {
+            saved = await RunAsync($"Save to location {slot}", () => Client.SaveSettingsAsync(slot));
+        }
+
+        if (saved)
+        {
+            Audit(AuditActions.SavedToMemory, $"Location {slot}", details: "The instrument's settings were stored in its own memory (*SAV)");
             SetStatus($"Settings saved to instrument location {slot}.");
         }
     }
@@ -593,7 +623,8 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
             return;
         }
 
-        if (await RunAsync($"Recall location {slot.Value}", () => Client.RecallSettingsAsync(slot.Value)))
+        if (await ReplaceSettingsAsync("Recalling settings…", AuditActions.Recalled, $"Recalled {slot.Label.ToLowerInvariant()} (*RCL {slot.Value})",
+                () => Client.RecallSettingsAsync(slot.Value)))
         {
             IsArmed = false;
             await RefreshAllAsync();
@@ -609,7 +640,7 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
             return;
         }
 
-        if (await RunAsync("Reset", () => Client.ResetAsync()))
+        if (await ReplaceSettingsAsync("Resetting…", AuditActions.Reset, "Reset to the default settings (*RST)", () => Client.ResetAsync()))
         {
             IsArmed = false;
             await RefreshAllAsync();
@@ -687,6 +718,65 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
     }
 
     // ---- Helpers ----
+
+    /// <summary>
+    /// Runs an operation that replaces many settings at once (applying a setup, recalling, resetting). The setup is read
+    /// before and after, and each setting that changed is recorded in the audit trail, also when the operation fails
+    /// part-way. Returns true if the operation succeeded.
+    /// </summary>
+    private async Task<bool> ReplaceSettingsAsync(string busyText, string action, string details, Func<Task> operation, Dg645Settings? before = null)
+    {
+        Exception? failure = null;
+        Dg645Settings? after = null;
+        await BusyAsync(busyText, async () =>
+        {
+            using var change = BeginChange();
+            before ??= await Client.ReadSettingsAsync();
+            try
+            {
+                await operation();
+            }
+            catch (Exception ex)
+            {
+                failure = ex;
+            }
+
+            try
+            {
+                after = await Client.ReadSettingsAsync();
+            }
+            catch when (failure is not null)
+            {
+                // Report the operation's own failure.
+            }
+
+            if (failure is not null)
+            {
+                ExceptionDispatchInfo.Throw(failure);
+            }
+        });
+
+        if (before is not null)
+        {
+            if (failure is not null)
+            {
+                details += $". Failed part-way: {ParameterViewModel.DescribeError(failure)}";
+            }
+
+            var changes = after is null ? [] : before.Compare(after);
+            if (changes.Count == 0)
+            {
+                Audit(action, details: after is null ? details : details + ". No settings changed");
+            }
+
+            foreach (var change in changes)
+            {
+                Audit(action, change.Setting, change.Before, change.After, details);
+            }
+        }
+
+        return failure is null && before is not null;
+    }
 
     private async Task<bool> RunAsync(string what, Func<Task> action)
     {

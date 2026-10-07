@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Windows.Input;
 using StanfordController.Core;
+using StanfordController.Core.Audit;
 using StanfordController.Core.Units;
 using StanfordController.Presentation.Mvvm;
 using StanfordController.Presentation.Services;
@@ -26,6 +27,15 @@ public interface IInstrumentContext
 
     /// <summary>Settings may have been changed behind the pages' backs (e.g. from the terminal).</summary>
     void NotifyExternalChange();
+
+    /// <summary>
+    /// Starts a change that the caller records in the audit trail itself: commands sent on this async flow until the
+    /// scope is disposed are not recorded again as raw commands.
+    /// </summary>
+    IDisposable BeginChange();
+
+    /// <summary>Adds a record about this instrument to the audit trail, with the user's reason for changes.</summary>
+    void Audit(string action, string? setting = null, string? oldValue = null, string? newValue = null, string? details = null);
 }
 
 public sealed record ChoiceOption(int Value, string Label)
@@ -90,6 +100,66 @@ public abstract class ParameterViewModel(IInstrumentContext context, string labe
         {
             IsBusy = false;
         }
+    }
+
+    /// <summary>
+    /// Writes to the instrument as one change in the audit trail. When <paramref name="write"/> succeeds, the change of
+    /// <paramref name="setting"/> (this setting's label by default) from <paramref name="before"/> to what
+    /// <paramref name="after"/> returns once <paramref name="readBack"/> has shown the instrument's value is recorded,
+    /// and the session is told settings changed. The read-back runs even if the write fails. Returns true on success.
+    /// </summary>
+    protected async Task<bool> ChangeAsync(string? before, Func<Task> write, Func<Task> readBack, Func<string?> after,
+        string? setting = null, Action? written = null)
+    {
+        var succeeded = false;
+        using (Context.BeginChange())
+        {
+            await RunAsync(async () =>
+            {
+                try
+                {
+                    await write();
+                    succeeded = true;
+                }
+                finally
+                {
+                    try
+                    {
+                        await readBack();
+                    }
+                    catch
+                    {
+                        // Keep the original error.
+                    }
+                }
+            });
+        }
+
+        if (succeeded)
+        {
+            written?.Invoke();
+            Context.Audit(AuditActions.Changed, setting ?? Label, before, after());
+            Context.NotifySettingsChanged();
+        }
+
+        return succeeded;
+    }
+
+    /// <summary>Runs an instrument action (a reset, a test, a mode change) as one audited step; see <see cref="ChangeAsync"/>.</summary>
+    protected async Task<bool> ActAsync(Func<Task> action, string auditAction, string? setting = null, Func<string?>? details = null)
+    {
+        bool succeeded;
+        using (Context.BeginChange())
+        {
+            succeeded = await RunAsync(action);
+        }
+
+        if (succeeded)
+        {
+            Context.Audit(auditAction, setting, details: details?.Invoke());
+        }
+
+        return succeeded;
     }
 
     public static string DescribeError(Exception exception) => exception switch
@@ -172,6 +242,9 @@ public sealed class EditableParameterViewModel<T> : TextParameterViewModel
 
     public bool HasValue => _hasValue;
 
+    /// <summary>The value last read from the instrument, as text (whatever is being typed).</summary>
+    public string ValueText => _committedText;
+
     public override ICommand CommitCommand { get; }
 
     public override ICommand RevertCommand { get; }
@@ -203,25 +276,9 @@ public sealed class EditableParameterViewModel<T> : TextParameterViewModel
             return;
         }
 
-        var written = false;
-        await RunAsync(async () =>
-        {
-            try
-            {
-                await _write(value, CancellationToken.None);
-                written = true;
-            }
-            finally
-            {
-                // Show what the instrument really holds, even if it rejected or rounded the value.
-                await TryReadBackAsync();
-            }
-        });
-
-        if (written)
-        {
-            Context.NotifySettingsChanged();
-        }
+        // Show what the instrument really holds afterwards, even if it rejected or rounded the value.
+        var before = _hasValue ? _committedText : null;
+        await ChangeAsync(before, () => _write(value, CancellationToken.None), TryReadBackAsync, () => _committedText);
     }
 
     public void Revert()
@@ -268,12 +325,13 @@ public sealed class ChoiceParameterViewModel(
                 return;
             }
 
+            var previous = _selected;
             _selected = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(SelectedValue));
             if (!_updating)
             {
-                _ = ApplyAsync(value.Value);
+                _ = ApplyAsync(value.Value, previous?.Label);
             }
         }
     }
@@ -304,36 +362,15 @@ public sealed class ChoiceParameterViewModel(
         }
     }
 
-    private async Task ApplyAsync(int value)
+    private async Task ApplyAsync(int value, string? before)
     {
         // Let the combo box finish its own selection change before we possibly revert it.
         await Task.Yield();
-        var written = false;
-        await RunAsync(async () =>
-        {
-            try
-            {
-                await write(value, CancellationToken.None);
-                written = true;
-            }
-            finally
-            {
-                try
-                {
-                    SetValue(await read(CancellationToken.None));
-                }
-                catch
-                {
-                    // Keep the original error.
-                }
-            }
-        });
-
-        if (written)
-        {
-            ValueChanged?.Invoke(this, EventArgs.Empty);
-            Context.NotifySettingsChanged();
-        }
+        await ChangeAsync(before,
+            () => write(value, CancellationToken.None),
+            async () => SetValue(await read(CancellationToken.None)),
+            () => _selected?.Label,
+            written: () => ValueChanged?.Invoke(this, EventArgs.Empty));
     }
 }
 
@@ -397,32 +434,13 @@ public sealed class ToggleParameterViewModel(
             return;
         }
 
-        var written = false;
-        await RunAsync(async () =>
-        {
-            try
-            {
-                await write(value, CancellationToken.None);
-                written = true;
-            }
-            finally
-            {
-                try
-                {
-                    SetValue(await read(CancellationToken.None));
-                }
-                catch
-                {
-                    // Keep the original error.
-                }
-            }
-        });
-
-        if (written)
-        {
-            Context.NotifySettingsChanged();
-        }
+        await ChangeAsync(OnOff(!value),
+            () => write(value, CancellationToken.None),
+            async () => SetValue(await read(CancellationToken.None)),
+            () => OnOff(_isChecked));
     }
+
+    private static string OnOff(bool on) => on ? "On" : "Off";
 }
 
 /// <summary>Factories for the common kinds of editable parameter.</summary>

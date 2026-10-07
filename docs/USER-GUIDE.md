@@ -356,6 +356,50 @@ The log under the pages records every command sent (→), reply received (←), 
 
 Show or hide the log with the **Log** check box, **View ▸ Communication log** or Ctrl+L. The status register reads made by *Live status* are not logged, to keep the log readable.
 
+## Audit trail
+
+Tempo keeps a permanent record of every change it makes to an instrument, and to the saved instruments, for quality systems such as ISO 9001 (records of changes, clause 7.5.3; control of changes, clause 8.5.6). Each record says:
+
+- **when**, to the millisecond, with the time zone;
+- **who**: the computer account, for example `LAB\jsmith`, and the computer's name;
+- **which instrument**: its saved name, serial number and address;
+- **what**: the action and, for a change, the setting with its old and new values;
+- **why**: the reason for the change, if one was given (see below);
+- **which program**: the Tempo version that made the change.
+
+ISO 9001 certifies an organisation's quality management system rather than any program, so the audit trail does not make a laboratory compliant by itself. It gives your procedures a dependable record to point to.
+
+### What is recorded
+
+| Recorded | How |
+| --- | --- |
+| A value changed on any page | One record with the old and new value, for example *Delay C: A + 1.5 µs → A + 2 µs*. This covers delays, step buttons, output levels and presets, trigger, burst, prescalers, interfaces, the front-panel display and the status enable registers. |
+| Many settings changed at once | Restoring or importing a setup, recalling from the instrument's memory and resetting give one record per setting that changed. Tempo reads the setup before and after, so the record shows what really changed, even if the operation fails part-way. |
+| Actions on the instrument | Triggering and arming, saving to the instrument's memory, clearing status, self test and auto calibration (with the result), interface resets, local and remote control, and the interface lock. |
+| Commands typed in the Terminal | Every command that can change something, as typed, with any error the instrument reported. Queries are not recorded. |
+| Connections | Connecting (with the instrument's identity), disconnecting, losing the connection, and keeping the instrument's own settings when they differ from the saved setup. |
+| The saved instruments | Adding, importing and removing an instrument; each detail changed in the instrument editor; and saving a setup, with each setting that differs from the setup saved before. |
+
+As a safety net, anything else Tempo sends that could change the instrument is recorded as a command, so no change Tempo makes goes unrecorded. Reading values is not recorded. Neither are changes made at the instrument's front panel or by other programs, which Tempo cannot see. When an instrument with a saved setup connects, though, Tempo does show any differences from the saved setup ([When an instrument connects](#when-an-instrument-connects)).
+
+### Reason for changes
+
+While an instrument is connected, a **Reason for changes** box appears in its header, at the top of every page. Whatever you type there, for example a job, batch or change request number, is recorded with each change until you change or clear it. It is optional.
+
+### Viewing the audit trail
+
+**View ▸ Audit trail…** shows one month at a time, newest first. Choose an instrument to see only its records, or type in the search box to find a setting, value, user or reason. Select a record to see it in full below the list, including its details and hash. **F5** reads the files again; Tempo also does so whenever it records something. **Ctrl+F** goes to the search box.
+
+### Where it is kept
+
+The audit trail is a set of CSV files, one per computer per month, for example `Tempo audit trail 2026-10 LABPC1.csv`. They are in the **Audit trail** folder inside the [data folder](#files-and-folders), or in a folder you choose with **Change folder…** in the audit trail window. A shared network folder that is backed up is a good choice. Each computer writes its own file, so several computers can share one folder. The files open in any spreadsheet program, and Tempo marks them read-only between writes.
+
+If the folder cannot be written, for example because the network share is offline, records wait in Tempo and are written as soon as the folder is back. Meanwhile the status bar shows **Audit trail not written** in red. If they still cannot be written when Tempo closes, they are written to the default folder instead, and Tempo says so if even that fails.
+
+### Checking that records have not been altered
+
+Each record ends with a hash: a fingerprint of the record and of the record before it in the same file. **Check integrity** recomputes the chain for the month on show. It reports the first line where a record was changed, or where a record was added or removed before it. Two things it cannot catch: deleting the latest records from the end of a file, and someone recomputing every hash after editing. The files are protected against accidental change, not determined tampering, so keep them in a folder where only authorised people can delete files, and back them up.
+
 ## Appearance
 
 **View ▸ Theme** chooses **Light**, **Dark** or **System**, which follows your operating system's light or dark setting. Both themes meet the WCAG AA contrast guidelines, and the four output colours were chosen to stay distinguishable with the common forms of colour blindness; every coloured mark also has a text label beside it.
@@ -383,6 +427,7 @@ Tempo remembers the theme, the window's size and position, whether the log is sh
 | Enter / Esc | In a value field: send the value / put the instrument's value back |
 | Up / Down | In the Terminal: previous / next command |
 | Alt+Left / Alt+Right | In this guide: back / forward |
+| F5 / Ctrl+F | In the audit trail: read the files again / search |
 
 ## Troubleshooting
 
@@ -422,7 +467,7 @@ The program is not code-signed. In the *Windows protected your PC* box choose **
 
 ### Starting again from scratch
 
-Close Tempo and delete (or rename) the [data folder](#files-and-folders). Tempo starts with an empty Default configuration and default preferences.
+Close Tempo, then delete `Default.tempo` and `settings.json` from the [data folder](#files-and-folders), or rename the whole folder. Tempo starts with an empty Default configuration and default preferences. Keep the **Audit trail** folder inside it: it is your record of changes.
 
 ### Reporting a problem
 
@@ -435,6 +480,7 @@ Include the Tempo version (**Help ▸ About Tempo**), what you did, and the save
 | Configurations (`*.tempo`) | `Default.tempo` in the data folder, and any others wherever you save them |
 | Preferences (`settings.json`) | The data folder |
 | Exported setups (`*.dg645.json`) | Wherever you save them |
+| Audit trail (`Tempo audit trail *.csv`) | The **Audit trail** folder in the data folder, or the folder chosen in the [audit trail](#where-it-is-kept) window |
 
 The data folder is:
 

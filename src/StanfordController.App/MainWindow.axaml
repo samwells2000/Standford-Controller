@@ -76,6 +76,7 @@
             </MenuItem>
             <MenuItem Header="_View">
                 <MenuItem Header="Communication _log" ToggleType="CheckBox" IsChecked="{Binding ShowLog}" InputGesture="Ctrl+L" />
+                <MenuItem Header="_Audit trail…" Command="{Binding AuditTrailCommand}" />
                 <Separator />
                 <MenuItem Header="_Theme">
                     <MenuItem Header="_System" ToggleType="Radio" IsChecked="{Binding IsSystemTheme, Mode=OneWay}"
@@ -100,6 +101,14 @@
         <Border DockPanel.Dock="Bottom" Classes="chrome" BorderThickness="0,1,0,0" Height="26" Padding="10,0">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Classes="link" Command="{Binding AuditTrailCommand}" IsVisible="{Binding Audit.HasProblem}" VerticalAlignment="Center"
+                            ToolTip.Tip="{Binding Audit.Problem}">
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <Path Classes="glyph error" Data="{StaticResource GlyphError}" />
+                            <TextBlock Text="Audit trail not written" Foreground="{DynamicResource DangerTextBrush}" FontSize="12" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Border Classes="vrule" IsVisible="{Binding Audit.HasProblem}" />
                     <Border Classes="vrule" IsVisible="{Binding IsPortable}" />
                     <TextBlock Text="Portable" Classes="caption" VerticalAlignment="Center" IsVisible="{Binding IsPortable}"
                                ToolTip.Tip="This copy keeps its configuration and preferences in the Tempo-data folder beside the program." />

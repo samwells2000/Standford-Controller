@@ -51,8 +51,8 @@ public sealed class OutputViewModel : ParameterViewModel
         AmplitudeDownCommand = new AsyncRelayCommand(() => StepAsync(() => Client.StepAmplitudeAsync(output, false), Amplitude));
         OffsetUpCommand = new AsyncRelayCommand(() => StepAsync(() => Client.StepOffsetAsync(output, true), Offset));
         OffsetDownCommand = new AsyncRelayCommand(() => StepAsync(() => Client.StepOffsetAsync(output, false), Offset));
-        TtlCommand = new AsyncRelayCommand(() => ApplyPresetAsync(TtlAmplitude, 0, OutputPolarity.Positive));
-        NimCommand = new AsyncRelayCommand(() => ApplyPresetAsync(NimAmplitude, NimOffset, OutputPolarity.Negative));
+        TtlCommand = new AsyncRelayCommand(() => ApplyPresetAsync("TTL", TtlAmplitude, 0, OutputPolarity.Positive));
+        NimCommand = new AsyncRelayCommand(() => ApplyPresetAsync("NIM", NimAmplitude, NimOffset, OutputPolarity.Negative));
     }
 
     public Dg645Output Output { get; }
@@ -133,28 +133,28 @@ public sealed class OutputViewModel : ParameterViewModel
         OnPropertyChanged(nameof(LevelSummary));
     }
 
-    private async Task StepAsync(Func<Task> step, EditableParameterViewModel<double> readBack)
-    {
-        if (await RunAsync(step))
-        {
-            await readBack.RefreshAsync();
-            Context.NotifySettingsChanged();
-        }
-    }
+    private Task StepAsync(Func<Task> step, EditableParameterViewModel<double> readBack) =>
+        ChangeAsync(readBack.ValueText, step, readBack.RefreshAsync, () => readBack.ValueText, readBack.Label);
 
-    private async Task ApplyPresetAsync(double amplitude, double offset, OutputPolarity polarity)
-    {
-        // Lower the amplitude before moving the offset so the combined swing stays within limits.
-        await RunAsync(async () =>
-        {
-            await Client.SetAmplitudeAsync(Output, Math.Min(amplitude, Amplitude.HasValue ? Amplitude.Value : amplitude));
-            await Client.SetOffsetAsync(Output, offset);
-            await Client.SetAmplitudeAsync(Output, amplitude);
-            await Client.SetPolarityAsync(Output, polarity);
-        });
-        await Amplitude.RefreshAsync();
-        await Offset.RefreshAsync();
-        await Polarity.RefreshAsync();
-        Context.NotifySettingsChanged();
-    }
+    private Task ApplyPresetAsync(string preset, double amplitude, double offset, OutputPolarity polarity) =>
+        ChangeAsync(LevelsText,
+            async () =>
+            {
+                // Lower the amplitude before moving the offset so the combined swing stays within limits.
+                await Client.SetAmplitudeAsync(Output, Math.Min(amplitude, Amplitude.HasValue ? Amplitude.Value : amplitude));
+                await Client.SetOffsetAsync(Output, offset);
+                await Client.SetAmplitudeAsync(Output, amplitude);
+                await Client.SetPolarityAsync(Output, polarity);
+            },
+            async () =>
+            {
+                await Amplitude.RefreshAsync();
+                await Offset.RefreshAsync();
+                await Polarity.RefreshAsync();
+            },
+            () => LevelsText,
+            $"{Output} levels ({preset} preset)");
+
+    /// <summary>e.g. "2.50 V, offset 0.00 V, Positive", for the audit trail.</summary>
+    private string LevelsText => $"{Amplitude.ValueText}, offset {Offset.ValueText}, {Polarity.Selected?.Label}";
 }

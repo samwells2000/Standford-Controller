@@ -42,6 +42,7 @@ public sealed record RawCommandResult(IReadOnlyList<string> Responses, IReadOnly
 public sealed class Dg645Client(IDg645Transport transport) : IAsyncDisposable
 {
     private static readonly AsyncLocal<bool> QuietTraffic = new();
+    private static readonly AsyncLocal<bool> AuditedChange = new();
     private readonly SemaphoreSlim _gate = new(1, 1);
 
     public TimeSpan QueryTimeout { get; set; } = TimeSpan.FromSeconds(3);
@@ -59,6 +60,13 @@ public sealed class Dg645Client(IDg645Transport transport) : IAsyncDisposable
     public string? Identity { get; private set; }
 
     public event EventHandler<CommunicationEventArgs>? Communication;
+
+    /// <summary>
+    /// Raised (on a background thread) for every line sent that can change the instrument, meaning any part of it
+    /// is not a query, unless it was sent inside <see cref="BeginAuditedChange"/>. The audit trail records these, so
+    /// a change is never missed even if it was made by a path that does not record its own.
+    /// </summary>
+    public event EventHandler<string>? UnrecordedCommandSent;
 
     // ------------------------------------------------------------------------------------------
     // Connection
@@ -638,6 +646,11 @@ public sealed class Dg645Client(IDg645Transport transport) : IAsyncDisposable
     private async Task WriteCoreAsync(string command, CancellationToken ct)
     {
         Log(CommunicationDirection.Sent, command);
+        if (!AuditedChange.Value && IsSetCommand(command))
+        {
+            UnrecordedCommandSent?.Invoke(this, command);
+        }
+
         await transport.WriteLineAsync(command, ct).ConfigureAwait(false);
     }
 
@@ -707,6 +720,21 @@ public sealed class Dg645Client(IDg645Transport transport) : IAsyncDisposable
         return new QuietScope(previous);
     }
 
+    /// <summary>
+    /// Within the returned scope, commands sent on this async flow belong to a change the caller records in the
+    /// audit trail itself, so <see cref="UnrecordedCommandSent"/> is not raised for them.
+    /// </summary>
+    public IDisposable BeginAuditedChange()
+    {
+        var previous = AuditedChange.Value;
+        AuditedChange.Value = true;
+        return new FlagScope(AuditedChange, previous);
+    }
+
+    /// <summary>True if any ';'-separated part of the line is not a query, so sending it can change the instrument.</summary>
+    public static bool IsSetCommand(string line) =>
+        line.Split(';').Any(part => part.Trim().Length > 0 && !part.Contains('?'));
+
     private void Log(CommunicationDirection direction, string text)
     {
         if (QuietTraffic.Value && direction is CommunicationDirection.Sent or CommunicationDirection.Received)
@@ -720,5 +748,10 @@ public sealed class Dg645Client(IDg645Transport transport) : IAsyncDisposable
     private sealed class QuietScope(bool previous) : IDisposable
     {
         public void Dispose() => QuietTraffic.Value = previous;
+    }
+
+    private sealed class FlagScope(AsyncLocal<bool> flag, bool previous) : IDisposable
+    {
+        public void Dispose() => flag.Value = previous;
     }
 }

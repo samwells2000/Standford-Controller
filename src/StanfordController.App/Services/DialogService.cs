@@ -12,6 +12,7 @@ public sealed class DialogService : IDialogService
 {
     private readonly AppPaths _paths;
     private HelpWindow? _help;
+    private AuditTrailWindow? _auditTrail;
 
     public DialogService(AppPaths paths)
     {
@@ -80,6 +81,34 @@ public sealed class DialogService : IDialogService
         return files.Count > 0 ? files[0].TryGetLocalPath() : null;
     }
 
+    public async Task<string?> PickFolderAsync(string title)
+    {
+        if (Owner?.StorageProvider is not { CanPickFolder: true } storage)
+        {
+            await ReportNoFileDialogAsync(title);
+            return null;
+        }
+
+        var folders = await storage.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = title, AllowMultiple = false });
+        return folders.Count > 0 ? folders[0].TryGetLocalPath() : null;
+    }
+
+    public async Task OpenFolderAsync(string path)
+    {
+        try
+        {
+            Directory.CreateDirectory(path);
+            if (Owner?.Launcher is { } launcher)
+            {
+                await launcher.LaunchDirectoryInfoAsync(new DirectoryInfo(path));
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            await ShowErrorAsync("Open folder", $"{path} could not be opened: {ex.Message}");
+        }
+    }
+
     public async Task CopyToClipboardAsync(string text)
     {
         try
@@ -125,6 +154,31 @@ public sealed class DialogService : IDialogService
 
         _help.Navigate(topic ?? HelpTopics.GettingStarted);
     }
+
+    public void ShowAuditTrail(AuditTrailViewModel auditTrail)
+    {
+        if (_auditTrail is not null)
+        {
+            auditTrail.Detach();
+            _auditTrail.ViewModel?.Reload();
+            _auditTrail.Activate();
+            return;
+        }
+
+        _auditTrail = new AuditTrailWindow { DataContext = auditTrail };
+        _auditTrail.Closed += (_, _) => _auditTrail = null;
+        if (Owner is not null)
+        {
+            _auditTrail.Show(Owner);
+        }
+        else
+        {
+            _auditTrail.Show();
+        }
+    }
+
+    /// <summary>The audit trail window, if it is open.</summary>
+    public AuditTrailWindow? AuditTrail => _auditTrail;
 
     // On Linux the file dialogs come from the desktop's portal service or GTK; a bare window manager may have neither.
     private Task ReportNoFileDialogAsync(string title) => ShowErrorAsync(title,

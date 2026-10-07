@@ -60,6 +60,10 @@ A new release is built automatically every time `main` changes (see
   auto calibration and timebase; every LAN, RS-232 and GPIB setting; a command terminal with history,
   error checking and a searchable command reference.
 * **Communication log** of every command and reply, which can be copied or saved.
+* **Audit trail** for quality systems such as ISO 9001. It records every change Tempo makes, with who,
+  when, which instrument (name and serial number), the setting's old and new values and an optional
+  reason. Records go in CSV files, one per computer per month, in a folder you choose. A hash chain shows
+  any record that has been altered or removed (**View ▸ Audit trail**).
 * **Built-in user guide**: F1 opens it at the page you are on.
 * **Demo instrument**: a simulated DG645 for trying everything without hardware.
 * **Light, dark or system theme**, meeting WCAG AA contrast, with output colours validated to stay
@@ -78,6 +82,10 @@ Rendered by the CI smoke test against the built-in simulated DG645.
 | Output levels with TTL and NIM presets | Saved setup, setup files and instrument memory |
 | ![Setup check on connect](docs/screenshots/setup-question.jpg) | ![User guide](docs/screenshots/help.jpg) |
 | The question asked when an instrument differs from its saved setup | The built-in user guide |
+
+![Audit trail window with the integrity check](docs/screenshots/audit-trail.jpg)
+
+The audit trail: every change with its old and new values, the reason given, and a check that no record has been altered.
 
 ## Documentation
 

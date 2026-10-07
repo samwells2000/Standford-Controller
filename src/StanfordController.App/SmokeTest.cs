@@ -70,17 +70,22 @@ internal sealed class SmokeTest
                 throw new InvalidOperationException($"Could not connect to the simulator: {item.LastError}");
             }
 
-            // A realistic setup so the screenshots show something meaningful.
+            // A realistic setup so the screenshots show something meaningful. (Set up behind the pages' backs, so
+            // left out of the audit trail; everything after this goes through the program and must record itself.)
             var client = session.Client;
-            await client.SetDelayAsync(Dg645Channel.A, Dg645Channel.T0, 1e-6);
-            await client.SetDelayAsync(Dg645Channel.B, Dg645Channel.A, 2.5e-6);
-            await client.SetDelayAsync(Dg645Channel.C, Dg645Channel.A, 1.5e-6);
-            await client.SetDelayAsync(Dg645Channel.D, Dg645Channel.C, 500e-9);
-            await client.SetDelayAsync(Dg645Channel.E, Dg645Channel.T0, 4e-6);
-            await client.SetDelayAsync(Dg645Channel.F, Dg645Channel.E, 1e-6);
-            await client.SetDelayAsync(Dg645Channel.G, Dg645Channel.T0, 6e-6);
-            await client.SetDelayAsync(Dg645Channel.H, Dg645Channel.G, 250e-9);
-            await client.SetPolarityAsync(Dg645Output.EF, OutputPolarity.Negative);
+            using (session.BeginChange())
+            {
+                await client.SetDelayAsync(Dg645Channel.A, Dg645Channel.T0, 1e-6);
+                await client.SetDelayAsync(Dg645Channel.B, Dg645Channel.A, 2.5e-6);
+                await client.SetDelayAsync(Dg645Channel.C, Dg645Channel.A, 1.5e-6);
+                await client.SetDelayAsync(Dg645Channel.D, Dg645Channel.C, 500e-9);
+                await client.SetDelayAsync(Dg645Channel.E, Dg645Channel.T0, 4e-6);
+                await client.SetDelayAsync(Dg645Channel.F, Dg645Channel.E, 1e-6);
+                await client.SetDelayAsync(Dg645Channel.G, Dg645Channel.T0, 6e-6);
+                await client.SetDelayAsync(Dg645Channel.H, Dg645Channel.G, 250e-9);
+                await client.SetPolarityAsync(Dg645Output.EF, OutputPolarity.Negative);
+            }
+
             await session.RefreshAllAsync();
             session.Terminal.Input = "*IDN?";
             await session.Terminal.SendAsync();
@@ -148,6 +153,7 @@ internal sealed class SmokeTest
 
             await CheckSingleShotExternalAsync(session);
             await CheckClickAwayAsync(session);
+            await CheckAuditTrailAsync(session);
 
             await item.DisconnectAsync();
             await IdleAsync();
@@ -159,6 +165,53 @@ internal sealed class SmokeTest
         }
 
         Finish();
+    }
+
+    /// <summary>
+    /// Every change made above is in the audit trail, with old and new values and the reason given; none fell
+    /// through to the raw-command safety net; the window shows them; and the file's hash chain is intact.
+    /// </summary>
+    private async Task CheckAuditTrailAsync(InstrumentSessionViewModel session)
+    {
+        session.ChangeReason = "Smoke test, run 1";
+        session.Burst.Count.Text = "5";
+        await ((AsyncRelayCommand)session.Burst.Count.CommitCommand).ExecuteAsync();
+        Check(await _viewModel.Audit.FlushAsync() == 0, $"The audit trail could not be written: {_viewModel.Audit.Problem}");
+
+        _viewModel.AuditTrailCommand.Execute(null);
+        await IdleAsync();
+        if (_dialogs.AuditTrail is not { ViewModel: { } trail } window)
+        {
+            Check(false, "The audit trail window did not open.");
+            return;
+        }
+
+        var records = trail.Records;
+        Check(records.Any(r => r is { Action: "Changed", Setting: "Internal rate", OldValue: "2.5 kHz", NewValue: "5 kHz" }),
+            "The audit trail does not show the internal rate changed from 2.5 kHz to 5 kHz.");
+        Check(records.Any(r => r is { Action: "Changed", Setting: "Trigger source", NewValue: "Single shot, external rising" }),
+            "The audit trail does not show the trigger source change.");
+        Check(records.Any(r => r.Action == "Armed") && records.Any(r => r is { Action: "Command", Setting: "Terminal", NewValue: "TRAT 2500" }),
+            "The audit trail does not show arming or the terminal command.");
+        Check(records.Any(r => r is { Setting: "Burst count", NewValue: "5", Reason: "Smoke test, run 1" }),
+            "The audit trail does not show the reason given for a change.");
+        var unrecorded = records.Where(r => r is { Action: "Command", Details: "Sent by Tempo" }).Select(r => r.NewValue).ToList();
+        Check(unrecorded.Count == 0, $"Changes reached the instrument without recording themselves: {string.Join(", ", unrecorded)}");
+
+        trail.SelectedRecord = records.FirstOrDefault(r => r.Setting == "Internal rate");
+        trail.CheckIntegrity();
+        Check(!trail.IntegrityIsProblem && trail.HasIntegrityText, $"The audit trail failed its integrity check: {trail.IntegrityText}");
+        foreach (var theme in new[] { AppTheme.Light, AppTheme.Dark })
+        {
+            _viewModel.Theme = theme;
+            await IdleAsync();
+            Capture(window, "99-audit-trail" + (theme == AppTheme.Dark ? "-dark" : string.Empty));
+        }
+
+        _viewModel.Theme = AppTheme.Light;
+        window.Close();
+        await IdleAsync();
+        session.ChangeReason = string.Empty;
     }
 
     /// <summary>

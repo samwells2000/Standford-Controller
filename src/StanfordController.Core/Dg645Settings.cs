@@ -1,6 +1,8 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using StanfordController.Core.Protocol;
+using StanfordController.Core.Units;
 
 namespace StanfordController.Core;
 
@@ -50,42 +52,64 @@ public sealed class Dg645Settings
     /// Names the settings that differ between this setup and <paramref name="other"/>, e.g. "Delay C" or
     /// "AB amplitude". Values within the instrument's resolution count as equal. Empty when the setups match.
     /// </summary>
-    public IReadOnlyList<string> DescribeDifferences(Dg645Settings other)
+    public IReadOnlyList<string> DescribeDifferences(Dg645Settings other) => Compare(other).Select(c => c.Setting).ToList();
+
+    /// <summary>
+    /// The settings that differ between this setup (before) and <paramref name="other"/> (after), with both values
+    /// written as the pages show them. Values within the instrument's resolution count as equal.
+    /// </summary>
+    public IReadOnlyList<SettingChange> Compare(Dg645Settings other)
     {
-        var differences = new List<string>();
-        void Check(bool same, string name)
+        var changes = new List<SettingChange>();
+        void Check(bool same, string name, string before, string after)
         {
             if (!same)
             {
-                differences.Add(name);
+                changes.Add(new SettingChange(name, before, after));
             }
         }
 
         static bool SameTime(double a, double b) => Math.Abs(a - b) <= 0.5e-12 + 1e-12 * Math.Max(Math.Abs(a), Math.Abs(b));
         static bool SameFrequency(double a, double b) => Math.Abs(a - b) <= 0.5e-6 + 1e-9 * Math.Max(Math.Abs(a), Math.Abs(b));
         static bool SameVolts(double a, double b) => Math.Abs(a - b) < 0.005;
+        static string Time(double seconds) => EngineeringUnits.Format(seconds, Quantity.Time);
+        static string Volts(double volts) => EngineeringUnits.Format(volts, Quantity.Voltage);
+        static string OnOff(bool on) => on ? "On" : "Off";
+        static string Item<T>(IReadOnlyList<T> list, int index) => index < list.Count ? Convert.ToString(list[index], CultureInfo.InvariantCulture) ?? "—" : "—";
 
-        Check(Trigger.Source == other.Trigger.Source, "Trigger source");
-        Check(SameFrequency(Trigger.RateHz, other.Trigger.RateHz), "Trigger rate");
-        Check(SameVolts(Trigger.LevelVolts, other.Trigger.LevelVolts), "Trigger threshold");
-        Check(SameTime(Trigger.HoldoffSeconds, other.Trigger.HoldoffSeconds), "Holdoff");
-        Check(Trigger.Inhibit == other.Trigger.Inhibit, "Inhibit");
-        Check(Trigger.AdvancedTriggering == other.Trigger.AdvancedTriggering, "Advanced triggering");
-        Check(Trigger.PrescaleFactors.SequenceEqual(other.Trigger.PrescaleFactors), "Prescale factors");
-        Check(Trigger.PrescalePhases.SequenceEqual(other.Trigger.PrescalePhases), "Prescale phases");
+        var (t, u) = (Trigger, other.Trigger);
+        Check(t.Source == u.Source, "Trigger source", Dg645Names.Describe(t.Source), Dg645Names.Describe(u.Source));
+        Check(SameFrequency(t.RateHz, u.RateHz), "Trigger rate",
+            EngineeringUnits.Format(t.RateHz, Quantity.Frequency), EngineeringUnits.Format(u.RateHz, Quantity.Frequency));
+        Check(SameVolts(t.LevelVolts, u.LevelVolts), "Trigger threshold", Volts(t.LevelVolts), Volts(u.LevelVolts));
+        Check(SameTime(t.HoldoffSeconds, u.HoldoffSeconds), "Holdoff", Time(t.HoldoffSeconds), Time(u.HoldoffSeconds));
+        Check(t.Inhibit == u.Inhibit, "Inhibit", Dg645Names.Describe(t.Inhibit), Dg645Names.Describe(u.Inhibit));
+        Check(t.AdvancedTriggering == u.AdvancedTriggering, "Advanced triggering", OnOff(t.AdvancedTriggering), OnOff(u.AdvancedTriggering));
+        for (var i = 0; i < Math.Max(t.PrescaleFactors.Count, u.PrescaleFactors.Count); i++)
+        {
+            var input = i == 0 ? "Trigger input" : ((PrescaleInput)i).ToString();
+            Check(Item(t.PrescaleFactors, i) == Item(u.PrescaleFactors, i), $"{input} prescale factor", Item(t.PrescaleFactors, i), Item(u.PrescaleFactors, i));
+        }
 
-        Check(Burst.Enabled == other.Burst.Enabled, "Burst mode");
-        Check(Burst.Count == other.Burst.Count, "Burst count");
-        Check(SameTime(Burst.DelaySeconds, other.Burst.DelaySeconds), "Burst delay");
-        Check(SameTime(Burst.PeriodSeconds, other.Burst.PeriodSeconds), "Burst period");
-        Check(Burst.T0Mode == other.Burst.T0Mode, "Burst T0 output");
+        for (var i = 0; i < Math.Max(t.PrescalePhases.Count, u.PrescalePhases.Count); i++)
+        {
+            var output = ((PrescaleInput)(i + 1)).ToString();
+            Check(Item(t.PrescalePhases, i) == Item(u.PrescalePhases, i), $"{output} prescale phase", Item(t.PrescalePhases, i), Item(u.PrescalePhases, i));
+        }
+
+        var (b, c) = (Burst, other.Burst);
+        Check(b.Enabled == c.Enabled, "Burst mode", OnOff(b.Enabled), OnOff(c.Enabled));
+        Check(b.Count == c.Count, "Burst count", b.Count.ToString(CultureInfo.InvariantCulture), c.Count.ToString(CultureInfo.InvariantCulture));
+        Check(SameTime(b.DelaySeconds, c.DelaySeconds), "Burst delay", Time(b.DelaySeconds), Time(c.DelaySeconds));
+        Check(SameTime(b.PeriodSeconds, c.PeriodSeconds), "Burst period", Time(b.PeriodSeconds), Time(c.PeriodSeconds));
+        Check(b.T0Mode == c.T0Mode, "Burst T0 output", Dg645Names.Describe(b.T0Mode), Dg645Names.Describe(c.T0Mode));
 
         foreach (var channel in Delays.Select(d => d.Channel).Union(other.Delays.Select(d => d.Channel)).Order())
         {
             var mine = Delays.FirstOrDefault(d => d.Channel == channel);
             var theirs = other.Delays.FirstOrDefault(d => d.Channel == channel);
             Check(mine is not null && theirs is not null && mine.Reference == theirs.Reference && SameTime(mine.DelaySeconds, theirs.DelaySeconds),
-                $"Delay {channel}");
+                $"Delay {channel}", DescribeDelay(mine), DescribeDelay(theirs));
         }
 
         foreach (var output in Outputs.Select(o => o.Output).Union(other.Outputs.Select(o => o.Output)).Order())
@@ -94,18 +118,30 @@ public sealed class Dg645Settings
             var theirs = other.Outputs.FirstOrDefault(o => o.Output == output);
             if (mine is null || theirs is null)
             {
-                differences.Add($"{output} output");
+                changes.Add(new SettingChange($"{output} output", mine is null ? "—" : "Set", theirs is null ? "—" : "Set"));
                 continue;
             }
 
-            Check(SameVolts(mine.AmplitudeVolts, theirs.AmplitudeVolts), $"{output} amplitude");
-            Check(SameVolts(mine.OffsetVolts, theirs.OffsetVolts), $"{output} offset");
-            Check(mine.Polarity == theirs.Polarity, $"{output} polarity");
+            Check(SameVolts(mine.AmplitudeVolts, theirs.AmplitudeVolts), $"{output} amplitude", Volts(mine.AmplitudeVolts), Volts(theirs.AmplitudeVolts));
+            Check(SameVolts(mine.OffsetVolts, theirs.OffsetVolts), $"{output} offset", Volts(mine.OffsetVolts), Volts(theirs.OffsetVolts));
+            Check(mine.Polarity == theirs.Polarity, $"{output} polarity", Dg645Names.Describe(mine.Polarity), Dg645Names.Describe(theirs.Polarity));
         }
 
-        return differences;
+        return changes;
     }
+
+    /// <summary>A channel's delay as the Delays page shows it, e.g. "A + 1.5 µs".</summary>
+    public static string DescribeDelay(ChannelDelaySettings? delay) =>
+        delay is null ? "—" : DescribeDelay(delay.Reference, delay.DelaySeconds);
+
+    public static string DescribeDelay(Dg645Channel reference, double seconds) =>
+        seconds < 0
+            ? $"{reference} \u2212 {EngineeringUnits.Format(-seconds, Quantity.Time)}"
+            : $"{reference} + {EngineeringUnits.Format(seconds, Quantity.Time)}";
 }
+
+/// <summary>One setting that differs between two setups, with both values as the pages show them.</summary>
+public sealed record SettingChange(string Setting, string Before, string After);
 
 public sealed class TriggerSettings
 {

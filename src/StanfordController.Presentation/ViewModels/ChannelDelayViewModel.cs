@@ -1,4 +1,5 @@
 using System.Windows.Input;
+using StanfordController.Core;
 using StanfordController.Core.Protocol;
 using StanfordController.Core.Units;
 using StanfordController.Presentation.Mvvm;
@@ -13,6 +14,7 @@ public sealed class ChannelDelayViewModel : ParameterViewModel
     private string _delayText = string.Empty;
     private string _committedDelayText = string.Empty;
     private double _delaySeconds;
+    private Dg645Channel _readReference;
     private double? _absoluteSeconds;
 
     public ChannelDelayViewModel(IInstrumentContext context, Dg645Channel channel)
@@ -144,6 +146,7 @@ public sealed class ChannelDelayViewModel : ParameterViewModel
                 Error = $"Referenced to {reference}, which this view does not offer.";
             }
 
+            _readReference = reference;
             _delaySeconds = seconds;
             _committedDelayText = EngineeringUnits.Format(seconds, Quantity.Time);
             DelayText = _committedDelayText;
@@ -184,49 +187,14 @@ public sealed class ChannelDelayViewModel : ParameterViewModel
         await WriteAsync(reference, _delaySeconds);
     }
 
-    private async Task WriteAsync(Dg645Channel reference, double seconds)
-    {
-        var written = false;
-        await RunAsync(async () =>
-        {
-            try
-            {
-                await Client.SetDelayAsync(Channel, reference, seconds);
-                written = true;
-            }
-            finally
-            {
-                await TryReadBackAsync();
-            }
-        });
+    private Task WriteAsync(Dg645Channel reference, double seconds) =>
+        ChangeAsync(ReadingText, () => Client.SetDelayAsync(Channel, reference, seconds), TryReadBackAsync, () => ReadingText, $"Delay {Channel}");
 
-        if (written)
-        {
-            Context.NotifySettingsChanged();
-        }
-    }
+    private Task StepAsync(bool up) =>
+        ChangeAsync(ReadingText, () => Client.StepDelayAsync(Channel, up), TryReadBackAsync, () => ReadingText, $"Delay {Channel}");
 
-    private async Task StepAsync(bool up)
-    {
-        var written = false;
-        await RunAsync(async () =>
-        {
-            try
-            {
-                await Client.StepDelayAsync(Channel, up);
-                written = true;
-            }
-            finally
-            {
-                await TryReadBackAsync();
-            }
-        });
-
-        if (written)
-        {
-            Context.NotifySettingsChanged();
-        }
-    }
+    /// <summary>The delay last read from the instrument, e.g. "A + 1.5 µs", for the audit trail.</summary>
+    private string ReadingText => Dg645Settings.DescribeDelay(_readReference, _delaySeconds);
 
     private async Task TryReadBackAsync()
     {

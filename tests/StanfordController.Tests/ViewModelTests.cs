@@ -56,6 +56,23 @@ internal sealed class FakeDialogs : IDialogService
     public Task ShowAboutAsync() => Task.CompletedTask;
 
     public void ShowHelp(string? topic = null) => HelpTopicsShown.Add(topic);
+
+    /// <summary>What the folder picker answers.</summary>
+    public string? FolderPath { get; set; }
+
+    public List<string> FoldersOpened { get; } = [];
+
+    public List<AuditTrailViewModel> AuditTrailsShown { get; } = [];
+
+    public Task<string?> PickFolderAsync(string title) => Task.FromResult(FolderPath);
+
+    public Task OpenFolderAsync(string path)
+    {
+        FoldersOpened.Add(path);
+        return Task.CompletedTask;
+    }
+
+    public void ShowAuditTrail(AuditTrailViewModel auditTrail) => AuditTrailsShown.Add(auditTrail);
 }
 
 public class ViewModelTests
@@ -113,7 +130,8 @@ public class ViewModelTests
         Assert.Contains("DLAY 2,0,0.000001500000", simulator.ReceivedLines);
 
         b.Reference = b.ReferenceOptions.Single(o => o.Label == "A");
-        await WaitUntilAsync(() => b.ReferenceChannel == Dg645Channel.A && !b.IsBusy);
+        // Wait for the instrument to confirm the new reference before going on.
+        await WaitUntilAsync(() => simulator.GetReceivedLines().Any(l => l.StartsWith("DLAY 3,2,", StringComparison.Ordinal)) && !b.IsBusy);
         b.DelayText = "250 ns";
         await ((Presentation.Mvvm.AsyncRelayCommand)b.CommitCommand).ExecuteAsync();
 
@@ -143,12 +161,13 @@ public class ViewModelTests
     [Fact]
     public async Task InstrumentErrorsAreShownOnTheFieldAndRevertTheValue()
     {
-        var (session, _) = await CreateSessionAsync();
+        var (session, simulator) = await CreateSessionAsync();
         var a = session.Channels.Single(c => c.Channel == Dg645Channel.A);
         var b = session.Channels.Single(c => c.Channel == Dg645Channel.B);
 
         b.Reference = b.ReferenceOptions.Single(o => o.Label == "A");
-        await WaitUntilAsync(() => b.ReferenceChannel == Dg645Channel.A && !b.IsBusy);
+        // Wait for the instrument to confirm the new reference before going on.
+        await WaitUntilAsync(() => simulator.GetReceivedLines().Any(l => l.StartsWith("DLAY 3,2,", StringComparison.Ordinal)) && !b.IsBusy);
 
         // A relative to B would create a loop.
         a.Reference = a.ReferenceOptions.Single(o => o.Label == "B");
@@ -258,7 +277,7 @@ public class ViewModelTests
         }
         finally
         {
-            Directory.Delete(Path.GetDirectoryName(path)!, recursive: true);
+            TestFolders.Delete(Path.GetDirectoryName(path)!);
         }
     }
 

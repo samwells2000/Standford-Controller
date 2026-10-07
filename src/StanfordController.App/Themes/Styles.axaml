@@ -164,6 +164,9 @@
     <Style Selector="Path.glyph.info">
         <Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" />
     </Style>
+    <Style Selector="Path.glyph.ok">
+        <Setter Property="Stroke" Value="{DynamicResource SuccessTextBrush}" />
+    </Style>
 
     <!-- Status register LED and connection state dot: always shown beside a text label. -->
     <Style Selector="Ellipse.led">

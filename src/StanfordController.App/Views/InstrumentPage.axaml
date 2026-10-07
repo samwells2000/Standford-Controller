@@ -14,6 +14,14 @@
                     <Ellipse Classes="state" Classes.connected="{Binding IsConnected}" Classes.connecting="{Binding IsConnecting}" Classes.failed="{Binding IsFailed}" />
                     <TextBlock Text="{Binding StateText}" Classes="secondary" VerticalAlignment="Center" />
                 </StackPanel>
+                <!-- Recorded with every change in the audit trail. -->
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" Margin="0,0,22,0" VerticalAlignment="Center"
+                            IsVisible="{Binding IsConnected}" inf:HelpContext.Topic="{x:Static help:HelpTopics.AuditTrail}">
+                    <TextBlock Text="Reason for changes" Classes="secondary" VerticalAlignment="Center" />
+                    <TextBox Text="{Binding Session?.ChangeReason, FallbackValue='', TargetNullValue=''}" Width="230"
+                             PlaceholderText="Optional; recorded in the audit trail"
+                             ToolTip.Tip="Why you are changing the instrument's settings, for example a job, batch or change request number. It is recorded with each change in the audit trail (View ▸ Audit trail)." />
+                </StackPanel>
                 <StackPanel>
                     <TextBlock Text="{Binding Name}" Classes="title" FontSize="15" />
                     <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis">
