@@ -8,7 +8,8 @@
              inf:HelpContext.Topic="{x:Static help:HelpTopics.Burst}">
     <ScrollViewer>
         <StackPanel Margin="20,16,20,12" HorizontalAlignment="Left" DataContext="{Binding Burst}" x:DataType="vm:BurstViewModel">
-            <HeaderedContentControl Theme="{StaticResource Section}" Header="Burst mode">
+            <HeaderedContentControl Theme="{StaticResource Section}" Header="Burst mode"
+                                    AutomationProperties.HelpText="Makes each trigger produce a burst of several delay cycles instead of one. Sets how many cycles, the time between them, the delay before the first, and whether T0 fires on every cycle or only the first.">
                 <StackPanel>
                     <ContentControl Content="{Binding Enabled}" Margin="140,0,0,10" />
                     <HeaderedContentControl Theme="{StaticResource FormRow}" Header="Cycles per burst" Content="{Binding Count}" />

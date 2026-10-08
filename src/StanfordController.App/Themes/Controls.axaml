@@ -69,14 +69,17 @@
     </ControlTheme>
 
     <!-- ============================== Page structure ============================== -->
-    <!-- A titled group: the title followed by a rule, like a group box without the box. Extra content in Tag sits at the right. -->
+    <!-- A titled group: the title followed by a rule, like a group box without the box. Extra content in Tag sits at the right.
+         AutomationProperties.HelpText on the section describes what it is for; resting the pointer on the title shows it. -->
     <ControlTheme x:Key="Section" TargetType="HeaderedContentControl">
         <Setter Property="Margin" Value="0,0,0,20" />
         <Setter Property="Template">
             <ControlTemplate>
                 <StackPanel>
                     <DockPanel Margin="0,0,0,8" MinHeight="22">
-                        <ContentPresenter DockPanel.Dock="Left" Content="{TemplateBinding Header}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <ContentPresenter DockPanel.Dock="Left" Content="{TemplateBinding Header}" FontWeight="SemiBold" VerticalAlignment="Center"
+                                          Background="Transparent" ToolTip.ShowDelay="2000" ToolTip.Placement="BottomEdgeAlignedLeft"
+                                          ToolTip.Tip="{Binding (AutomationProperties.HelpText), RelativeSource={RelativeSource TemplatedParent}}" />
                         <ContentPresenter DockPanel.Dock="Right" Content="{TemplateBinding Tag}" VerticalAlignment="Center" Margin="12,0,0,0" />
                         <Border Classes="rule" Margin="10,1,0,0" VerticalAlignment="Center" />
                     </DockPanel>

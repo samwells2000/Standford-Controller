@@ -10,7 +10,8 @@
     <ScrollViewer>
         <StackPanel Margin="20,16,20,12">
 
-            <HeaderedContentControl Theme="{StaticResource Section}" Header="Output levels">
+            <HeaderedContentControl Theme="{StaticResource Section}" Header="Output levels"
+                                    AutomationProperties.HelpText="Sets the voltage of each front-panel output (T0, AB, CD, EF, GH): its amplitude, its offset and whether the pulse goes positive or negative. TTL and NIM fill in the standard logic levels.">
                 <HeaderedContentControl.Tag>
                     <TextBlock Classes="caption" Text="Amplitude and offset in volts; each is applied on Enter." />
                 </HeaderedContentControl.Tag>
@@ -77,7 +78,8 @@
                 </StackPanel>
             </HeaderedContentControl>
 
-            <HeaderedContentControl Theme="{StaticResource Section}" Header="Step sizes" HorizontalAlignment="Left">
+            <HeaderedContentControl Theme="{StaticResource Section}" Header="Step sizes"
+                                    AutomationProperties.HelpText="Sets how much the up and down arrow buttons change each output's amplitude and offset per click." HorizontalAlignment="Left">
                 <HeaderedContentControl.Tag>
                     <TextBlock Classes="caption" Text="How far each up or down step button moves the value." />
                 </HeaderedContentControl.Tag>

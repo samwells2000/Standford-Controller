@@ -9,7 +9,8 @@
     <ScrollViewer>
         <StackPanel Margin="20,16,20,12" MaxWidth="720" HorizontalAlignment="Left">
 
-            <HeaderedContentControl Theme="{StaticResource Section}" Header="Saved setup on this computer">
+            <HeaderedContentControl Theme="{StaticResource Section}" Header="Saved setup on this computer"
+                                    AutomationProperties.HelpText="Keeps a copy of this instrument's complete setup in the open configuration, so you can put it back on the instrument after it has been switched off or changed.">
                 <StackPanel Spacing="10">
                     <TextBlock Classes="secondary" TextWrapping="Wrap"
                                Text="The complete setup — delays, output levels, trigger and burst — kept in the open configuration, so it can be put back whenever the instrument is switched on or reconnected." />
@@ -27,7 +28,8 @@
                 </StackPanel>
             </HeaderedContentControl>
 
-            <HeaderedContentControl Theme="{StaticResource Section}" Header="Setup files">
+            <HeaderedContentControl Theme="{StaticResource Section}" Header="Setup files"
+                                    AutomationProperties.HelpText="Saves this instrument's setup to a file, or loads one, to keep with an experiment or share with someone else.">
                 <StackPanel Spacing="8">
                     <TextBlock Classes="secondary" TextWrapping="Wrap"
                                Text="One instrument's setup as a .dg645.json file, to archive with an experiment, send to a colleague or load into another DG645." />
@@ -38,7 +40,8 @@
                 </StackPanel>
             </HeaderedContentControl>
 
-            <HeaderedContentControl Theme="{StaticResource Section}" Header="Instrument memory">
+            <HeaderedContentControl Theme="{StaticResource Section}" Header="Instrument memory"
+                                    AutomationProperties.HelpText="Saves the current setup into, or recalls it from, one of the nine memory locations inside the DG645 itself.">
                 <StackPanel>
                     <TextBlock Classes="secondary" TextWrapping="Wrap" Margin="0,0,0,10"
                                Text="Nine setups stored inside the DG645 itself (*SAV / *RCL), which can also be recalled from its front panel." />
@@ -63,7 +66,8 @@
                 </StackPanel>
             </HeaderedContentControl>
 
-            <HeaderedContentControl Theme="{StaticResource Section}" Header="Reset">
+            <HeaderedContentControl Theme="{StaticResource Section}" Header="Reset"
+                                    AutomationProperties.HelpText="Puts the instrument back to its factory default settings, replacing every delay, level, trigger and burst setting.">
                 <StackPanel Spacing="8">
                     <TextBlock Classes="secondary" TextWrapping="Wrap"
                                Text="Return the instrument to its default settings (*RST). Every delay, level, trigger and burst setting is replaced." />

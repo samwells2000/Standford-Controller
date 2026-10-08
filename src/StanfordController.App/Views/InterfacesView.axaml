@@ -9,7 +9,8 @@
     <ScrollViewer>
         <Grid Margin="20,16,20,12" ColumnDefinitions="Auto,32,*" DataContext="{Binding Interface}" x:DataType="vm:InterfaceViewModel">
 
-            <HeaderedContentControl Theme="{StaticResource Section}" Header="LAN (TCP/IP)" VerticalAlignment="Top" MaxWidth="400">
+            <HeaderedContentControl Theme="{StaticResource Section}" Header="LAN (TCP/IP)"
+                                    AutomationProperties.HelpText="The instrument's network settings: which network services are on and how it gets its IP address. Changes only take effect after the LAN interface is reset." VerticalAlignment="Top" MaxWidth="400">
                 <StackPanel>
                     <Border Classes="infobar warning" Margin="0,0,0,12">
                         <Grid ColumnDefinitions="Auto,*">
@@ -41,7 +42,8 @@
             </HeaderedContentControl>
 
             <StackPanel Grid.Column="2">
-                <HeaderedContentControl Theme="{StaticResource Section}" Header="RS-232">
+                <HeaderedContentControl Theme="{StaticResource Section}" Header="RS-232"
+                                        AutomationProperties.HelpText="Turns the instrument's serial port on or off and sets its baud rate.">
                     <StackPanel>
                         <ContentControl Content="{Binding Rs232Enabled}" Margin="140,0,0,8" />
                         <HeaderedContentControl Theme="{StaticResource FormRow}" Header="Baud rate" Content="{Binding BaudRate}" />
@@ -49,7 +51,8 @@
                     </StackPanel>
                 </HeaderedContentControl>
 
-                <HeaderedContentControl Theme="{StaticResource Section}" Header="GPIB">
+                <HeaderedContentControl Theme="{StaticResource Section}" Header="GPIB"
+                                        AutomationProperties.HelpText="Turns the instrument's GPIB (IEEE-488) port on or off and sets its bus address.">
                     <StackPanel>
                         <ContentControl Content="{Binding GpibEnabled}" Margin="140,0,0,8" />
                         <HeaderedContentControl Theme="{StaticResource FormRow}" Header="GPIB address" Content="{Binding GpibAddress}" />
@@ -57,7 +60,8 @@
                     </StackPanel>
                 </HeaderedContentControl>
 
-                <HeaderedContentControl Theme="{StaticResource Section}" Header="Remote control">
+                <HeaderedContentControl Theme="{StaticResource Section}" Header="Remote control"
+                                        AutomationProperties.HelpText="Switches the instrument between local mode, where its front panel works, and remote mode, where it is locked. The lock gives this connection sole control.">
                     <StackPanel Spacing="6">
                         <TextBlock Classes="secondary" TextWrapping="Wrap"
                                    Text="Local mode unlocks the front panel; remote mode locks it. The lock gives this connection sole control over the other interfaces." />

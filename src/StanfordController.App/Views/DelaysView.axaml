@@ -10,7 +10,8 @@
     <ScrollViewer>
         <StackPanel Margin="20,16,20,12">
 
-            <HeaderedContentControl Theme="{StaticResource Section}" Header="Channel delays">
+            <HeaderedContentControl Theme="{StaticResource Section}" Header="Channel delays"
+                                    AutomationProperties.HelpText="Sets when each of the eight edges A to H fires. Every edge is a delay after a reference channel (T0 or another channel), and pairs of edges form the AB, CD, EF and GH output pulses. The From T0 column shows the resulting time after the trigger.">
                 <HeaderedContentControl.Tag>
                     <TextBlock Classes="caption" Text="Type e.g. 1.5 us, 250 ns or 1e-6, then Enter. Esc undoes." />
                 </HeaderedContentControl.Tag>
@@ -65,7 +66,8 @@
                 </StackPanel>
             </HeaderedContentControl>
 
-            <HeaderedContentControl Theme="{StaticResource Section}" Header="Timing">
+            <HeaderedContentControl Theme="{StaticResource Section}" Header="Timing"
+                                    AutomationProperties.HelpText="A picture of the output pulses over one cycle, drawn from the delays above, so you can check the pulse order, widths and overlaps at a glance.">
                 <HeaderedContentControl.Tag>
                     <TextBlock Classes="caption" Text="Outputs relative to T0. Negative-polarity outputs are drawn inverted. Hover for exact edges." />
                 </HeaderedContentControl.Tag>

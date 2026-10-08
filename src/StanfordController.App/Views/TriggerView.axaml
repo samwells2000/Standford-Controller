@@ -10,7 +10,8 @@
         <Grid Margin="20,16,20,12" ColumnDefinitions="Auto,32,Auto" DataContext="{Binding Trigger}" x:DataType="vm:TriggerViewModel">
 
             <StackPanel>
-                <HeaderedContentControl Theme="{StaticResource Section}" Header="Trigger">
+                <HeaderedContentControl Theme="{StaticResource Section}" Header="Trigger"
+                                        AutomationProperties.HelpText="Chooses what starts each delay cycle: the internal rate generator, an external trigger edge, the power line, or a single shot you fire yourself. Also sets the external threshold and how the inhibit input gates the outputs.">
                     <StackPanel>
                         <HeaderedContentControl Theme="{StaticResource FormRow}" Header="Source" Content="{Binding Source}" />
                         <HeaderedContentControl Theme="{StaticResource FormRow}" Header="Internal rate" Content="{Binding Rate}" />
@@ -35,7 +36,8 @@
             </StackPanel>
 
             <StackPanel Grid.Column="2">
-                <HeaderedContentControl Theme="{StaticResource Section}" Header="Advanced triggering">
+                <HeaderedContentControl Theme="{StaticResource Section}" Header="Advanced triggering"
+                                        AutomationProperties.HelpText="Turns on the instrument's extra trigger controls: a holdoff that ignores triggers arriving too soon after the last one, and the prescalers below.">
                     <StackPanel>
                         <ContentControl Content="{Binding AdvancedTriggering}" Margin="140,0,0,10" />
                         <HeaderedContentControl Theme="{StaticResource FormRow}" Header="Holdoff" Content="{Binding Holdoff}" />
@@ -44,7 +46,8 @@
                     </StackPanel>
                 </HeaderedContentControl>
 
-                <HeaderedContentControl Theme="{StaticResource Section}" Header="Prescalers">
+                <HeaderedContentControl Theme="{StaticResource Section}" Header="Prescalers"
+                                        AutomationProperties.HelpText="Divides the trigger rate. The trigger prescaler fires a cycle on every Nth trigger, and each output's prescaler and phase let that output fire on only every Nth cycle. Needs advanced triggering on.">
                     <StackPanel>
                         <Border Classes="table-header">
                             <Grid ColumnDefinitions="112,120,10,120">

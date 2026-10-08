@@ -48,7 +48,8 @@
         </Border>
 
         <!-- Command reference -->
-        <HeaderedContentControl Grid.Column="2" Theme="{StaticResource Section}" Header="Command reference" Margin="0">
+        <HeaderedContentControl Grid.Column="2" Theme="{StaticResource Section}" Header="Command reference"
+                                AutomationProperties.HelpText="Every DG645 remote command with what it does and an example. Search the list and double-click a command to put it in the terminal." Margin="0">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,8">
                     <TextBlock Classes="caption" TextWrapping="Wrap"
