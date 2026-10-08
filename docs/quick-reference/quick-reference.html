@@ -6,7 +6,8 @@
 <!--
   The two-sided quick reference card for Tempo. Build the PDF with:
       node docs/quick-reference/build.mjs
-  It prints exactly two A4 pages: print double-sided, flipping on the long edge.
+  It prints exactly two A4 pages with 12 mm margins, inside the printable area of any printer.
+  Print double-sided at actual size (100%, not "fit to page"), flipping on the long edge.
 -->
 <style>
   @font-face { font-family: "Plex"; src: url("../../src/StanfordController.App/Assets/Fonts/IBMPlexSans-Regular.ttf"); font-weight: 400; }
@@ -37,8 +38,8 @@
   html, body { margin: 0; padding: 0; background: #fff; }
   body { font: 400 8.4pt/1.38 "Plex", sans-serif; color: var(--ink); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
-  .page { width: 210mm; height: 297mm; padding: 9mm 10mm 7mm; display: flex; flex-direction: column; overflow: hidden; break-after: page; }
-  .page:last-child { break-after: auto; }
+  .page { width: 210mm; height: 297mm; padding: 12mm; display: flex; flex-direction: column; overflow: hidden; break-after: page; }
+  .page:last-child { break-after: auto; }   /* the 12 mm padding is the printed margin: printers cannot reach the edge of the sheet */
   .page > * { flex-shrink: 0; }   /* overflow shows up (and fails the build) instead of squashing the screenshot */
 
   /* Header and footer */
@@ -80,6 +81,7 @@
   /* Back: two columns */
   .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 6mm; }
   .block { margin-bottom: 3.4mm; }
+  .block:last-child { margin-bottom: 0; }
 
   /* Connection dots and mock alerts */
   .dot { display: inline-block; width: 2.4mm; height: 2.4mm; border-radius: 50%; vertical-align: -0.2mm; margin-right: 0.8mm; }
@@ -181,7 +183,7 @@
 
   <footer>
     <span><b>F1</b> opens the full user guide at the page you are on.</span>
-    <span>Print double-sided, flipping on the long edge.</span>
+    <span>Print double-sided at actual size (100%), flipping on the long edge.</span>
   </footer>
 </section>
 
@@ -204,7 +206,7 @@
           <li><span class="ui">Save setup</span> stores the instrument's complete setup (delays, output levels, trigger and burst) on this computer. <span class="ui">File ▸ Save setups</span> <kbd>Ctrl</kbd>+<kbd>S</kbd> saves every connected instrument at once.</li>
           <li><span class="ui">Restore saved…</span> <kbd>Ctrl</kbd>+<kbd>R</kbd> puts the saved setup back on the instrument.</li>
           <li><i>Setup not saved</i> in the status bar, and an asterisk in the title, mean something has changed since the last save.</li>
-          <li>Setups are kept in a <b>configuration</b> file (<code>.tempo</code>). Keep one per experiment or lab with <span class="ui">File ▸ New / Open / Save configuration as</span>. The last one opens automatically next time.</li>
+          <li>Setups are kept in a <b>configuration</b> file (<code>.tempo</code>): keep one per experiment or lab with <span class="ui">File ▸ New / Open / Save configuration as</span>. The last one opens automatically next time.</li>
         </ul>
       </div>
 
@@ -212,7 +214,7 @@
         <h3>When an instrument connects</h3>
         <p>Tempo compares the instrument with its saved setup. If they differ, it lists what is different and asks you to choose:</p>
         <p><span class="btn">Load saved setup</span> puts your saved settings on the instrument. <span class="btn">Keep instrument settings</span> leaves it as it is.</p>
-        <p class="muted">Tick <i>Remember my choice</i> to do the same automatically every time. You can change this later with <span class="ui">Edit…</span>.</p>
+        <p class="muted">Tick <i>Remember my choice</i> to do the same every time (change it later with <span class="ui">Edit…</span>).</p>
       </div>
 
       <div class="block">
@@ -263,12 +265,12 @@
           <span><span class="dot off"></span>Not connected</span><span>Double-click to connect.</span>
         </div>
         <p>Problems appear in an <b>alert bar</b> at the top of the window, with a sound (<span class="ui">View ▸ Alert sound</span>):</p>
-        <div class="alert warn"><span class="icon">!</span><span><span class="t">Not responding</span> · clears itself when the instrument answers again</span>
+        <div class="alert warn"><span class="icon">!</span><span><span class="t">Not responding</span> · clears itself when it answers again</span>
           <span class="d">Check that it is switched on and its network cable is plugged in.</span></div>
         <div class="alert bad"><span class="icon">×</span><span><span class="t">Connection lost</span> · <span class="btn">Reconnect</span></span>
           <span class="d">Fix the power or cable, then press <b>Reconnect</b> in the alert.</span></div>
         <div class="alert bad"><span class="icon">×</span><span><span class="t">PLL unlocked · Rubidium unlocked · Timebase changed</span></span>
-          <span class="d">The instrument's timing reference has a fault. Check the timebase and any external 10 MHz reference. Timing may have been wrong while this lasted.</span></div>
+          <span class="d">A fault in the timing reference: check the timebase and any external 10 MHz reference.</span></div>
         <p class="muted"><span class="ui">Show</span> jumps to the instrument, and <b>×</b> dismisses the alert. Alerts are also kept in the audit trail.</p>
       </div>
 
@@ -291,7 +293,7 @@
       <div class="block">
         <h3>If something goes wrong</h3>
         <table class="trouble">
-          <tr><td>Will not connect</td><td>Check the IP address against the front panel and that the computer is on the same network. Close any other program using the instrument, and try <span class="ui">Find on network</span>.</td></tr>
+          <tr><td>Will not connect</td><td>Check the IP address on the front panel and that the computer is on the same network, close other programs using the instrument, or try <span class="ui">Find on network</span>.</td></tr>
           <tr><td>Value refused</td><td>Read the message under the red field (e.g. <i>Illegal delay</i>). Press <kbd>Esc</kbd> to go back.</td></tr>
           <tr><td>Front panel locked</td><td><span class="ui">Disconnect</span>, or <span class="ui">Go to local</span> on the Interfaces page.</td></tr>
           <tr><td>Pages may be out of date</td><td>Shown after typing commands in the Terminal. Click it or press <kbd>F5</kbd>.</td></tr>
