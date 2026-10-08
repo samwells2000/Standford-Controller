@@ -144,17 +144,24 @@ public sealed class AuditLog : ObservableObject
     /// <summary>Waits until every record has been written, or writing has failed. Returns the number still waiting.</summary>
     public async Task<int> FlushAsync()
     {
-        Kick();
-        Task writer;
-        lock (_sync)
+        while (true)
         {
-            writer = _writer;
-        }
+            Kick();
+            Task writer;
+            lock (_sync)
+            {
+                writer = _writer;
+            }
 
-        await writer.ConfigureAwait(false);
-        lock (_sync)
-        {
-            return _pending.Count;
+            await writer.ConfigureAwait(false);
+            lock (_sync)
+            {
+                // A record that arrived as that writer finished has started another one: wait for it too.
+                if (_pending.Count == 0 || !_writing)
+                {
+                    return _pending.Count;
+                }
+            }
         }
     }
 
