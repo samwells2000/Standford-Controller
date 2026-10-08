@@ -40,6 +40,9 @@ public sealed class HelpViewModel : ObservableObject
     /// <summary>Raised after every navigation, including to the same place, so the view can scroll.</summary>
     public event EventHandler? Navigated;
 
+    /// <summary>Raised when a link to the quick reference card is followed, to open the copy built into the program.</summary>
+    public event EventHandler? QuickReferenceRequested;
+
     public HelpGuide Guide { get; }
 
     public ObservableCollection<HelpContentsEntry> Contents { get; } = [];
@@ -94,14 +97,20 @@ public sealed class HelpViewModel : ObservableObject
     public bool Navigate(string anchor) => Show(anchor, addToHistory: true);
 
     /// <summary>
-    /// Follows a link in the guide. Links within the guide navigate here and return null; anything else
-    /// returns the web address to open in the browser.
+    /// Follows a link in the guide. Links within the guide navigate here and return null, as does the quick reference
+    /// card (see <see cref="QuickReferenceRequested"/>); anything else returns the web address to open in the browser.
     /// </summary>
     public string? ActivateLink(string target)
     {
         if (target.StartsWith('#'))
         {
             Navigate(target[1..]);
+            return null;
+        }
+
+        if (target.TrimStart('.', '/') is HelpGuide.QuickReferenceFile or "docs/" + HelpGuide.QuickReferenceFile)
+        {
+            QuickReferenceRequested?.Invoke(this, EventArgs.Empty);
             return null;
         }
 

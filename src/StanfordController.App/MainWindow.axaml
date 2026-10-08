@@ -90,7 +90,8 @@
             </MenuItem>
             <MenuItem Header="_Help">
                 <MenuItem Header="_User guide" Click="OnContextHelp" InputGesture="F1" />
-                <MenuItem Header="_Quick reference card (PDF)" Click="OnQuickReference" />
+                <MenuItem Header="_Quick reference card (PDF)" Click="OnQuickReference"
+                          ToolTip.Tip="Opens the two-sided card in your web browser, ready to print on one sheet of A4" />
                 <MenuItem Header="_Keyboard shortcuts" Command="{Binding HelpCommand}" CommandParameter="{x:Static help:HelpTopics.Shortcuts}" />
                 <MenuItem Header="_Troubleshooting" Command="{Binding HelpCommand}" CommandParameter="{x:Static help:HelpTopics.Troubleshooting}" />
                 <Separator />
@@ -292,6 +293,8 @@
                                         Content="Configurations and saved setups" />
                                 <Button Classes="link" Command="{Binding HelpCommand}" CommandParameter="{x:Static help:HelpTopics.Shortcuts}"
                                         Content="Keyboard shortcuts" />
+                                <Button Classes="link" Click="OnQuickReference" Content="Quick reference card to print (PDF)"
+                                        ToolTip.Tip="Opens in your web browser" />
                             </StackPanel>
                         </HeaderedContentControl>
 

@@ -9,6 +9,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using StanfordController.App.Controls;
 using StanfordController.App.Dialogs;
+using StanfordController.App.Infrastructure;
 using StanfordController.App.Services;
 using StanfordController.Core.Profiles;
 using StanfordController.Core.Protocol;
@@ -131,12 +132,14 @@ internal sealed class SmokeTest
             _window.Focus();
             Check(_window.CurrentHelpTopic() == HelpTopics.Outputs, $"F1 on the Outputs page should open '{HelpTopics.Outputs}', not '{_window.CurrentHelpTopic()}'.");
 
-            // Help ▸ Quick reference card opens the two-sided PDF built into the program.
-            await using (var card = typeof(MainWindow).Assembly.GetManifestResourceStream("Tempo.QuickReference.pdf"))
+            // Help ▸ Quick reference card hands the two-sided PDF built into the program to the web browser.
+            var card = QuickReference.Load();
+            Check(card.AsSpan().StartsWith("%PDF-"u8), "The quick reference card is not built into the program.");
+            using (var server = new LocalDocumentServer(HelpGuide.QuickReferenceFile, card, "application/pdf"))
+            using (var browser = new HttpClient(new HttpClientHandler { UseProxy = false }))
             {
-                var header = new byte[5];
-                Check(card is not null && await card.ReadAsync(header) == 5 && Encoding.ASCII.GetString(header) == "%PDF-",
-                    "The quick reference card is not built into the program.");
+                var served = await browser.GetByteArrayAsync(server.Address);
+                Check(served.AsSpan().SequenceEqual(card), "The web browser was not given the quick reference card.");
             }
             tabs.SelectedIndex = 0;
 

@@ -2,7 +2,10 @@
 
 `quick-reference.html` is the source of [`../Tempo-Quick-Reference.pdf`](../Tempo-Quick-Reference.pdf), the
 two-sided A4 card for new users: getting started on side 1, everyday tasks on side 2. The program carries the
-PDF and opens it from **Help ▸ Quick reference card (PDF)**, and every release attaches it.
+PDF, and **Help ▸ Quick reference card (PDF)** (also on the start page and linked from the user guide) opens it in the
+default web browser, ready to print. It is handed to the browser from `http://127.0.0.1` on a free port, which only
+this computer can reach, so it opens in the browser rather than the PDF viewer and even sandboxed browsers can read it.
+Every release attaches it too.
 
 To rebuild the PDF after changing the card or the program:
 

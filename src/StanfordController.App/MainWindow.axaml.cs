@@ -2,7 +2,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using StanfordController.App.Infrastructure;
 using StanfordController.Presentation.Help;
@@ -119,30 +118,15 @@ public partial class MainWindow : Window
 
     private void OnOpenReleases(object? sender, RoutedEventArgs e) => Launcher?.LaunchUriAsync(new Uri(AppInfo.ReleasesUrl));
 
-    /// <summary>Opens the two-sided quick reference card in the PDF viewer, ready to print.</summary>
-    private async void OnQuickReference(object? sender, RoutedEventArgs e)
-    {
-        try
-        {
-            var path = Path.Combine(Path.GetTempPath(), "Tempo-Quick-Reference.pdf");
-            await using (var resource = typeof(MainWindow).Assembly.GetManifestResourceStream("Tempo.QuickReference.pdf")
-                                        ?? throw new FileNotFoundException("The quick reference card is missing from this build."))
-            await using (var file = File.Create(path))
-            {
-                await resource.CopyToAsync(file);
-            }
+    /// <summary>Help ▸ Quick reference card: opens the two-sided card in the default web browser, ready to print.</summary>
+    private async void OnQuickReference(object? sender, RoutedEventArgs e) => ShowStatus(await QuickReference.OpenAsync(this));
 
-            if (Launcher is null || !await Launcher.LaunchFileInfoAsync(new FileInfo(path)))
-            {
-                ViewModel!.StatusMessage = $"The quick reference card is saved at {path}; open it with a PDF viewer.";
-            }
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+    /// <summary>Shows a message in the status bar (also used by the help window, which has none).</summary>
+    internal void ShowStatus(string message)
+    {
+        if (ViewModel is { } viewModel)
         {
-            if (ViewModel is { } viewModel)
-            {
-                viewModel.StatusMessage = $"The quick reference card could not be opened: {ex.Message}";
-            }
+            viewModel.StatusMessage = message;
         }
     }
 

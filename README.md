@@ -24,7 +24,7 @@ Get the program from the [latest release](../../releases/latest):
 | **`PKGBUILD`** | Arch Linux: put it in an empty folder and run `makepkg -si`. |
 | **`Tempo-<version>-linux-x64.tar.gz`** | Any x86-64 Linux desktop: unpack, then `./install.sh` (or just run `./tempo-dg645`). |
 | `Tempo-linux-x64`, `Tempo-Portable-linux-x64` | The bare Linux program, normal and portable (`chmod +x` after downloading). |
-| **`Tempo-Quick-Reference.pdf`** | A two-sided quick reference card for new users, on one sheet of A4. Print it double-sided at actual size. It is also in the program under **Help**. |
+| **`Tempo-Quick-Reference.pdf`** | A two-sided quick reference card for new users, on one sheet of A4. Print it double-sided at actual size. In the program, **Help ▸ Quick reference card** opens it in your web browser. |
 
 Each program is a single self-contained file: the .NET runtime, the Avalonia user interface, the
 renderer and the fonts are all inside, so there is nothing else to install. Windows SmartScreen may ask

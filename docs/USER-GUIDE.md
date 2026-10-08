@@ -4,7 +4,7 @@ Tempo (short for *Timing & Event Manager for Pulse Outputs*) controls Stanford R
 
 This guide is built into the program: press **F1** anywhere to open it at the page you are working on. It is also in the repository as `docs/USER-GUIDE.md`.
 
-New to Tempo? **Help ▸ Quick reference card (PDF)** opens a two-sided summary to print and keep by the instrument: getting started on one side, everyday tasks on the other.
+New to Tempo? The [quick reference card](Tempo-Quick-Reference.pdf) (**Help ▸ Quick reference card**) opens in your web browser, ready to print on one sheet of A4 and keep by the instrument: getting started on one side, everyday tasks on the other.
 
 Quick links: [Getting started](#getting-started) · [Configurations and saved setups](#configurations-and-saved-setups) · [Keyboard shortcuts](#keyboard-shortcuts) · [Troubleshooting](#troubleshooting)
 

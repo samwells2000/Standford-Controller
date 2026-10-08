@@ -39,6 +39,9 @@ public sealed class HelpGuide
 {
     public const string ResourceName = "StanfordController.UserGuide.md";
 
+    /// <summary>The quick reference card, beside the guide in the docs folder; the guide links to it by this name.</summary>
+    public const string QuickReferenceFile = "Tempo-Quick-Reference.pdf";
+
     private HelpGuide(string title, IReadOnlyList<HelpTopic> topics)
     {
         Title = title;

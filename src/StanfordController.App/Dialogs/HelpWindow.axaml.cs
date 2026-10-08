@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
+using StanfordController.App.Infrastructure;
 using StanfordController.Presentation.Help;
 
 namespace StanfordController.App.Dialogs;
@@ -16,6 +17,11 @@ public partial class HelpWindow : Window
         InitializeComponent();
         DataContext = _help;
         _help.Navigated += (_, _) => Dispatcher.UIThread.Post(ScrollToAnchor, DispatcherPriority.Background);
+        _help.QuickReferenceRequested += async (_, _) =>
+        {
+            var message = await QuickReference.OpenAsync(this);
+            (Owner as MainWindow)?.ShowStatus(message);
+        };
         Viewer.LinkClicked += (_, target) =>
         {
             if (_help.ActivateLink(target) is { } url)
