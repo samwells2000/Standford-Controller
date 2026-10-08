@@ -37,6 +37,21 @@ public sealed class Dg645Simulator
 
     public Timebase Timebase { get; set; } = Timebase.Internal;
 
+    /// <summary>
+    /// False makes the instrument ignore everything sent to it and never reply, as if it had hung or its cable had
+    /// been pulled, for testing the connection heartbeat.
+    /// </summary>
+    public bool IsResponding { get; set; } = true;
+
+    /// <summary>Sets bits in the instrument status register, e.g. PLL_UNLOCK, as the hardware would on a fault.</summary>
+    public void RaiseStatus(InstrumentStatusFlags flags)
+    {
+        lock (_sync)
+        {
+            _insr |= (int)flags;
+        }
+    }
+
     /// <summary>True after *TRG has armed a single-shot external trigger mode, until an external edge arrives.</summary>
     public bool IsArmed
     {
@@ -85,6 +100,11 @@ public sealed class Dg645Simulator
         {
             ReceivedLines.Add(line);
             var replies = new List<string>();
+            if (!IsResponding)
+            {
+                return replies;
+            }
+
             foreach (var raw in line.Split(';'))
             {
                 var command = raw.Trim();

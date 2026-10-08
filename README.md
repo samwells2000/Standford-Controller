@@ -56,7 +56,11 @@ A new release is built automatically every time `main` changes (see
   the status bar) until the external edge has fired the shot.
 * **Setups page.** Saved setup, `.dg645.json` setup files, the instrument's nine memory locations, and
   reset.
-* **Status, interfaces and terminal.** Live status registers with enable masks, error list, self test,
+* **Heartbeat and alerts.** A connected instrument is checked every second. An alert bar shows at
+  once if it stops answering, the connection drops, or it reports a fault: a PLL or rubidium unlock,
+  or a changed timebase such as a lost external reference. The window also asks for attention, with
+  an optional alert sound.
+* **Status, interfaces and terminal.** Status registers with enable masks, error list, self test,
   auto calibration and timebase; every LAN, RS-232 and GPIB setting; a command terminal with history,
   error checking and a searchable command reference.
 * **Communication log** of every command and reply, which can be copied or saved.

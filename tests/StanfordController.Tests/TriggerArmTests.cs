@@ -19,7 +19,7 @@ public sealed class TriggerArmTests
         await client.ConnectAsync();
         var session = new InstrumentSessionViewModel(new InstrumentProfile { Name = "Test", IsSimulator = true }, client, new FakeDialogs(), new LogViewModel())
         {
-            PollIntervalSeconds = 0.2,
+            HeartbeatIntervalSeconds = 0.2,
         };
         await session.RefreshAllAsync();
         return (session, simulator);
@@ -65,7 +65,7 @@ public sealed class TriggerArmTests
     public async Task ExternalSingleShotShowsArmThenReadyUntilTheEdgeArrives()
     {
         var (session, simulator) = await CreateSessionAsync(TriggerSource.SingleShotExternalRising);
-        Assert.False(session.IsPolling);
+        Assert.False(session.IsHeartbeatRunning);
         Assert.True(session.TriggerCommand.CanExecute(null));
         Assert.Equal("Arm", session.TriggerActionText);
         Assert.Equal("Arm", session.TriggerNowText);
@@ -79,10 +79,11 @@ public sealed class TriggerArmTests
         Assert.Equal("_Arm again", session.TriggerMenuText);
         Assert.StartsWith("Armed at", session.StatusMessage);
 
-        // With nothing at the trigger input it stays Ready, though Live status is off.
+        // With nothing at the trigger input it stays Ready. Arming starts the background check even without the
+        // heartbeat (which only starts once a session is fully connected).
         await Task.Delay(600);
         Assert.True(session.IsArmed);
-        Assert.False(session.IsPolling);
+        Assert.True(session.IsHeartbeatRunning);
 
         simulator.ExternalTrigger();
         await WaitForAsync(() => !session.IsArmed);
@@ -135,7 +136,7 @@ public sealed class TriggerArmTests
     {
         var (session, _) = await CreateSessionAsync(TriggerSource.SingleShotExternalRising);
         await TriggerAsync(session);
-        session.StopPolling();
+        session.StopHeartbeat();
         Assert.False(session.IsArmed);
         Assert.Equal("Arm", session.TriggerActionText);
     }

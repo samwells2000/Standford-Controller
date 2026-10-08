@@ -29,8 +29,8 @@
                 <HeaderedContentControl Theme="{StaticResource Section}" Header="Instrument status">
                     <HeaderedContentControl.Tag>
                         <StackPanel Orientation="Horizontal" Spacing="10">
-                            <TextBlock Text="{Binding Status.LastPollText}" Classes="caption" VerticalAlignment="Center" />
-                            <CheckBox Content="Live" IsChecked="{Binding IsPolling}" ToolTip.Tip="Read the register every second" />
+                            <TextBlock Text="{Binding Status.LastPollText}" Classes="caption" VerticalAlignment="Center"
+                                       ToolTip.Tip="Read every second while connected, as the connection heartbeat" />
                         </StackPanel>
                     </HeaderedContentControl.Tag>
                     <StackPanel>

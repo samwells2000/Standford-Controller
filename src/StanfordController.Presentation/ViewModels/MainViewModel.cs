@@ -46,6 +46,7 @@ public sealed class MainViewModel : ObservableObject
         _dialogs = dialogs;
         _settingsStore = settingsStore;
         Audit = new AuditLog(Path.Combine(Path.GetDirectoryName(_defaultConfigurationPath) ?? ".", "Audit trail"), $"{AppName} {Help.AppInfo.Version}");
+        Alerts.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasAlerts));
         Instruments.CollectionChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(HasInstruments));
@@ -167,6 +168,29 @@ public sealed class MainViewModel : ObservableObject
     public bool IsLightTheme => Theme == AppTheme.Light;
 
     public bool IsDarkTheme => Theme == AppTheme.Dark;
+
+    /// <summary>Faults and connection problems, newest first, shown in the bar at the top of the window.</summary>
+    public ObservableCollection<AlertViewModel> Alerts { get; } = [];
+
+    public bool HasAlerts => Alerts.Count > 0;
+
+    /// <summary>Raised when a new alert appears, so the window can ask for attention.</summary>
+    public event EventHandler<AlertViewModel>? AlertRaised;
+
+    /// <summary>Whether a new alert also plays the system's alert sound.</summary>
+    public bool AlertSound
+    {
+        get => _settings.AlertSound;
+        set
+        {
+            if (_settings.AlertSound != value)
+            {
+                _settings.AlertSound = value;
+                OnPropertyChanged();
+                SaveSettings();
+            }
+        }
+    }
 
     /// <summary>Whether communication logs are shown under the instrument pages (applies to every instrument).</summary>
     public bool ShowLog
@@ -535,6 +559,7 @@ public sealed class MainViewModel : ObservableObject
         }
 
         _store = store;
+        Alerts.Clear();
         Instruments.Clear();
         foreach (var profile in profiles)
         {
@@ -568,7 +593,36 @@ public sealed class MainViewModel : ObservableObject
             }
         };
         item.PropertyChanged += OnItemPropertyChanged;
+        item.AlertRaised += OnAlertRaised;
+        item.AlertResolved += OnAlertResolved;
         return item;
+    }
+
+    private void OnAlertRaised(object? sender, InstrumentAlert alert)
+    {
+        if (sender is not InstrumentItemViewModel item)
+        {
+            return;
+        }
+
+        // The same problem again updates its alert instead of adding another.
+        if (Alerts.FirstOrDefault(a => a.Item == item && a.Kind == alert.Kind) is { } existing)
+        {
+            existing.Repeat(alert);
+            return;
+        }
+
+        var added = new AlertViewModel(item, alert, a => Alerts.Remove(a), i => SelectedInstrument = i);
+        Alerts.Insert(0, added);
+        AlertRaised?.Invoke(this, added);
+    }
+
+    private void OnAlertResolved(object? sender, string kind)
+    {
+        foreach (var alert in Alerts.Where(a => a.Item == sender && a.Kind == kind).ToList())
+        {
+            Alerts.Remove(alert);
+        }
     }
 
     private void OnItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -709,6 +763,13 @@ public sealed class MainViewModel : ObservableObject
         await item.DisconnectAsync();
         var index = Instruments.IndexOf(item);
         item.PropertyChanged -= OnItemPropertyChanged;
+        item.AlertRaised -= OnAlertRaised;
+        item.AlertResolved -= OnAlertResolved;
+        foreach (var alert in Alerts.Where(a => a.Item == item).ToList())
+        {
+            Alerts.Remove(alert);
+        }
+
         Instruments.Remove(item);
         Save();
         RecordConfigurationChange(item.Profile, AuditActions.InstrumentRemoved,

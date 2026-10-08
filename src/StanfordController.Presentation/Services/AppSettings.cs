@@ -36,6 +36,9 @@ public sealed class AppSettings
 
     public bool ShowLog { get; set; } = true;
 
+    /// <summary>Play the system's alert sound when an instrument reports a fault or its connection drops.</summary>
+    public bool AlertSound { get; set; } = true;
+
     /// <summary>The configuration file open last time; reopened at startup.</summary>
     public string? ConfigurationPath { get; set; }
 

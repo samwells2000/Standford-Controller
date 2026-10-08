@@ -10,9 +10,13 @@
         <!-- ============================== Header ============================== -->
         <Border DockPanel.Dock="Top" Classes="chrome" BorderThickness="0,0,0,1" Padding="16,7,14,7">
             <DockPanel>
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
-                    <Ellipse Classes="state" Classes.connected="{Binding IsConnected}" Classes.connecting="{Binding IsConnecting}" Classes.failed="{Binding IsFailed}" />
+                <!-- Connection state, with the heartbeat's round trip while connected. -->
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center" Background="Transparent"
+                            ToolTip.Tip="{Binding HeartbeatTip}">
+                    <Ellipse Classes="state" Classes.connected="{Binding IsConnected}" Classes.connecting="{Binding IsConnecting}" Classes.failed="{Binding IsFailed}"
+                             Classes.warning="{Binding IsNotResponding}" />
                     <TextBlock Text="{Binding StateText}" Classes="secondary" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding HeartbeatText}" Classes="caption" VerticalAlignment="Center" IsVisible="{Binding IsConnected}" />
                 </StackPanel>
                 <!-- Recorded with every change in the audit trail. -->
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" Margin="0,0,22,0" VerticalAlignment="Center"
@@ -61,8 +65,6 @@
                     <Button Classes="tool" Content="Restore saved…" Command="{Binding RestoreSetupCommand}"
                             ToolTip.Tip="{Binding StoredSetupText, StringFormat='Put the setup saved in the configuration back on the instrument ({0}). Ctrl+R'}" />
                     <Border Classes="vrule" />
-                    <CheckBox Content="Live status" IsChecked="{Binding Session?.IsPolling, FallbackValue=False}" IsEnabled="{Binding IsConnected}" Margin="4,0,10,0"
-                              ToolTip.Tip="Read the instrument's status register every second (Status page)" />
                     <CheckBox Content="Log" IsChecked="{Binding Log.IsPanelVisible}" ToolTip.Tip="Show every command sent and reply received (Ctrl+L)" />
                 </StackPanel>
 

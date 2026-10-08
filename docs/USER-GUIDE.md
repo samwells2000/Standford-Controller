@@ -55,7 +55,8 @@ Easiest of all is **Find on network**, which asks every address on this computer
 
 - **Menu bar.** *File* handles configurations and saving setups, *Instrument* works on the instrument selected in the list, *View* shows or hides the communication log and changes the theme, and *Help* opens this guide.
 - **Instrument list** (left). Every instrument in the open configuration. The dot shows the connection: hollow when not connected, green when connected, amber while connecting, red if the connection failed. The second line is the address and location. Double-click to connect; right-click for the other actions.
-- **Header and command bar** (top of the instrument). The instrument's name, address, model, serial number and firmware, then buttons for the common actions: **Connect / Disconnect**, **Edit…**, **Refresh**, **Trigger** (which reads **Arm** or **Ready** in the [single-shot external modes](#single-shot-and-arming)), **Save setup**, **Restore saved…**, and the **Live status** and **Log** check boxes.
+- **Header and command bar** (top of the instrument). The instrument's name, address, model, serial number and firmware, then buttons for the common actions: **Connect / Disconnect**, **Edit…**, **Refresh**, **Trigger** (which reads **Arm** or **Ready** in the [single-shot external modes](#single-shot-and-arming)), **Save setup**, **Restore saved…** and the **Log** check box. At the top right, the connection state shows the [heartbeat](#heartbeat-and-alerts): the time the instrument took to answer, or how long it has been silent.
+- **Alert bar** (across the top, when needed). Faults the instrument reports and connection problems, newest first; see [Heartbeat and alerts](#heartbeat-and-alerts).
 - **Pages.** Delays, Outputs, Trigger, Burst, Setups, Status, Interfaces and Terminal, one tab each. Each is described below.
 - **Communication log** (bottom). Every command sent and reply received, with the time; see [Communication log](#communication-log).
 - **Status bar.** The connection state, the trigger source and rate (with a green **Ready** while a single shot is armed), whether burst mode is on, **Setup not saved** when the instrument's settings have changed since its setup was last saved, the latest message, and the name of the open configuration. **Portable** appears when you are running the portable program.
@@ -165,13 +166,29 @@ Double-click an instrument, press **Connect** or press Ctrl+K. Tempo:
 2. asks it to identify itself and clears any old errors,
 3. reads every setting and fills in all the pages,
 4. compares the instrument with its saved setup, if it has one (see [When an instrument connects](#when-an-instrument-connects)),
-5. starts reading the status register once a second (**Live status**).
+5. starts the [heartbeat](#heartbeat-and-alerts), which checks the instrument every second.
 
 While Tempo is connected the DG645 is in remote mode and its front panel is locked. **Disconnect** (Ctrl+Shift+K) closes the connection and, unless you untick the option in the instrument editor, returns the front panel to local control. Closing Tempo disconnects every instrument.
 
-If the connection drops (the cable is pulled, the instrument is switched off, the network fails), Tempo notices within a few seconds, marks the instrument red and shows the reason. Connect again when it is back.
+If the connection drops (the cable is pulled, the instrument is switched off, the network fails), the heartbeat notices within seconds and an alert appears; see below. Connect again when it is back.
 
 Several instruments can be connected at the same time; select one in the list to see its pages.
+
+### Heartbeat and alerts
+
+While an instrument is connected, Tempo checks it every second by reading its status register. This is the **heartbeat**. Each reply shows the connection is alive and carries the instrument's fault flags. The header shows how long the last reply took (for example *Connected 4 ms*); hover over it for the time of the last reply.
+
+When something is wrong, an **alert** appears in the bar across the top of the window. It stays until you dismiss it (×), even if you are looking at another instrument:
+
+| Alert | When | What to do |
+| --- | --- | --- |
+| **Not responding** (amber) | The instrument missed a heartbeat. Its dot turns amber and the header shows how long it has been silent. | Usually nothing: the alert clears by itself as soon as the instrument answers again. Check that it is switched on and its network cable is in. |
+| **Connection lost** (red) | The instrument missed three heartbeats in a row (about 10 seconds), or the connection was closed. Its dot turns red. | Check power and cabling, then press **Reconnect** in the alert. Reconnecting clears the alert. |
+| **Timebase PLL unlocked** (red) | The DG645 reports its 100 MHz phase-locked loop came unlocked (*PLL_UNLOCK*), so timing may have been wrong. | Check the timebase, and the external 10 MHz reference if one is used. |
+| **Rubidium timebase unlocked** (red) | An optional rubidium timebase reports it is unlocked (*RB_UNLOCK*). | Wait for it to lock after power-on (several minutes); if it persists, check the instrument. |
+| **Timebase changed** (red) | The timebase in use changed, for example from *External reference* to *Internal crystal*. Checked every 10 seconds. | An external reference may have been unplugged or lost. |
+
+The same problem happening again updates its alert ("3 times since 14:03") rather than adding another. **Show** selects the instrument. When an alert appears, the window asks for attention (on Windows its taskbar button flashes if another program is in front) and plays the system alert sound. Turn the sound off with **View ▸ Alert sound**. Every alert is also recorded in the [audit trail](#audit-trail), with the time the instrument answered again.
 
 ### Connecting the instrument directly
 
@@ -271,7 +288,7 @@ The trigger button on the command bar, the button under **Single shot** on this 
 - **Single shot.** The button reads **Trigger** (**Trigger now** on this page) and starts one delay cycle straight away.
 - **Single shot, external rising** or **falling.** The button reads **Arm**. Arming tells the DG645 to start one delay cycle on the next edge at its trigger input. While it waits, the button reads **Ready** in green, on the command bar above every page, and the status bar shows **Ready** beside the trigger source. When the edge arrives and the delay cycle has run, the button goes back to **Arm** for the next shot. Clicking **Ready** arms the instrument again.
 
-Tempo notices the shot by reading the instrument's status register about once a second, even when **Live status** is off, so **Ready** can stay on for up to a second afterwards. Choosing another trigger source, resetting the instrument, recalling or restoring a setup, or disconnecting clears **Ready**. If the instrument is armed from its front panel, Tempo cannot tell, and the button stays at **Arm**.
+Tempo notices the shot with the [heartbeat](#heartbeat-and-alerts), which reads the instrument's status register every second, so **Ready** can stay on for up to a second afterwards. Choosing another trigger source, resetting the instrument, recalling or restoring a setup, or disconnecting clears **Ready**. If the instrument is armed from its front panel, Tempo cannot tell, and the button stays at **Arm**.
 
 ### Advanced triggering
 
@@ -310,7 +327,7 @@ Recall, import and reset ask before replacing the current settings.
 
 ### Status registers
 
-The **Instrument status** table shows the DG645's events since the lamps were last cleared: a trigger received, a trigger arriving while a cycle was in progress (*RATE*), the end of a delay or burst cycle, inhibited triggers, aborted cycles, and loss of lock of the internal PLL or an optional rubidium timebase. Tick **Live** (or *Live status* on the command bar) to read it every second. **Clear lamps** resets them.
+The **Instrument status** table shows the DG645's events since the lamps were last cleared: a trigger received, a trigger arriving while a cycle was in progress (*RATE*), the end of a delay or burst cycle, inhibited triggers, aborted cycles, and loss of lock of the internal PLL or an optional rubidium timebase. The heartbeat reads it every second while connected; **Read now** reads it at once. **Clear lamps** resets them.
 
 The **Standard event status** and **Status byte** tables are the IEEE-488.2 registers. The **Enable** boxes choose which bits feed the summary bits and the service request; **Apply enable masks** writes them to the instrument. Most users never need them.
 
@@ -354,7 +371,7 @@ Commands sent from the Terminal can change settings shown on other pages; when t
 
 The log under the pages records every command sent (→), reply received (←), error (✕) and connection event, with the time to the millisecond. Untick **Commands and replies** to show only connection events and errors. **Copy** puts the whole log on the clipboard and **Save…** writes it to a text file, which is the most useful thing to include when reporting a problem.
 
-Show or hide the log with the **Log** check box, **View ▸ Communication log** or Ctrl+L. The status register reads made by *Live status* are not logged, to keep the log readable.
+Show or hide the log with the **Log** check box, **View ▸ Communication log** or Ctrl+L. The heartbeat's status register reads are not logged, to keep the log readable; only a missed reply is.
 
 ## Audit trail
 
