@@ -8,6 +8,7 @@ public sealed class SimulatorTransport(Dg645Simulator simulator) : IDg645Transpo
 {
     private Channel<string> _responses = Channel.CreateUnbounded<string>();
     private bool _connected;
+    private bool _dropped;
 
     public SimulatorTransport() : this(new Dg645Simulator())
     {
@@ -23,14 +24,23 @@ public sealed class SimulatorTransport(Dg645Simulator simulator) : IDg645Transpo
     {
         _responses = Channel.CreateUnbounded<string>();
         _connected = true;
+        _dropped = false;
         return Task.CompletedTask;
     }
+
+    /// <summary>Breaks the link as a network failure or a power cut would: the next write fails.</summary>
+    public void Drop() => _dropped = true;
 
     public Task WriteLineAsync(string line, CancellationToken cancellationToken)
     {
         if (!_connected)
         {
             throw new InvalidOperationException("Not connected.");
+        }
+
+        if (_dropped)
+        {
+            throw new IOException("The connection was closed by the instrument.");
         }
 
         foreach (var response in Simulator.Process(line))

@@ -1,6 +1,7 @@
 using System.IO;
 using System.Net.Sockets;
 using System.Windows.Input;
+using System.Diagnostics;
 using System.Runtime.ExceptionServices;
 using StanfordController.Core;
 using StanfordController.Core.Audit;
@@ -27,10 +28,13 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
 
     private readonly LogViewModel _log;
     private readonly AuditLog? _audit;
-    private CancellationTokenSource? _pollCancellation;
-    private bool _isPolling;
-    private double _pollIntervalSeconds = 1;
-    private int _pollFailures;
+    private CancellationTokenSource? _heartbeatCancellation;
+    private bool _heartbeatOn;
+    private double _heartbeatIntervalSeconds = 1;
+    private int _missedBeats;
+    private long _beats;
+    private DateTime? _lastReply;
+    private TimeSpan? _latency;
     private bool _isBusy;
     private string? _busyText;
     private string? _statusMessage;
@@ -200,7 +204,7 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
             if (SetProperty(ref _isArmed, value))
             {
                 OnTriggerActionChanged();
-                UpdatePollLoop();
+                UpdateHeartbeat();
             }
         }
     }
@@ -245,31 +249,50 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         private set => SetProperty(ref _statusIsError, value);
     }
 
-    /// <summary>Poll the instrument status register in the background.</summary>
-    public bool IsPolling
+    /// <summary>Missed heartbeats in a row before the connection counts as lost.</summary>
+    public const int MissedBeatsBeforeLost = 3;
+
+    /// <summary>
+    /// How often the heartbeat asks the instrument for its status (INSR?) while connected. Each reply shows the
+    /// connection is alive, and carries the fault bits (PLL and rubidium unlock) that raise alerts.
+    /// </summary>
+    public double HeartbeatIntervalSeconds
     {
-        get => _isPolling;
+        get => _heartbeatIntervalSeconds;
         set
         {
-            if (SetProperty(ref _isPolling, value))
+            if (SetProperty(ref _heartbeatIntervalSeconds, Math.Clamp(value, 0.2, 60)) && _heartbeatCancellation is not null)
             {
-                UpdatePollLoop();
+                StopHeartbeatLoop();
+                UpdateHeartbeat();
             }
         }
     }
 
-    public double PollIntervalSeconds
-    {
-        get => _pollIntervalSeconds;
-        set
-        {
-            if (SetProperty(ref _pollIntervalSeconds, Math.Clamp(value, 0.2, 60)) && _pollCancellation is not null)
-            {
-                StopPollLoop();
-                UpdatePollLoop();
-            }
-        }
-    }
+    /// <summary>True while the heartbeat (or an armed single shot) is reading the instrument in the background.</summary>
+    public bool IsHeartbeatRunning => _heartbeatCancellation is not null;
+
+    /// <summary>False from the first missed heartbeat until the instrument answers again.</summary>
+    public bool IsResponding => _missedBeats == 0;
+
+    /// <summary>Round trip of the last heartbeat, e.g. "4 ms"; or how long the instrument has been silent.</summary>
+    public string HeartbeatText => _missedBeats > 0
+        ? $"No reply for {SilenceSeconds} s"
+        : _latency is { } latency ? (latency.TotalMilliseconds < 1 ? "<1 ms" : $"{latency.TotalMilliseconds:0} ms") : string.Empty;
+
+    public string HeartbeatTip => _missedBeats > 0
+        ? $"The instrument has not answered the heartbeat since {_lastReply:HH:mm:ss}. After {MissedBeatsBeforeLost} missed replies in a row Tempo reports the connection as lost."
+        : _lastReply is { } at
+            ? $"Heartbeat: the instrument answered at {at:HH:mm:ss}, in {HeartbeatText}. Tempo checks it every {_heartbeatIntervalSeconds:0.#} s and alerts you if it stops answering or reports a fault."
+            : "Tempo checks the instrument every second while connected and alerts you if it stops answering or reports a fault.";
+
+    private int SilenceSeconds => _lastReply is { } at ? (int)Math.Round((DateTime.Now - at).TotalSeconds) : 0;
+
+    /// <summary>A fault or connection problem to show in the alert bar.</summary>
+    public event EventHandler<InstrumentAlert>? AlertRaised;
+
+    /// <summary>A problem that has cleared by itself (identified by its <see cref="InstrumentAlert.Kind"/>).</summary>
+    public event EventHandler<string>? AlertResolved;
 
     public IReadOnlyList<int> SaveSlots { get; } = Enumerable.Range(1, 9).ToList();
 
@@ -305,11 +328,18 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
 
     public ICommand SaveLogCommand { get; }
 
-    /// <summary>Reads everything from the instrument and starts status polling.</summary>
+    /// <summary>Reads everything from the instrument and starts the heartbeat.</summary>
     public async Task InitializeAsync()
     {
         await RefreshAllAsync();
-        IsPolling = true;
+        StartHeartbeat();
+    }
+
+    /// <summary>Starts checking the connection and the instrument's fault bits in the background.</summary>
+    public void StartHeartbeat()
+    {
+        _heartbeatOn = true;
+        UpdateHeartbeat();
     }
 
     public async Task RefreshAllAsync()
@@ -354,16 +384,11 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
     }
 
     /// <summary>Stops all background reading, e.g. on disconnecting.</summary>
-    public void StopPolling()
+    public void StopHeartbeat()
     {
-        if (_isPolling)
-        {
-            _isPolling = false;
-            OnPropertyChanged(nameof(IsPolling));
-        }
-
+        _heartbeatOn = false;
         IsArmed = false;
-        StopPollLoop();
+        StopHeartbeatLoop();
     }
 
     // ---- IInstrumentContext ----
@@ -461,7 +486,7 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         }
 
         _disconnectRequested = true;
-        StopPolling();
+        StopHeartbeat();
         DisconnectRequested?.Invoke(this, reason);
     }
 
@@ -560,6 +585,20 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
 
     private void OnInstrumentStatusRead(InstrumentStatusFlags status)
     {
+        if (status.HasFlag(InstrumentStatusFlags.PllUnlock))
+        {
+            RaiseFault(new InstrumentAlert(InstrumentAlert.PllUnlocked, AlertSeverity.Error, "Timebase PLL unlocked",
+                "The DG645 reports that its 100 MHz phase-locked loop came unlocked (PLL_UNLOCK), so output timing may have been wrong. " +
+                "Check the timebase, and the external 10 MHz reference if one is connected."));
+        }
+
+        if (status.HasFlag(InstrumentStatusFlags.RbUnlock))
+        {
+            RaiseFault(new InstrumentAlert(InstrumentAlert.RubidiumUnlocked, AlertSeverity.Error, "Rubidium timebase unlocked",
+                "The DG645 reports that its rubidium timebase is unlocked (RB_UNLOCK), so its timing is not referenced to the rubidium standard. " +
+                "It can take several minutes to lock after power-on."));
+        }
+
         // End of delay (or burst), not TRIG: the cycle the external edge started has run, so the shot is spent.
         if (_isArmed && (status & (InstrumentStatusFlags.EndOfDelay | InstrumentStatusFlags.EndOfBurst)) != 0)
         {
@@ -814,52 +853,79 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         StatusIsError = isError;
     }
 
-    // The status register is read while Live status is on, and while a single shot is armed so its trigger is noticed.
-    private void UpdatePollLoop()
+    private void RaiseFault(InstrumentAlert alert)
     {
-        if (!(_isPolling || _isArmed) || _disconnectRequested)
+        Audit(AuditActions.Fault, details: $"{alert.Title}: {alert.Message}");
+        SetStatus($"{alert.Title} at {DateTime.Now:HH:mm:ss}.", isError: true);
+        AlertRaised?.Invoke(this, alert);
+    }
+
+    // The heartbeat runs while connected, and while a single shot is armed (so its shot is noticed in tests too).
+    private void UpdateHeartbeat()
+    {
+        if (!(_heartbeatOn || _isArmed) || _disconnectRequested)
         {
-            StopPollLoop();
+            StopHeartbeatLoop();
             return;
         }
 
-        if (_pollCancellation is null)
+        if (_heartbeatCancellation is null)
         {
             var cancellation = new CancellationTokenSource();
-            _pollCancellation = cancellation;
-            _ = PollLoopAsync(TimeSpan.FromSeconds(_pollIntervalSeconds), cancellation.Token);
+            _heartbeatCancellation = cancellation;
+            OnPropertyChanged(nameof(IsHeartbeatRunning));
+            _ = HeartbeatLoopAsync(TimeSpan.FromSeconds(_heartbeatIntervalSeconds), cancellation.Token);
         }
     }
 
-    private void StopPollLoop()
+    private void StopHeartbeatLoop()
     {
-        _pollCancellation?.Cancel();
-        _pollCancellation = null;
+        if (_heartbeatCancellation is not null)
+        {
+            _heartbeatCancellation.Cancel();
+            _heartbeatCancellation = null;
+            OnPropertyChanged(nameof(IsHeartbeatRunning));
+        }
     }
 
-    private async Task PollLoopAsync(TimeSpan interval, CancellationToken token)
+    private async Task HeartbeatLoopAsync(TimeSpan interval, CancellationToken token)
     {
         using var timer = new PeriodicTimer(interval);
         try
         {
             while (await timer.WaitForNextTickAsync(token))
             {
+                // A long operation (applying a setup, a refresh) talks to the instrument itself and reports failures.
                 if (_isBusy)
                 {
                     continue;
                 }
 
+                var started = Stopwatch.GetTimestamp();
                 try
                 {
                     await Status.PollAsync();
-                    _pollFailures = 0;
+                    var latency = Stopwatch.GetElapsedTime(started);
+                    if (++_beats % 10 == 0)
+                    {
+                        await CheckTimebaseAsync();
+                    }
+
+                    OnHeartbeat(latency);
                 }
                 catch (Exception ex) when (!token.IsCancellationRequested)
                 {
-                    _pollFailures++;
-                    if (IsConnectionFailure(ex) || _pollFailures >= 3)
+                    if (IsConnectionFailure(ex))
                     {
-                        RequestDisconnect($"Lost contact with the instrument: {ParameterViewModel.DescribeError(ex)}");
+                        RequestDisconnect($"The connection to the instrument was closed: {ParameterViewModel.DescribeError(ex).TrimEnd('.')}.");
+                        return;
+                    }
+
+                    if (OnMissedHeartbeat())
+                    {
+                        RequestDisconnect(
+                            $"The instrument stopped answering: no reply to {MissedBeatsBeforeLost} heartbeats in a row since {_lastReply:HH:mm:ss}. " +
+                            "It may be switched off, or its network cable unplugged.");
                         return;
                     }
                 }
@@ -868,6 +934,55 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         catch (OperationCanceledException)
         {
         }
+    }
+
+    private void OnHeartbeat(TimeSpan latency)
+    {
+        var missed = _missedBeats;
+        _missedBeats = 0;
+        _lastReply = DateTime.Now;
+        _latency = latency;
+        RaiseHeartbeatProperties();
+        if (missed > 0)
+        {
+            Audit(AuditActions.RespondingAgain, details: $"The instrument answered again after {missed} missed heartbeat{(missed == 1 ? string.Empty : "s")}");
+            SetStatus($"The instrument is answering again ({DateTime.Now:HH:mm:ss}).");
+            AlertResolved?.Invoke(this, InstrumentAlert.NotResponding);
+        }
+    }
+
+    /// <summary>Returns true when enough heartbeats have been missed in a row to call the connection lost.</summary>
+    private bool OnMissedHeartbeat()
+    {
+        _lastReply ??= DateTime.Now;
+        _missedBeats++;
+        RaiseHeartbeatProperties();
+        if (_missedBeats == 1)
+        {
+            var message = $"No reply to the heartbeat since {_lastReply:HH:mm:ss}. If this continues, Tempo will report the connection as lost.";
+            Audit(AuditActions.NotResponding, details: message);
+            SetStatus($"The instrument is not responding ({DateTime.Now:HH:mm:ss}).", isError: true);
+            AlertRaised?.Invoke(this, new InstrumentAlert(InstrumentAlert.NotResponding, AlertSeverity.Warning, "Not responding", message));
+        }
+
+        return _missedBeats >= MissedBeatsBeforeLost;
+    }
+
+    private async Task CheckTimebaseAsync()
+    {
+        if (await Status.CheckTimebaseAsync() is { } change)
+        {
+            RaiseFault(new InstrumentAlert(InstrumentAlert.TimebaseChanged, AlertSeverity.Error, "Timebase changed",
+                $"The instrument's timebase changed from {change.Before} to {change.After}. " +
+                "If an external reference was in use, it may have been disconnected or lost."));
+        }
+    }
+
+    private void RaiseHeartbeatProperties()
+    {
+        OnPropertyChanged(nameof(IsResponding));
+        OnPropertyChanged(nameof(HeartbeatText));
+        OnPropertyChanged(nameof(HeartbeatTip));
     }
 
     private static bool IsConnectionFailure(Exception exception) =>

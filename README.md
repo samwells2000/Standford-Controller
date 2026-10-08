@@ -24,6 +24,7 @@ Get the program from the [latest release](../../releases/latest):
 | **`PKGBUILD`** | Arch Linux: put it in an empty folder and run `makepkg -si`. |
 | **`Tempo-<version>-linux-x64.tar.gz`** | Any x86-64 Linux desktop: unpack, then `./install.sh` (or just run `./tempo-dg645`). |
 | `Tempo-linux-x64`, `Tempo-Portable-linux-x64` | The bare Linux program, normal and portable (`chmod +x` after downloading). |
+| **`Tempo-Quick-Reference.pdf`** | A two-sided quick reference card for new users, on one sheet of A4. Print it double-sided at actual size. In the program, **Help ▸ Quick reference card** opens it in your web browser. |
 
 Each program is a single self-contained file: the .NET runtime, the Avalonia user interface, the
 renderer and the fonts are all inside, so there is nothing else to install. Windows SmartScreen may ask
@@ -56,7 +57,11 @@ A new release is built automatically every time `main` changes (see
   the status bar) until the external edge has fired the shot.
 * **Setups page.** Saved setup, `.dg645.json` setup files, the instrument's nine memory locations, and
   reset.
-* **Status, interfaces and terminal.** Live status registers with enable masks, error list, self test,
+* **Heartbeat and alerts.** A connected instrument is checked every second. An alert bar shows at
+  once if it stops answering, the connection drops, or it reports a fault: a PLL or rubidium unlock,
+  or a changed timebase such as a lost external reference. The window also asks for attention, with
+  an optional alert sound.
+* **Status, interfaces and terminal.** Status registers with enable masks, error list, self test,
   auto calibration and timebase; every LAN, RS-232 and GPIB setting; a command terminal with history,
   error checking and a searchable command reference.
 * **Communication log** of every command and reply, which can be copied or saved.
@@ -90,6 +95,9 @@ The audit trail: every change with its old and new values, the reason given, and
 ## Documentation
 
 * [`docs/USER-GUIDE.md`](docs/USER-GUIDE.md): the user guide, also built into the program (F1).
+* [`docs/Tempo-Quick-Reference.pdf`](docs/Tempo-Quick-Reference.pdf): a two-sided A4 quick reference card,
+  covering getting started and everyday tasks. Rebuild it from
+  [`docs/quick-reference/`](docs/quick-reference/README.md) after changing the program.
 * [`docs/DG645-Command-Reference.md`](docs/DG645-Command-Reference.md): the DG645 remote command set,
   parameters, status registers and error codes, and where each command appears in the program.
 * [`docs/manuals/`](docs/manuals/README.md): the official Stanford Research Systems manual and data

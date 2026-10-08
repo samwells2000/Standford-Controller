@@ -13,6 +13,7 @@ namespace StanfordController.App;
 public partial class MainWindow : Window
 {
     private bool _closeConfirmed;
+    private MainViewModel? _alertSource;
 
     public MainWindow()
     {
@@ -20,6 +21,36 @@ public partial class MainWindow : Window
     }
 
     private MainViewModel? ViewModel => DataContext as MainViewModel;
+
+    protected override void OnDataContextChanged(EventArgs e)
+    {
+        base.OnDataContextChanged(e);
+        if (_alertSource is not null)
+        {
+            _alertSource.AlertRaised -= OnAlertRaised;
+        }
+
+        _alertSource = ViewModel;
+        if (_alertSource is not null)
+        {
+            _alertSource.AlertRaised += OnAlertRaised;
+        }
+    }
+
+    /// <summary>A new fault or a lost connection: ask for the user's attention, with a sound if that is turned on.</summary>
+    private void OnAlertRaised(object? sender, AlertViewModel alert)
+    {
+        if (ViewModel?.AlertSound == true)
+        {
+            AlertSound.Play(alert.IsError);
+        }
+
+        // On Windows this flashes the taskbar button if another program has the focus.
+        if (!IsActive)
+        {
+            Activate();
+        }
+    }
 
     /// <summary>Puts the window back where it was last time, if that spot is still on a screen.</summary>
     public void RestorePlacement(WindowPlacement? placement)
@@ -86,6 +117,18 @@ public partial class MainWindow : Window
     private void OnExit(object? sender, RoutedEventArgs e) => Close();
 
     private void OnOpenReleases(object? sender, RoutedEventArgs e) => Launcher?.LaunchUriAsync(new Uri(AppInfo.ReleasesUrl));
+
+    /// <summary>Help ▸ Quick reference card: opens the two-sided card in the default web browser, ready to print.</summary>
+    private async void OnQuickReference(object? sender, RoutedEventArgs e) => ShowStatus(await QuickReference.OpenAsync(this));
+
+    /// <summary>Shows a message in the status bar (also used by the help window, which has none).</summary>
+    internal void ShowStatus(string message)
+    {
+        if (ViewModel is { } viewModel)
+        {
+            viewModel.StatusMessage = message;
+        }
+    }
 
     /// <summary>Offers to save unsaved setups, remembers the window placement, then disconnects every instrument.</summary>
     protected override void OnClosing(WindowClosingEventArgs e)

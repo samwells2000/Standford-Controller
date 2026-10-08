@@ -26,6 +26,7 @@ public sealed class InstrumentItemViewModel : ObservableObject
     private ConnectionState _state;
     private string? _lastError;
     private InstrumentSessionViewModel? _session;
+    private bool _connectionLost;
 
     /// <param name="configurationName">The name of the configuration this instrument is saved in, for the audit trail.</param>
     public InstrumentItemViewModel(InstrumentProfile profile, IDialogService dialogs, Action<InstrumentItemViewModel> profileChanged,
@@ -107,11 +108,27 @@ public sealed class InstrumentItemViewModel : ObservableObject
 
     public string StateText => _state switch
     {
+        ConnectionState.Connected when IsNotResponding => "Not responding",
         ConnectionState.Connected => "Connected",
         ConnectionState.Connecting => "Connecting…",
+        ConnectionState.Failed when _connectionLost => "Connection lost",
         ConnectionState.Failed => "Connection failed",
         _ => "Not connected",
     };
+
+    /// <summary>Connected, but the instrument has missed a heartbeat.</summary>
+    public bool IsNotResponding => _session is { IsResponding: false };
+
+    /// <summary>The heartbeat's round trip, e.g. "4 ms", or how long the instrument has been silent.</summary>
+    public string HeartbeatText => _session?.HeartbeatText ?? string.Empty;
+
+    public string? HeartbeatTip => _session?.HeartbeatTip;
+
+    /// <summary>A fault or connection problem for the alert bar.</summary>
+    public event EventHandler<InstrumentAlert>? AlertRaised;
+
+    /// <summary>A problem that has cleared by itself, by <see cref="InstrumentAlert.Kind"/>.</summary>
+    public event EventHandler<string>? AlertResolved;
 
     public string? LastError
     {
@@ -127,6 +144,8 @@ public sealed class InstrumentItemViewModel : ObservableObject
             if (_session is not null)
             {
                 _session.PropertyChanged -= OnSessionPropertyChanged;
+                _session.AlertRaised -= OnSessionAlertRaised;
+                _session.AlertResolved -= OnSessionAlertResolved;
             }
 
             if (SetProperty(ref _session, value))
@@ -134,8 +153,11 @@ public sealed class InstrumentItemViewModel : ObservableObject
                 if (value is not null)
                 {
                     value.PropertyChanged += OnSessionPropertyChanged;
+                    value.AlertRaised += OnSessionAlertRaised;
+                    value.AlertResolved += OnSessionAlertResolved;
                 }
 
+                OnHeartbeatChanged();
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 OnPropertyChanged(nameof(Details));
                 OnPropertyChanged(nameof(StatusMessage));
@@ -169,6 +191,7 @@ public sealed class InstrumentItemViewModel : ObservableObject
             return;
         }
 
+        _connectionLost = false;
         State = ConnectionState.Connecting;
         LastError = null;
         var client = _profile.CreateClient();
@@ -199,6 +222,7 @@ public sealed class InstrumentItemViewModel : ObservableObject
         session.Audit(AuditActions.Connected, details: client.Identity);
         Session = session;
         State = ConnectionState.Connected;
+        AlertResolved?.Invoke(this, InstrumentAlert.ConnectionLost);
         await session.InitializeAsync();
         await OfferStoredSetupAsync(session);
     }
@@ -346,7 +370,24 @@ public sealed class InstrumentItemViewModel : ObservableObject
         {
             RaiseSetupCommands();
         }
+        else if (e.PropertyName is nameof(InstrumentSessionViewModel.IsResponding) or nameof(InstrumentSessionViewModel.HeartbeatText)
+                 or nameof(InstrumentSessionViewModel.HeartbeatTip))
+        {
+            OnHeartbeatChanged();
+        }
     }
+
+    private void OnHeartbeatChanged()
+    {
+        OnPropertyChanged(nameof(IsNotResponding));
+        OnPropertyChanged(nameof(StateText));
+        OnPropertyChanged(nameof(HeartbeatText));
+        OnPropertyChanged(nameof(HeartbeatTip));
+    }
+
+    private void OnSessionAlertRaised(object? sender, InstrumentAlert alert) => AlertRaised?.Invoke(this, alert);
+
+    private void OnSessionAlertResolved(object? sender, string kind) => AlertResolved?.Invoke(this, kind);
 
     private void RaiseSetupCommands()
     {
@@ -363,7 +404,7 @@ public sealed class InstrumentItemViewModel : ObservableObject
             return;
         }
 
-        session.StopPolling();
+        session.StopHeartbeat();
         Session = null;
         var returnToLocal = failureReason is null && _profile.ReturnToLocalOnDisconnect;
         try
@@ -382,6 +423,13 @@ public sealed class InstrumentItemViewModel : ObservableObject
             details: failureReason ?? (returnToLocal ? "Front panel returned to local control" : "Front panel left under remote control"));
 
         LastError = failureReason;
+        _connectionLost = failureReason is not null;
         State = failureReason is null ? ConnectionState.Disconnected : ConnectionState.Failed;
+        AlertResolved?.Invoke(this, InstrumentAlert.NotResponding);
+        if (failureReason is not null)
+        {
+            AlertRaised?.Invoke(this, new InstrumentAlert(InstrumentAlert.ConnectionLost, AlertSeverity.Error, "Connection lost",
+                $"{failureReason} Reconnect once it is back."));
+        }
     }
 }

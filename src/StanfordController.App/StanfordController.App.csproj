@@ -44,6 +44,8 @@
 
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />
+    <!-- The two-sided quick reference card, opened from Help (rebuild with docs/quick-reference/build.mjs). -->
+    <EmbeddedResource Include="..\..\docs\Tempo-Quick-Reference.pdf" LogicalName="Tempo.QuickReference.pdf" Link="Assets\Tempo-Quick-Reference.pdf" />
   </ItemGroup>
 
   <!-- SkiaSharp ships native debug symbols (~100 MB); keep them out of the published program. -->

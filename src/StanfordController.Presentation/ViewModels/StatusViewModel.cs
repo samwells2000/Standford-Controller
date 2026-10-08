@@ -53,6 +53,7 @@ public sealed class StatusViewModel : ParameterViewModel
     private IReadOnlyList<ChoiceOption> _displayChannelOptions = [];
     private DateTime? _lastPoll;
     private bool _timebaseUnsupported;
+    private bool _timebaseKnown;
 
     private static readonly IReadOnlyList<ChoiceOption> ChannelChoices =
         Enum.GetValues<Dg645Channel>().Select(c => new ChoiceOption((int)c, c.ToString())).ToList();
@@ -181,6 +182,7 @@ public sealed class StatusViewModel : ParameterViewModel
             try
             {
                 Timebase = Dg645Names.Describe(await Client.GetTimebaseAsync());
+                _timebaseKnown = true;
             }
             catch (TimeoutException)
             {
@@ -209,6 +211,34 @@ public sealed class StatusViewModel : ParameterViewModel
         _lastPoll = DateTime.Now;
         OnPropertyChanged(nameof(LastPollText));
         InstrumentStatusRead?.Invoke(this, status);
+    }
+
+    /// <summary>
+    /// For the heartbeat: reads the timebase again (TIMB?) and returns the change if it is not the one in use before,
+    /// e.g. an external reference that has been lost. Null when unchanged, or when the firmware does not report it.
+    /// </summary>
+    public async Task<(string Before, string After)?> CheckTimebaseAsync()
+    {
+        if (_timebaseUnsupported || !_timebaseKnown)
+        {
+            return null;
+        }
+
+        Core.Protocol.Timebase now;
+        using (Client.SuppressTrafficLogging())
+        {
+            now = await Client.GetTimebaseAsync();
+        }
+
+        var before = _timebase;
+        var after = Dg645Names.Describe(now);
+        if (after == before)
+        {
+            return null;
+        }
+
+        Timebase = after;
+        return (before, after);
     }
 
     /// <summary>Records an error the instrument reported for one of our commands.</summary>

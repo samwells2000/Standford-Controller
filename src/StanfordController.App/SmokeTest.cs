@@ -9,6 +9,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using StanfordController.App.Controls;
 using StanfordController.App.Dialogs;
+using StanfordController.App.Infrastructure;
 using StanfordController.App.Services;
 using StanfordController.Core.Profiles;
 using StanfordController.Core.Protocol;
@@ -130,6 +131,16 @@ internal sealed class SmokeTest
             await IdleAsync();
             _window.Focus();
             Check(_window.CurrentHelpTopic() == HelpTopics.Outputs, $"F1 on the Outputs page should open '{HelpTopics.Outputs}', not '{_window.CurrentHelpTopic()}'.");
+
+            // Help ▸ Quick reference card hands the two-sided PDF built into the program to the web browser.
+            var card = QuickReference.Load();
+            Check(card.AsSpan().StartsWith("%PDF-"u8), "The quick reference card is not built into the program.");
+            using (var server = new LocalDocumentServer(HelpGuide.QuickReferenceFile, card, "application/pdf"))
+            using (var browser = new HttpClient(new HttpClientHandler { UseProxy = false }))
+            {
+                var served = await browser.GetByteArrayAsync(server.Address);
+                Check(served.AsSpan().SequenceEqual(card), "The web browser was not given the quick reference card.");
+            }
             tabs.SelectedIndex = 0;
 
             // Saving setups writes them into the configuration file.
@@ -154,6 +165,7 @@ internal sealed class SmokeTest
             await CheckSingleShotExternalAsync(session);
             await CheckClickAwayAsync(session);
             await CheckAuditTrailAsync(session);
+            await CheckAlertsAsync(item);
 
             await item.DisconnectAsync();
             await IdleAsync();
@@ -165,6 +177,58 @@ internal sealed class SmokeTest
         }
 
         Finish();
+    }
+
+    /// <summary>
+    /// The heartbeat notices a fault, a silent instrument and a dropped connection, and each appears in the alert bar.
+    /// The instrument answering again, or reconnecting from the alert, clears its alert.
+    /// </summary>
+    private async Task CheckAlertsAsync(InstrumentItemViewModel item)
+    {
+        var session = item.Session ?? throw new InvalidOperationException("The instrument is not connected.");
+        session.HeartbeatIntervalSeconds = 0.25;
+        session.Client.QueryTimeout = TimeSpan.FromMilliseconds(400);
+        var transport = (SimulatorTransport)session.Client.Transport;
+        Tabs().SelectedIndex = 0;
+
+        transport.Simulator.RaiseStatus(InstrumentStatusFlags.PllUnlock);
+        Check(await WaitAsync(() => _viewModel.Alerts.Any(a => a.Kind == InstrumentAlert.PllUnlocked)), "A PLL unlock did not raise an alert.");
+
+        transport.Simulator.IsResponding = false;
+        Check(await WaitAsync(() => item.IsNotResponding && _viewModel.Alerts.Any(a => a.Kind == InstrumentAlert.NotResponding)),
+            "A silent instrument was not reported as not responding.");
+        await IdleAsync();
+        Check(VisibleTexts("Not responding") >= 2, "The header and status bar do not say the instrument is not responding.");
+        foreach (var theme in new[] { AppTheme.Light, AppTheme.Dark })
+        {
+            _viewModel.Theme = theme;
+            await IdleAsync();
+            Capture(_window, "92-alerts" + (theme == AppTheme.Dark ? "-dark" : string.Empty));
+        }
+
+        _viewModel.Theme = AppTheme.Light;
+        transport.Simulator.IsResponding = true;
+        Check(await WaitAsync(() => !item.IsNotResponding && _viewModel.Alerts.All(a => a.Kind != InstrumentAlert.NotResponding)),
+            "The not-responding alert did not clear when the instrument answered again.");
+
+        transport.Drop();
+        Check(await WaitAsync(() => item.IsFailed && _viewModel.Alerts.Any(a => a.Kind == InstrumentAlert.ConnectionLost)),
+            "A dropped connection was not reported.");
+        await IdleAsync();
+        Capture(_window, "92-connection-lost");
+
+        // Reconnect from the alert, keeping whatever the (new) simulated instrument holds.
+        item.Profile.SetupOnConnect = SetupOnConnect.KeepInstrument;
+        _viewModel.Alerts.First(a => a.Kind == InstrumentAlert.ConnectionLost).ReconnectCommand.Execute(null);
+        Check(await WaitAsync(() => item.IsConnected && item.Session?.IsBusy == false && _viewModel.Alerts.All(a => a.Kind != InstrumentAlert.ConnectionLost)),
+            "Reconnecting from the alert did not reconnect, or did not clear the alert.");
+        foreach (var alert in _viewModel.Alerts.ToList())
+        {
+            alert.DismissCommand.Execute(null);
+        }
+
+        Check(!_viewModel.HasAlerts, "Dismissing did not clear the alert bar.");
+        await IdleAsync();
     }
 
     /// <summary>

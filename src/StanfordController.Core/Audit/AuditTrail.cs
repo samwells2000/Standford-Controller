@@ -25,6 +25,9 @@ public static class AuditActions
     public const string LocalControl = "Local control";
     public const string RemoteControl = "Remote control";
     public const string Lock = "Interface lock";
+    public const string Fault = "Fault";
+    public const string NotResponding = "Not responding";
+    public const string RespondingAgain = "Responding again";
     public const string SetupSaved = "Setup saved";
     public const string SetupKept = "Instrument settings kept";
     public const string InstrumentAdded = "Instrument added";

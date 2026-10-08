@@ -9,6 +9,7 @@ name: Build and release
 #   Tempo-<version>-linux-x64.tar.gz     the Linux program with a desktop entry, icon and install script
 #   tempo-dg645_<version>_amd64.deb      Debian / Ubuntu package
 #   PKGBUILD                             Arch Linux package recipe (makepkg -si)
+#   Tempo-Quick-Reference.pdf            two-sided quick reference card for new users
 on:
   push:
     branches: ['**']
@@ -142,6 +143,7 @@ jobs:
           mkdir dist
           install -m755 publish/standard/Tempo dist/Tempo-linux-x64
           install -m755 publish/portable/Tempo dist/Tempo-Portable-linux-x64
+          install -m644 docs/Tempo-Quick-Reference.pdf dist/Tempo-Quick-Reference.pdf
 
       - name: UI smoke test
         run: |
@@ -205,7 +207,7 @@ jobs:
           set -euo pipefail
           cd dist
           chmod +x Tempo-linux-x64 Tempo-Portable-linux-x64
-          sha256sum Tempo* tempo-dg645_* PKGBUILD > SHA256SUMS.txt
+          sha256sum Tempo-linux-x64 Tempo-Portable-linux-x64 Tempo.exe Tempo-Portable.exe Tempo-*.tar.gz tempo-dg645_* PKGBUILD Tempo-Quick-Reference.pdf > SHA256SUMS.txt
           cat SHA256SUMS.txt
           cat > notes.md <<NOTES
           | Download | For |
@@ -216,11 +218,12 @@ jobs:
           | **PKGBUILD** | Arch Linux: put it in an empty folder and run \`makepkg -si\` |
           | **Tempo-${VERSION}-linux-x64.tar.gz** | Any x86-64 Linux desktop: unpack, then \`./install.sh\` or run \`./tempo-dg645\` |
           | **Tempo-linux-x64** / **Tempo-Portable-linux-x64** | The bare Linux program (\`chmod +x\` after downloading). |
+          | **Tempo-Quick-Reference.pdf** | Two-sided quick reference card for new users (print double-sided). |
 
           SHA256SUMS.txt lists the checksum of every file.
           NOTES
           gh release create "v${VERSION}" Tempo.exe Tempo-Portable.exe Tempo-linux-x64 Tempo-Portable-linux-x64 \
-            "Tempo-${VERSION}-linux-x64.tar.gz" "tempo-dg645_${VERSION}_amd64.deb" PKGBUILD SHA256SUMS.txt \
+            "Tempo-${VERSION}-linux-x64.tar.gz" "tempo-dg645_${VERSION}_amd64.deb" PKGBUILD Tempo-Quick-Reference.pdf SHA256SUMS.txt \
             --repo "${GITHUB_REPOSITORY}" \
             --target "${GITHUB_SHA}" \
             --title "Tempo ${VERSION}" \

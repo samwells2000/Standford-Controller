@@ -77,6 +77,7 @@
             <MenuItem Header="_View">
                 <MenuItem Header="Communication _log" ToggleType="CheckBox" IsChecked="{Binding ShowLog}" InputGesture="Ctrl+L" />
                 <MenuItem Header="_Audit trail…" Command="{Binding AuditTrailCommand}" />
+                <MenuItem Header="Alert _sound" ToggleType="CheckBox" IsChecked="{Binding AlertSound}" />
                 <Separator />
                 <MenuItem Header="_Theme">
                     <MenuItem Header="_System" ToggleType="Radio" IsChecked="{Binding IsSystemTheme, Mode=OneWay}"
@@ -89,6 +90,8 @@
             </MenuItem>
             <MenuItem Header="_Help">
                 <MenuItem Header="_User guide" Click="OnContextHelp" InputGesture="F1" />
+                <MenuItem Header="_Quick reference card (PDF)" Click="OnQuickReference"
+                          ToolTip.Tip="Opens the two-sided card in your web browser, ready to print on one sheet of A4" />
                 <MenuItem Header="_Keyboard shortcuts" Command="{Binding HelpCommand}" CommandParameter="{x:Static help:HelpTopics.Shortcuts}" />
                 <MenuItem Header="_Troubleshooting" Command="{Binding HelpCommand}" CommandParameter="{x:Static help:HelpTopics.Troubleshooting}" />
                 <Separator />
@@ -96,6 +99,39 @@
                 <MenuItem Header="_About Tempo" Command="{Binding AboutCommand}" />
             </MenuItem>
         </Menu>
+
+        <!-- ================================ Alerts ================================ -->
+        <ScrollViewer DockPanel.Dock="Top" MaxHeight="190" IsVisible="{Binding HasAlerts}">
+            <ItemsControl ItemsSource="{Binding Alerts}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:AlertViewModel">
+                        <Border Classes="alertbar" Classes.error="{Binding IsError}">
+                            <DockPanel>
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="14,0,0,0">
+                                    <Button Content="Reconnect" Command="{Binding ReconnectCommand}" IsVisible="{Binding CanReconnect}" />
+                                    <Button Content="Show" Command="{Binding ShowCommand}" ToolTip.Tip="Select this instrument" />
+                                    <Button Classes="tool" Command="{Binding DismissCommand}" ToolTip.Tip="Dismiss this alert" AutomationProperties.Name="Dismiss">
+                                        <Path Classes="glyph" Data="{StaticResource GlyphClose}" />
+                                    </Button>
+                                </StackPanel>
+                                <Panel DockPanel.Dock="Left" Margin="0,1,10,0" VerticalAlignment="Top">
+                                    <Path Classes="glyph error" Data="{StaticResource GlyphError}" IsVisible="{Binding IsError}" />
+                                    <Path Classes="glyph warning" Data="{StaticResource GlyphWarning}" IsVisible="{Binding !IsError}" />
+                                </Panel>
+                                <StackPanel Spacing="1">
+                                    <TextBlock>
+                                        <Run Text="{Binding Title}" FontWeight="SemiBold" />
+                                        <Run Text="   " />
+                                        <Run Text="{Binding TimeText}" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
 
         <!-- ================================ Status bar ================================ -->
         <Border DockPanel.Dock="Bottom" Classes="chrome" BorderThickness="0,1,0,0" Height="26" Padding="10,0">
@@ -119,7 +155,8 @@
                 <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" IsVisible="{Binding SelectedInstrument, Converter={x:Static ObjectConverters.IsNotNull}}">
                     <Ellipse Classes="state" Classes.connected="{Binding SelectedInstrument.IsConnected, FallbackValue=False}"
                              Classes.connecting="{Binding SelectedInstrument.IsConnecting, FallbackValue=False}"
-                             Classes.failed="{Binding SelectedInstrument.IsFailed, FallbackValue=False}" Margin="0,0,7,0" />
+                             Classes.failed="{Binding SelectedInstrument.IsFailed, FallbackValue=False}"
+                             Classes.warning="{Binding SelectedInstrument.IsNotResponding, FallbackValue=False}" Margin="0,0,7,0" />
                     <TextBlock Text="{Binding SelectedInstrument.StateText, FallbackValue=''}" Classes="caption" VerticalAlignment="Center" />
                     <StackPanel Orientation="Horizontal" IsVisible="{Binding SelectedInstrument.IsConnected, FallbackValue=False}">
                         <Border Classes="vrule" />
@@ -206,7 +243,7 @@
                                 <DataTemplate x:DataType="vm:InstrumentItemViewModel">
                                     <Grid ColumnDefinitions="16,*" ToolTip.Tip="{Binding LastSeen}" Margin="2,2">
                                         <Ellipse Classes="state" Classes.connected="{Binding IsConnected}" Classes.connecting="{Binding IsConnecting}"
-                                                 Classes.failed="{Binding IsFailed}" VerticalAlignment="Top" Margin="0,6,0,0" />
+                                                 Classes.failed="{Binding IsFailed}" Classes.warning="{Binding IsNotResponding}" VerticalAlignment="Top" Margin="0,6,0,0" />
                                         <StackPanel Grid.Column="1">
                                             <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
                                             <TextBlock Text="{Binding Subtitle}" Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
@@ -256,6 +293,8 @@
                                         Content="Configurations and saved setups" />
                                 <Button Classes="link" Command="{Binding HelpCommand}" CommandParameter="{x:Static help:HelpTopics.Shortcuts}"
                                         Content="Keyboard shortcuts" />
+                                <Button Classes="link" Click="OnQuickReference" Content="Quick reference card to print (PDF)"
+                                        ToolTip.Tip="Opens in your web browser" />
                             </StackPanel>
                         </HeaderedContentControl>
 
