@@ -130,6 +130,14 @@ internal sealed class SmokeTest
             await IdleAsync();
             _window.Focus();
             Check(_window.CurrentHelpTopic() == HelpTopics.Outputs, $"F1 on the Outputs page should open '{HelpTopics.Outputs}', not '{_window.CurrentHelpTopic()}'.");
+
+            // Help ▸ Quick reference card opens the two-sided PDF built into the program.
+            await using (var card = typeof(MainWindow).Assembly.GetManifestResourceStream("Tempo.QuickReference.pdf"))
+            {
+                var header = new byte[5];
+                Check(card is not null && await card.ReadAsync(header) == 5 && Encoding.ASCII.GetString(header) == "%PDF-",
+                    "The quick reference card is not built into the program.");
+            }
             tabs.SelectedIndex = 0;
 
             // Saving setups writes them into the configuration file.

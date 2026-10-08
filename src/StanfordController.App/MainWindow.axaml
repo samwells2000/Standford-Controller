@@ -90,6 +90,7 @@
             </MenuItem>
             <MenuItem Header="_Help">
                 <MenuItem Header="_User guide" Click="OnContextHelp" InputGesture="F1" />
+                <MenuItem Header="_Quick reference card (PDF)" Click="OnQuickReference" />
                 <MenuItem Header="_Keyboard shortcuts" Command="{Binding HelpCommand}" CommandParameter="{x:Static help:HelpTopics.Shortcuts}" />
                 <MenuItem Header="_Troubleshooting" Command="{Binding HelpCommand}" CommandParameter="{x:Static help:HelpTopics.Troubleshooting}" />
                 <Separator />

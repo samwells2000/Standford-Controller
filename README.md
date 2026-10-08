@@ -24,6 +24,7 @@ Get the program from the [latest release](../../releases/latest):
 | **`PKGBUILD`** | Arch Linux: put it in an empty folder and run `makepkg -si`. |
 | **`Tempo-<version>-linux-x64.tar.gz`** | Any x86-64 Linux desktop: unpack, then `./install.sh` (or just run `./tempo-dg645`). |
 | `Tempo-linux-x64`, `Tempo-Portable-linux-x64` | The bare Linux program, normal and portable (`chmod +x` after downloading). |
+| **`Tempo-Quick-Reference.pdf`** | A two-sided quick reference card for new users. Print it double-sided. It is also in the program under **Help**. |
 
 Each program is a single self-contained file: the .NET runtime, the Avalonia user interface, the
 renderer and the fonts are all inside, so there is nothing else to install. Windows SmartScreen may ask
@@ -94,6 +95,9 @@ The audit trail: every change with its old and new values, the reason given, and
 ## Documentation
 
 * [`docs/USER-GUIDE.md`](docs/USER-GUIDE.md): the user guide, also built into the program (F1).
+* [`docs/Tempo-Quick-Reference.pdf`](docs/Tempo-Quick-Reference.pdf): a two-sided A4 quick reference card,
+  covering getting started and everyday tasks. Rebuild it from
+  [`docs/quick-reference/`](docs/quick-reference/README.md) after changing the program.
 * [`docs/DG645-Command-Reference.md`](docs/DG645-Command-Reference.md): the DG645 remote command set,
   parameters, status registers and error codes, and where each command appears in the program.
 * [`docs/manuals/`](docs/manuals/README.md): the official Stanford Research Systems manual and data

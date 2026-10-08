@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Tempo quick reference</title>
+<!--
+  The two-sided quick reference card for Tempo. Build the PDF with:
+      node docs/quick-reference/build.mjs
+  It prints exactly two A4 pages: print double-sided, flipping on the long edge.
+-->
+<style>
+  @font-face { font-family: "Plex"; src: url("../../src/StanfordController.App/Assets/Fonts/IBMPlexSans-Regular.ttf"); font-weight: 400; }
+  @font-face { font-family: "Plex"; src: url("../../src/StanfordController.App/Assets/Fonts/IBMPlexSans-Medium.ttf"); font-weight: 500; }
+  @font-face { font-family: "Plex"; src: url("../../src/StanfordController.App/Assets/Fonts/IBMPlexSans-SemiBold.ttf"); font-weight: 600; }
+  @font-face { font-family: "Plex"; src: url("../../src/StanfordController.App/Assets/Fonts/IBMPlexSans-Bold.ttf"); font-weight: 700; }
+  @font-face { font-family: "Plex"; src: url("../../src/StanfordController.App/Assets/Fonts/IBMPlexSans-Italic.ttf"); font-style: italic; }
+  @font-face { font-family: "PlexMono"; src: url("../../src/StanfordController.App/Assets/Fonts/IBMPlexMono-Regular.ttf"); }
+
+  :root {
+    --ink: #1b1b1b;
+    --ink-2: #4d4d4d;
+    --rule: #d4d4d4;
+    --soft: #f3f3f3;
+    --accent: #005fb8;
+    --accent-soft: #e6f0fa;
+    --ok: #0f7b0f;
+    --warn: #9d5d00;
+    --warn-soft: #fff4ce;
+    --warn-rule: #e3c46a;
+    --bad: #c42b1c;
+    --bad-soft: #fde7e9;
+    --bad-rule: #eba7ae;
+  }
+
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #fff; }
+  body { font: 400 8.4pt/1.38 "Plex", sans-serif; color: var(--ink); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  .page { width: 210mm; height: 297mm; padding: 9mm 10mm 7mm; display: flex; flex-direction: column; overflow: hidden; break-after: page; }
+  .page:last-child { break-after: auto; }
+  .page > * { flex-shrink: 0; }   /* overflow shows up (and fails the build) instead of squashing the screenshot */
+
+  /* Header and footer */
+  header { display: flex; align-items: center; gap: 3.2mm; padding-bottom: 2.6mm; border-bottom: 0.6mm solid var(--accent); margin-bottom: 4mm; }
+  header img { width: 10.5mm; height: 10.5mm; }
+  header .name { font-size: 17pt; font-weight: 600; letter-spacing: -0.2pt; line-height: 1; }
+  header .what { font-size: 10pt; color: var(--ink-2); margin-top: 1mm; }
+  header .side { margin-left: auto; text-align: right; font-size: 8pt; color: var(--ink-2); line-height: 1.35; }
+  header .side b { display: block; font-size: 10.5pt; color: var(--accent); font-weight: 600; }
+  footer { margin-top: auto; padding-top: 2.2mm; border-top: 0.25mm solid var(--rule); display: flex; justify-content: space-between; font-size: 7.2pt; color: var(--ink-2); }
+
+  h2 { font-size: 10.5pt; font-weight: 600; margin: 0 0 1.4mm; color: var(--ink); display: flex; align-items: center; gap: 2mm; }
+  h2 .n { display: inline-grid; place-items: center; width: 5.4mm; height: 5.4mm; border-radius: 50%; background: var(--accent); color: #fff; font-size: 8.5pt; font-weight: 600; flex: none; }
+  h3 { font-size: 9.6pt; font-weight: 600; margin: 0 0 1.2mm; padding-bottom: 0.8mm; border-bottom: 0.25mm solid var(--rule); color: var(--accent); }
+  p { margin: 0 0 1.4mm; }
+  ul { margin: 0 0 1.4mm; padding-left: 4mm; }
+  li { margin: 0 0 0.6mm; }
+  b { font-weight: 600; }
+  .ui { font-weight: 600; }                      /* names of buttons and menus */
+  kbd, code { font-family: "PlexMono", monospace; font-size: 7.6pt; }
+  kbd { border: 0.25mm solid #b9b9b9; border-bottom-width: 0.5mm; border-radius: 0.8mm; padding: 0 0.9mm; background: #fafafa; white-space: nowrap; }
+  code { background: var(--soft); border-radius: 0.6mm; padding: 0 0.7mm; white-space: nowrap; }
+  .muted { color: var(--ink-2); }
+
+  /* Front: the four steps */
+  .steps { display: grid; grid-template-columns: 1fr 1fr; gap: 3mm 5mm; margin-bottom: 3.6mm; }
+  .step { padding: 2.6mm 3mm 1.6mm; border: 0.25mm solid var(--rule); border-radius: 1.2mm; background: #fff; }
+  .tip { margin-top: 1mm; padding: 1.2mm 2mm; background: var(--accent-soft); border-radius: 0.8mm; font-size: 7.8pt; }
+
+  /* Front: annotated screenshot */
+  .shot { position: relative; border: 0.3mm solid #a9a9a9; border-radius: 1mm; overflow: hidden; }
+  .shot img { display: block; width: 100%; }
+  .pin { position: absolute; transform: translate(-50%, -50%); width: 5.2mm; height: 5.2mm; border-radius: 50%; background: var(--accent); color: #fff;
+         border: 0.5mm solid #fff; box-shadow: 0 0.3mm 1mm rgba(0,0,0,.45); display: grid; place-items: center; font-size: 8pt; font-weight: 700; }
+  .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8mm 6mm; margin-top: 2.6mm; font-size: 8pt; }
+  .legend div { display: flex; gap: 1.8mm; align-items: baseline; }
+  .legend .pin { position: static; transform: none; width: 4.4mm; height: 4.4mm; font-size: 7pt; border-width: 0.3mm; box-shadow: none; flex: none; position: relative; top: 0.6mm; }
+
+  /* Back: two columns */
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 6mm; }
+  .block { margin-bottom: 3.4mm; }
+
+  /* Connection dots and mock alerts */
+  .dot { display: inline-block; width: 2.4mm; height: 2.4mm; border-radius: 50%; vertical-align: -0.2mm; margin-right: 0.8mm; }
+  .dot.ok { background: var(--ok); } .dot.warn { background: #c88700; } .dot.bad { background: var(--bad); } .dot.off { border: 0.3mm solid #888; }
+  .states { display: grid; grid-template-columns: auto 1fr; gap: 0.6mm 2.4mm; margin-bottom: 2mm; }
+  .alert { border: 0.25mm solid; border-radius: 0.8mm; padding: 1.3mm 2mm 1.2mm; margin-bottom: 1.4mm; display: grid; grid-template-columns: 4mm 1fr; gap: 0 1.2mm; }
+  .alert.warn { background: var(--warn-soft); border-color: var(--warn-rule); }
+  .alert.bad { background: var(--bad-soft); border-color: var(--bad-rule); }
+  .alert .icon { width: 3.4mm; height: 3.4mm; border-radius: 50%; display: grid; place-items: center; font-size: 6.5pt; font-weight: 700; color: #fff; margin-top: 0.4mm; }
+  .alert.warn .icon { background: var(--warn); } .alert.bad .icon { background: var(--bad); }
+  .alert .t { font-weight: 600; }
+  .alert .d { grid-column: 2; font-size: 7.8pt; }
+  .btn { display: inline-block; border: 0.25mm solid #9a9a9a; border-radius: 0.7mm; padding: 0 1.2mm; background: #fff; font-size: 7.4pt; font-weight: 500; white-space: nowrap; }
+  .ready { display: inline-block; border: 0.3mm solid var(--ok); background: #dff6dd; color: var(--ok); border-radius: 0.7mm; padding: 0 1.4mm; font-weight: 600; font-size: 7.6pt; }
+  .ready::before { content: ""; display: inline-block; width: 1.8mm; height: 1.8mm; border-radius: 50%; background: var(--ok); margin-right: 1mm; vertical-align: 0; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 8pt; }
+  td { padding: 0.55mm 1mm 0.55mm 0; vertical-align: top; border-bottom: 0.2mm solid #e6e6e6; }
+  td:first-child { white-space: nowrap; width: 1%; padding-right: 2.6mm; }
+  .keys td:first-child { width: 47%; }
+  .trouble td:first-child { font-weight: 600; white-space: normal; width: 25%; }
+</style>
+</head>
+<body>
+
+<!-- =============================== SIDE 1 =============================== -->
+<section class="page">
+  <header>
+    <img src="../../src/StanfordController.App/Assets/logo.png" alt="">
+    <div>
+      <div class="name">Tempo</div>
+      <div class="what">Quick reference · control software for SRS DG645 delay generators</div>
+    </div>
+    <div class="side"><b>Getting started</b>Side 1 of 2</div>
+  </header>
+
+  <div class="steps">
+    <div class="step">
+      <h2><span class="n">1</span>Install and start</h2>
+      <ul>
+        <li><b>Windows:</b> double-click <code>Tempo.exe</code>. If Windows says it protected your PC, choose <span class="ui">More info</span> ▸ <span class="ui">Run anyway</span>.</li>
+        <li><b>USB stick:</b> <code>Tempo-Portable.exe</code> keeps everything in a <code>Tempo-data</code> folder beside it.</li>
+        <li><b>Linux:</b> install the <code>.deb</code> (Arch: the <code>PKGBUILD</code>), then start <span class="ui">Tempo</span> from the menu or run <code>tempo-dg645</code>.</li>
+      </ul>
+    </div>
+    <div class="step">
+      <h2><span class="n">2</span>Add your instrument</h2>
+      <ul>
+        <li><span class="ui">Instrument ▸ Add…</span> <kbd>Ctrl</kbd>+<kbd>N</kbd>: a name you will recognise (e.g. <i>Laser lab DG645</i>) and its IP address, from the DG645's front-panel network settings.</li>
+        <li>Or let Tempo look: <span class="ui">Instrument ▸ Find on network…</span> <kbd>Ctrl</kbd>+<kbd>F</kbd>.</li>
+        <li><span class="ui">Test connection</span>, then <span class="ui">Save</span>. No hardware? <span class="ui">Instrument ▸ Add demo instrument</span>.</li>
+      </ul>
+    </div>
+    <div class="step">
+      <h2><span class="n">3</span>Connect</h2>
+      <ul>
+        <li>Double-click the instrument in the list, or select it and press <kbd>Ctrl</kbd>+<kbd>K</kbd>. Tempo reads every setting into the pages.</li>
+        <li>The dot turns <span class="dot ok"></span>green and the header says <i>Connected</i>, with the reply time. Tempo then checks the instrument every second.</li>
+        <li>The DG645's front panel is locked while connected. <span class="ui">Disconnect</span> <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd> hands it back.</li>
+      </ul>
+    </div>
+    <div class="step">
+      <h2><span class="n">4</span>Change a value</h2>
+      <ul>
+        <li>Click a field, type the value with its unit (<code>1.5 us</code>, <code>250 ns</code>, <code>10 kHz</code>), then press <kbd>Enter</kbd> or click anywhere else.</li>
+        <li><b>Amber</b>: typed, not sent yet. <b>Red</b>: the instrument refused it, and the reason is underneath. <kbd>Esc</kbd> undoes.</li>
+        <li>Every value is read back, so the screen shows what the instrument really holds.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>The main window</h3>
+  <div class="shot">
+    <img src="main-window.jpg" alt="Tempo's main window with a DG645 connected, showing the Delays page, its log and the status bar">
+    <span class="pin" style="left:16.7%;top:2.4%">1</span>
+    <span class="pin" style="left:8.1%;top:41.2%">2</span>
+    <span class="pin" style="left:31.6%;top:4.6%">3</span>
+    <span class="pin" style="left:62.7%;top:7.8%">4</span>
+    <span class="pin" style="left:96.9%;top:3.2%">5</span>
+    <span class="pin" style="left:57.6%;top:13.7%">6</span>
+    <span class="pin" style="left:68.4%;top:18.8%">7</span>
+    <span class="pin" style="left:44.6%;top:33.5%">8</span>
+    <span class="pin" style="left:69.4%;top:83.5%">9</span>
+    <span class="pin" style="left:48.6%;top:97.6%">10</span>
+  </div>
+  <div class="legend">
+    <div><span class="pin">1</span><span><b>Menus.</b> <i>File</i>: configurations, saving setups. <i>Instrument</i>: add, connect, trigger. <i>View</i>: log, audit trail, alert sound, theme.</span></div>
+    <div><span class="pin">6</span><span><b>Command bar:</b> Connect, Edit, Refresh, Trigger (or Arm), Save setup, Restore saved, Log.</span></div>
+    <div><span class="pin">2</span><span><b>Instruments.</b> Double-click to connect; right-click for more. The dot shows the connection.</span></div>
+    <div><span class="pin">7</span><span><b>Pages:</b> Delays (with a timing diagram), Outputs, Trigger, Burst, Setups, Status, Interfaces, Terminal.</span></div>
+    <div><span class="pin">3</span><span><b>Header:</b> name, address, model, serial number and firmware.</span></div>
+    <div><span class="pin">8</span><span><b>Value fields.</b> Type and press Enter; the up and down buttons step by the step size.</span></div>
+    <div><span class="pin">4</span><span><b>Reason for changes</b> (optional), recorded with every change in the audit trail.</span></div>
+    <div><span class="pin">9</span><span><b>Communication log:</b> every command sent and reply received.</span></div>
+    <div><span class="pin">5</span><span><b>Connection and heartbeat:</b> <i>Connected</i> and how fast the instrument answered.</span></div>
+    <div><span class="pin">10</span><span><b>Status bar:</b> state, trigger, burst, <i>Setup not saved</i>, messages, configuration.</span></div>
+  </div>
+  <p class="muted" style="margin-top:2mm">If anything goes wrong, a coloured <b>alert bar</b> appears across the top of the window (see side 2).</p>
+
+  <footer>
+    <span><b>F1</b> opens the full user guide at the page you are on.</span>
+    <span>Print double-sided, flipping on the long edge.</span>
+  </footer>
+</section>
+
+<!-- =============================== SIDE 2 =============================== -->
+<section class="page">
+  <header>
+    <img src="../../src/StanfordController.App/Assets/logo.png" alt="">
+    <div>
+      <div class="name">Tempo</div>
+      <div class="what">Quick reference · control software for SRS DG645 delay generators</div>
+    </div>
+    <div class="side"><b>Everyday tasks</b>Side 2 of 2</div>
+  </header>
+
+  <div class="cols">
+    <div>
+      <div class="block">
+        <h3>Save a setup and put it back</h3>
+        <ul>
+          <li><span class="ui">Save setup</span> stores the instrument's complete setup (delays, output levels, trigger and burst) on this computer. <span class="ui">File ▸ Save setups</span> <kbd>Ctrl</kbd>+<kbd>S</kbd> saves every connected instrument at once.</li>
+          <li><span class="ui">Restore saved…</span> <kbd>Ctrl</kbd>+<kbd>R</kbd> puts the saved setup back on the instrument.</li>
+          <li><i>Setup not saved</i> in the status bar, and an asterisk in the title, mean something has changed since the last save.</li>
+          <li>Setups are kept in a <b>configuration</b> file (<code>.tempo</code>). Keep one per experiment or lab with <span class="ui">File ▸ New / Open / Save configuration as</span>. The last one opens automatically next time.</li>
+        </ul>
+      </div>
+
+      <div class="block">
+        <h3>When an instrument connects</h3>
+        <p>Tempo compares the instrument with its saved setup. If they differ, it lists what is different and asks you to choose:</p>
+        <p><span class="btn">Load saved setup</span> puts your saved settings on the instrument. <span class="btn">Keep instrument settings</span> leaves it as it is.</p>
+        <p class="muted">Tick <i>Remember my choice</i> to do the same automatically every time. You can change this later with <span class="ui">Edit…</span>.</p>
+      </div>
+
+      <div class="block">
+        <h3>Triggering</h3>
+        <p>Choose the trigger <b>Source</b> on the <span class="ui">Trigger</span> page.</p>
+        <ul>
+          <li><b>Single shot:</b> <span class="ui">Trigger</span> <kbd>Ctrl</kbd>+<kbd>T</kbd> fires one delay cycle.</li>
+          <li><b>Single shot, external rising/falling:</b> press <span class="ui">Arm</span>. The button turns into <span class="ready">Ready</span>, on every page and in the status bar. The next edge at the trigger input fires the shot, and the button goes back to <span class="ui">Arm</span>.</li>
+        </ul>
+      </div>
+
+      <div class="block">
+        <h3>How the delays work</h3>
+        <p>Each channel <b>A–H</b> fires a set delay after its <b>reference</b>: T0 (the start of every cycle) or another channel. Each output pulse runs from one channel to the next:
+          <b>AB</b> starts at A and ends at B, and likewise <b>CD</b>, <b>EF</b> and <b>GH</b>.</p>
+        <p class="tip" style="margin:0">Example: <code>A = T0 + 1 us</code>, <code>B = A + 2.5 us</code> gives an AB pulse <b>2.5 µs wide</b>, starting 1 µs after T0.
+          Because B follows A, moving A moves the whole pulse.</p>
+      </div>
+
+      <div class="block">
+        <h3>Typing values</h3>
+        <table>
+          <tr><td>Time</td><td><code>ps</code> <code>ns</code> <code>us</code> (or <code>µs</code>) <code>ms</code> <code>s</code>, e.g. <code>250 ns</code>, <code>1.5us</code>, <code>1e-6</code></td></tr>
+          <tr><td>Frequency</td><td><code>mHz</code> <code>Hz</code> <code>kHz</code> <code>MHz</code>, e.g. <code>10 kHz</code>, <code>2.5k</code></td></tr>
+          <tr><td>Voltage</td><td><code>mV</code> <code>V</code>, e.g. <code>2.5 V</code>, <code>800 mV</code>, <code>-0.8</code></td></tr>
+        </table>
+        <p class="muted" style="margin-top:1mm">A number on its own is in seconds, hertz or volts. Always use a full stop for the decimal point.</p>
+      </div>
+
+      <div class="block">
+        <h3>Audit trail (ISO 9001 records)</h3>
+        <ul>
+          <li>Every change Tempo makes is recorded: who made it, when, on which instrument (with its serial number), each setting's <b>old → new</b> value, and your reason.</li>
+          <li>Type a <span class="ui">Reason for changes</span> in the instrument header first, for example a job or change number.</li>
+          <li><span class="ui">View ▸ Audit trail…</span> shows the records. Filter and search them, use <span class="ui">Check integrity</span> to prove none have been altered, and use <span class="ui">Change folder…</span> to keep them on a backed-up network drive.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div>
+      <div class="block">
+        <h3>Heartbeat and alerts</h3>
+        <p>While connected, Tempo checks the instrument <b>every second</b>. The dot by its name shows the result:</p>
+        <div class="states">
+          <span><span class="dot ok"></span>Connected</span><span>Answering normally; the header shows the reply time (e.g. <i>4 ms</i>).</span>
+          <span><span class="dot warn"></span>Not responding</span><span>A check went unanswered. Usually it recovers by itself.</span>
+          <span><span class="dot bad"></span>Connection lost</span><span>No answer for about 10 s, or the link was closed.</span>
+          <span><span class="dot off"></span>Not connected</span><span>Double-click to connect.</span>
+        </div>
+        <p>Problems appear in an <b>alert bar</b> at the top of the window, with a sound (<span class="ui">View ▸ Alert sound</span>):</p>
+        <div class="alert warn"><span class="icon">!</span><span><span class="t">Not responding</span> · clears itself when the instrument answers again</span>
+          <span class="d">Check that it is switched on and its network cable is plugged in.</span></div>
+        <div class="alert bad"><span class="icon">×</span><span><span class="t">Connection lost</span> · <span class="btn">Reconnect</span></span>
+          <span class="d">Fix the power or cable, then press <b>Reconnect</b> in the alert.</span></div>
+        <div class="alert bad"><span class="icon">×</span><span><span class="t">PLL unlocked · Rubidium unlocked · Timebase changed</span></span>
+          <span class="d">The instrument's timing reference has a fault. Check the timebase and any external 10 MHz reference. Timing may have been wrong while this lasted.</span></div>
+        <p class="muted"><span class="ui">Show</span> jumps to the instrument, and <b>×</b> dismisses the alert. Alerts are also kept in the audit trail.</p>
+      </div>
+
+      <div class="block">
+        <h3>Keyboard shortcuts</h3>
+        <table class="keys">
+          <tr><td><kbd>F1</kbd></td><td>User guide, at the page you are on</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>N</kbd> / <kbd>Ctrl</kbd>+<kbd>F</kbd></td><td>Add an instrument / find on network</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>K</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd></td><td>Connect / disconnect</td></tr>
+          <tr><td><kbd>F2</kbd></td><td>Edit the selected instrument</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>S</kbd> / <kbd>Ctrl</kbd>+<kbd>R</kbd></td><td>Save setups / restore the saved setup</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>O</kbd></td><td>Open a configuration</td></tr>
+          <tr><td><kbd>F5</kbd></td><td>Read every setting again</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>T</kbd></td><td>Trigger, or arm</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>L</kbd></td><td>Show or hide the communication log</td></tr>
+          <tr><td><kbd>Enter</kbd> / <kbd>Esc</kbd></td><td>In a field: send the value / undo</td></tr>
+        </table>
+      </div>
+
+      <div class="block">
+        <h3>If something goes wrong</h3>
+        <table class="trouble">
+          <tr><td>Will not connect</td><td>Check the IP address against the front panel and that the computer is on the same network. Close any other program using the instrument, and try <span class="ui">Find on network</span>.</td></tr>
+          <tr><td>Value refused</td><td>Read the message under the red field (e.g. <i>Illegal delay</i>). Press <kbd>Esc</kbd> to go back.</td></tr>
+          <tr><td>Front panel locked</td><td><span class="ui">Disconnect</span>, or <span class="ui">Go to local</span> on the Interfaces page.</td></tr>
+          <tr><td>Pages may be out of date</td><td>Shown after typing commands in the Terminal. Click it or press <kbd>F5</kbd>.</td></tr>
+          <tr><td>Audit trail not written</td><td>The audit folder cannot be reached. Records wait and are written once it is back.</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <span>Files: <code>%APPDATA%\Tempo</code> (Windows) · <code>~/.config/Tempo</code> (Linux) · <code>Tempo-data</code> beside the portable program</span>
+    <span><b>Help ▸ User guide</b> for everything else</span>
+  </footer>
+</section>
+
+</body>
+</html>

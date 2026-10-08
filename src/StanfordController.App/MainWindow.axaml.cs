@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using StanfordController.App.Infrastructure;
 using StanfordController.Presentation.Help;
@@ -117,6 +118,33 @@ public partial class MainWindow : Window
     private void OnExit(object? sender, RoutedEventArgs e) => Close();
 
     private void OnOpenReleases(object? sender, RoutedEventArgs e) => Launcher?.LaunchUriAsync(new Uri(AppInfo.ReleasesUrl));
+
+    /// <summary>Opens the two-sided quick reference card in the PDF viewer, ready to print.</summary>
+    private async void OnQuickReference(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var path = Path.Combine(Path.GetTempPath(), "Tempo-Quick-Reference.pdf");
+            await using (var resource = typeof(MainWindow).Assembly.GetManifestResourceStream("Tempo.QuickReference.pdf")
+                                        ?? throw new FileNotFoundException("The quick reference card is missing from this build."))
+            await using (var file = File.Create(path))
+            {
+                await resource.CopyToAsync(file);
+            }
+
+            if (Launcher is null || !await Launcher.LaunchFileInfoAsync(new FileInfo(path)))
+            {
+                ViewModel!.StatusMessage = $"The quick reference card is saved at {path}; open it with a PDF viewer.";
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            if (ViewModel is { } viewModel)
+            {
+                viewModel.StatusMessage = $"The quick reference card could not be opened: {ex.Message}";
+            }
+        }
+    }
 
     /// <summary>Offers to save unsaved setups, remembers the window placement, then disconnects every instrument.</summary>
     protected override void OnClosing(WindowClosingEventArgs e)
