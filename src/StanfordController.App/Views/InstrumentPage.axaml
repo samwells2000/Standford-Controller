@@ -108,7 +108,8 @@
                         </Grid>
                     </Border>
 
-                    <HeaderedContentControl Theme="{StaticResource Section}" Header="Instrument">
+                    <HeaderedContentControl Theme="{StaticResource Section}" Header="Instrument"
+                                            AutomationProperties.HelpText="The saved details for this instrument: where to reach it, where it is, your notes and when it was last connected.">
                         <StackPanel>
                             <HeaderedContentControl Theme="{StaticResource DialogRow}" Header="Address">
                                 <SelectableTextBlock Text="{Binding Address}" Classes.mono="{Binding !IsSimulator}" Margin="0,5,0,0" />

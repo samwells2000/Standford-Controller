@@ -26,7 +26,8 @@
         <Grid Margin="20,16,20,12" ColumnDefinitions="*,28,*">
 
             <StackPanel>
-                <HeaderedContentControl Theme="{StaticResource Section}" Header="Instrument status">
+                <HeaderedContentControl Theme="{StaticResource Section}" Header="Instrument status"
+                                        AutomationProperties.HelpText="Lamps for instrument events such as triggers, burst completion and PLL lock, as reported by the DG645 and read every second while connected.">
                     <HeaderedContentControl.Tag>
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <TextBlock Text="{Binding Status.LastPollText}" Classes="caption" VerticalAlignment="Center"
@@ -45,14 +46,16 @@
                     </StackPanel>
                 </HeaderedContentControl>
 
-                <HeaderedContentControl Theme="{StaticResource Section}" Header="Standard event status">
+                <HeaderedContentControl Theme="{StaticResource Section}" Header="Standard event status"
+                                        AutomationProperties.HelpText="The standard IEEE-488.2 event lamps, such as command, execution and query errors. Enable boxes choose which events are passed on to the status byte.">
                     <StackPanel>
                         <TextBlock Classes="caption" Margin="0,0,0,6" Text="IEEE-488.2 event register (*ESR? / *ESE)." />
                         <ItemsControl ItemsSource="{Binding Status.EventBits}" ItemTemplate="{StaticResource BitRow}" />
                     </StackPanel>
                 </HeaderedContentControl>
 
-                <HeaderedContentControl Theme="{StaticResource Section}" Header="Status byte">
+                <HeaderedContentControl Theme="{StaticResource Section}" Header="Status byte"
+                                        AutomationProperties.HelpText="The instrument's summary status, read by a serial poll. Enable boxes choose which bits raise a service request to the controlling computer.">
                     <StackPanel>
                         <TextBlock Classes="caption" Margin="0,0,0,6" Text="Serial poll status byte and service request enable (*STB? / *SRE)." />
                         <ItemsControl ItemsSource="{Binding Status.StatusByteBits}" ItemTemplate="{StaticResource BitRow}" />
@@ -62,7 +65,8 @@
             </StackPanel>
 
             <StackPanel Grid.Column="2">
-                <HeaderedContentControl Theme="{StaticResource Section}" Header="Errors">
+                <HeaderedContentControl Theme="{StaticResource Section}" Header="Errors"
+                                        AutomationProperties.HelpText="Commands the instrument rejected and why, newest first, so you can see what went wrong.">
                     <StackPanel>
                         <TextBlock Classes="caption" Margin="0,0,0,6" Text="Commands the instrument rejected, newest first." />
                         <Border Classes="framed" Height="150">
@@ -89,7 +93,8 @@
                     </StackPanel>
                 </HeaderedContentControl>
 
-                <HeaderedContentControl Theme="{StaticResource Section}" Header="Diagnostics">
+                <HeaderedContentControl Theme="{StaticResource Section}" Header="Diagnostics"
+                                        AutomationProperties.HelpText="Runs the instrument's built-in self test and timing auto-calibration and shows the result.">
                     <StackPanel>
                         <Grid ColumnDefinitions="140,Auto,*" RowDefinitions="Auto,8,Auto,10,Auto">
                             <TextBlock Text="Self test" Classes="label" />
@@ -107,7 +112,8 @@
                     </StackPanel>
                 </HeaderedContentControl>
 
-                <HeaderedContentControl Theme="{StaticResource Section}" Header="Front-panel display">
+                <HeaderedContentControl Theme="{StaticResource Section}" Header="Front-panel display"
+                                        AutomationProperties.HelpText="Chooses what the instrument's own front-panel screen shows, such as a channel's delay or an output's level.">
                     <StackPanel>
                         <HeaderedContentControl Theme="{StaticResource FormRow}" Header="Show">
                             <ComboBox ItemsSource="{Binding Status.DisplayModes}" SelectedItem="{Binding Status.DisplayMode}" />
@@ -119,7 +125,8 @@
                     </StackPanel>
                 </HeaderedContentControl>
 
-                <HeaderedContentControl Theme="{StaticResource Section}" Header="Identity">
+                <HeaderedContentControl Theme="{StaticResource Section}" Header="Identity"
+                                        AutomationProperties.HelpText="The instrument's make, model, serial number and firmware version, as it reports them.">
                     <SelectableTextBlock Text="{Binding Identity}" Classes="mono" TextWrapping="Wrap" />
                 </HeaderedContentControl>
             </StackPanel>

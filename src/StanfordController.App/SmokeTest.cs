@@ -1,6 +1,9 @@
 using System.Text;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Controls.Presenters;
+using Avalonia.Controls.Primitives;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Logging;
@@ -162,6 +165,7 @@ internal sealed class SmokeTest
                 $"Refresh all did not pick up the terminal change (rate shows {session.Trigger.Rate.Text}).");
             Check(!session.StatusIsError, $"The session reported an error: {session.StatusMessage}");
 
+            await CheckSectionDescriptionsAsync();
             await CheckSingleShotExternalAsync(session);
             await CheckClickAwayAsync(session);
             await CheckAuditTrailAsync(session);
@@ -177,6 +181,46 @@ internal sealed class SmokeTest
         }
 
         Finish();
+    }
+
+    /// <summary>
+    /// Every section title on every page shows a short description of the section when the pointer rests on it.
+    /// </summary>
+    private async Task CheckSectionDescriptionsAsync()
+    {
+        var section = Application.Current!.FindResource("Section");
+        var tabs = Tabs();
+        for (var i = 0; i < tabs.ItemCount; i++)
+        {
+            tabs.SelectedIndex = i;
+            await IdleAsync();
+            if (tabs.SelectedContent is not Control page)
+            {
+                continue;
+            }
+
+            foreach (var group in page.GetVisualDescendants().OfType<HeaderedContentControl>().Where(c => c.Theme == section))
+            {
+                var title = group.GetVisualDescendants().OfType<ContentPresenter>().FirstOrDefault(p => Equals(p.Content, group.Header));
+                var description = AutomationProperties.GetHelpText(group);
+                Check(!string.IsNullOrWhiteSpace(description), $"The '{group.Header}' section has no description.");
+                Check(title is not null && Equals(ToolTip.GetTip(title), description),
+                    $"Hovering the '{group.Header}' title does not show its description.");
+            }
+        }
+
+        // One open, for the screenshots.
+        tabs.SelectedIndex = 0;
+        await IdleAsync();
+        if (tabs.SelectedContent is Control delays
+            && delays.GetVisualDescendants().OfType<HeaderedContentControl>().FirstOrDefault(c => c.Theme == section) is { } first
+            && first.GetVisualDescendants().OfType<ContentPresenter>().FirstOrDefault(p => Equals(p.Content, first.Header)) is { } firstTitle)
+        {
+            ToolTip.SetIsOpen(firstTitle, true);
+            await IdleAsync();
+            Capture(_window, "93-section-description");
+            ToolTip.SetIsOpen(firstTitle, false);
+        }
     }
 
     /// <summary>

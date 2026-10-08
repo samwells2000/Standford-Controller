@@ -276,7 +276,8 @@
                         <TextBlock Classes="secondary" Margin="0,4,0,22" TextWrapping="Wrap"
                                    Text="Timing &amp; Event Manager for Pulse Outputs: control software for Stanford Research Systems DG645 delay generators." />
 
-                        <HeaderedContentControl Theme="{StaticResource Section}" Header="Start">
+                        <HeaderedContentControl Theme="{StaticResource Section}" Header="Start"
+                                                AutomationProperties.HelpText="Ways to begin: add an instrument by address, search the network for one, open a saved configuration, or try a simulated DG645.">
                             <StackPanel Spacing="7">
                                 <Button Classes="link" Command="{Binding AddInstrumentCommand}" Content="Add an instrument by its address…" />
                                 <Button Classes="link" Command="{Binding DiscoverCommand}" Content="Find instruments on the network…" />
@@ -285,7 +286,8 @@
                             </StackPanel>
                         </HeaderedContentControl>
 
-                        <HeaderedContentControl Theme="{StaticResource Section}" Header="Help">
+                        <HeaderedContentControl Theme="{StaticResource Section}" Header="Help"
+                                                AutomationProperties.HelpText="Guides to using this program, the keyboard shortcuts and a printable quick reference card.">
                             <StackPanel Spacing="7">
                                 <Button Classes="link" Command="{Binding HelpCommand}" CommandParameter="{x:Static help:HelpTopics.GettingStarted}"
                                         Content="Getting started (F1)" />
