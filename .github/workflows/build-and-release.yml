@@ -1,6 +1,8 @@
 name: Build and release
 
-# Every push and pull request is built, tested and smoke-tested on Windows, Linux and macOS.
+# Every pull request and every push to main is built, tested and smoke-tested on Windows, Linux and macOS.
+# The Linux job runs on your own Ubuntu server instead of GitHub's machines when the repository variable
+# LINUX_RUNNER is set to self-hosted; see docs/SELF-HOSTED-RUNNER.md.
 # Every push to main also publishes a GitHub Release with:
 #   Tempo.exe                            Windows 10/11, keeps its files in %APPDATA%\Tempo
 #   Tempo-Portable.exe                   Windows, keeps its files in a Tempo-data folder beside it
@@ -12,9 +14,11 @@ name: Build and release
 #   Tempo-<version>-macos-arm64.zip      Tempo.app for Apple Silicon Macs, keeps its files in ~/Library/Application Support/Tempo
 #   Tempo-<version>-macos-x64.zip        Tempo.app for Intel Macs
 #   Tempo-Quick-Reference.pdf            two-sided quick reference card for new users
+# Branch pushes are not built on their own: a branch with a pull request is built once for the pull request
+# rather than twice (once for the push and again for the pull request), which halves the build minutes.
 on:
   push:
-    branches: ['**']
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -98,7 +102,7 @@ jobs:
           name: smoke-test-windows
           path: ${{ runner.temp }}/smoke-test
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 7
 
       - name: Upload programs
         uses: actions/upload-artifact@v7
@@ -106,11 +110,13 @@ jobs:
           name: windows
           path: dist/
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 3
 
   linux:
     name: Linux
-    runs-on: ubuntu-24.04
+    # Your own Ubuntu server (docs/SELF-HOSTED-RUNNER.md) when the repository variable LINUX_RUNNER is
+    # self-hosted, otherwise GitHub's. With the variable unset nothing changes, so it is safe to switch back.
+    runs-on: ${{ vars.LINUX_RUNNER == 'self-hosted' && fromJSON('["self-hosted", "Linux", "X64", "tempo"]') || 'ubuntu-24.04' }}
     timeout-minutes: 30
 
     steps:
@@ -119,10 +125,16 @@ jobs:
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
+        env:
+          # The runner service has no root access, so on a self-hosted runner .NET goes into the runner's tool
+          # cache rather than /usr/share/dotnet. It is downloaded once and reused by later builds.
+          DOTNET_INSTALL_DIR: ${{ runner.environment == 'self-hosted' && format('{0}/dotnet', runner.tool_cache) || '' }}
         with:
           global-json-file: global.json
 
+      # A self-hosted server has these installed once by its owner (docs/SELF-HOSTED-RUNNER.md).
       - name: Install a virtual display for the smoke test
+        if: runner.environment == 'github-hosted'
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq --no-install-recommends xvfb xauth libice6 libsm6 libfontconfig1
@@ -171,7 +183,7 @@ jobs:
           name: smoke-test-linux
           path: ${{ runner.temp }}/smoke-test
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 7
 
       - name: Upload programs and packages
         uses: actions/upload-artifact@v7
@@ -179,7 +191,7 @@ jobs:
           name: linux
           path: dist/
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 3
 
   macos:
     name: macOS (${{ matrix.arch }})
@@ -236,7 +248,7 @@ jobs:
           name: smoke-test-macos-${{ matrix.arch }}
           path: ${{ runner.temp }}/smoke-test
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 7
 
       - name: Upload program
         uses: actions/upload-artifact@v7
@@ -244,7 +256,7 @@ jobs:
           name: macos-${{ matrix.arch }}
           path: dist/
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 3
 
   release:
     name: Publish GitHub Release
