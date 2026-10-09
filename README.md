@@ -147,10 +147,12 @@ binding error. CI runs it on Windows, on Linux (under a virtual X display) and o
 
 ## How releases are made
 
-[`.github/workflows/build-and-release.yml`](.github/workflows/build-and-release.yml) runs for every push
-and pull request, on Windows, Linux and macOS (Apple Silicon and Intel): it builds, runs the tests,
+[`.github/workflows/build-and-release.yml`](.github/workflows/build-and-release.yml) runs for every pull
+request and every push to `main`, on Windows, Linux and macOS (Apple Silicon and Intel): it builds, runs the tests,
 publishes the normal and portable single-file programs, runs the UI smoke test on each, on Linux builds
-the `.deb`, tarball and `PKGBUILD`, and on macOS builds an ad-hoc-signed `Tempo.app` and zips it. The programs are attached to each run as artifacts.
+the `.deb`, tarball and `PKGBUILD`, and on macOS builds an ad-hoc-signed `Tempo.app` and zips it. The programs are attached to each run as artifacts for 3 days.
+The Linux job can run on your own Ubuntu server instead of GitHub's machines: see
+[docs/SELF-HOSTED-RUNNER.md](docs/SELF-HOSTED-RUNNER.md).
 
 On every push to **`main`** it also creates a GitHub Release named `v1.0.<run number>` with all of the
 files above and a `SHA256SUMS.txt`. The newest Windows program is always at
