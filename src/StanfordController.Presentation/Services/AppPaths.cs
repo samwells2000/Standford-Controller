@@ -4,7 +4,8 @@ namespace StanfordController.Presentation.Services;
 
 /// <summary>
 /// Where Tempo keeps its files. The normal build uses the user's application-data folder
-/// (<c>%APPDATA%\Tempo</c> on Windows, <c>~/.config/Tempo</c> on Linux); the portable build keeps everything
+/// (<c>%APPDATA%\Tempo</c> on Windows, <c>~/.config/Tempo</c> on Linux, <c>~/Library/Application Support/Tempo</c> on
+/// macOS); the portable build keeps everything
 /// in a <c>Tempo-data</c> folder next to the program, so it can run from a USB stick and leave nothing behind.
 /// </summary>
 public sealed record AppPaths(string DataDirectory, bool IsPortable)
@@ -33,8 +34,10 @@ public sealed record AppPaths(string DataDirectory, bool IsPortable)
     public string PreviousDataDirectory =>
         Path.Combine(Path.GetDirectoryName(DataDirectory) ?? string.Empty, IsPortable ? PreviousPortableFolderName : PreviousAppName);
 
-    public static string UserDataDirectory { get; } =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), AppName);
+    // .NET maps ApplicationData to ~/.config on macOS too; LocalApplicationData is ~/Library/Application Support there.
+    public static string UserDataDirectory { get; } = Path.Combine(
+        Environment.GetFolderPath(OperatingSystem.IsMacOS() ? Environment.SpecialFolder.LocalApplicationData : Environment.SpecialFolder.ApplicationData),
+        AppName);
 
     public static AppPaths ForUser() => new(UserDataDirectory, IsPortable: false);
 

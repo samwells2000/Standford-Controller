@@ -18,9 +18,14 @@
   <!--
     dotnet publish -r win-x64 | linux-x64 produces one self-contained file: the .NET runtime, Avalonia,
     the Skia renderer and the fonts are all inside. Add -p:PortableBuild=true for the portable variant.
+    dotnet publish -r osx-arm64 | osx-x64 produces a self-contained folder instead, which
+    packaging/macos/build-app.sh turns into Tempo.app (a bundle is signed file by file, not as one blob).
   -->
   <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
     <SelfContained>true</SelfContained>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != '' And !$(RuntimeIdentifier.StartsWith('osx'))">
     <PublishSingleFile>true</PublishSingleFile>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
