@@ -1,6 +1,6 @@
 name: Build and release
 
-# Every push and pull request is built, tested and smoke-tested on Windows and Linux.
+# Every push and pull request is built, tested and smoke-tested on Windows, Linux and macOS.
 # Every push to main also publishes a GitHub Release with:
 #   Tempo.exe                            Windows 10/11, keeps its files in %APPDATA%\Tempo
 #   Tempo-Portable.exe                   Windows, keeps its files in a Tempo-data folder beside it
@@ -9,6 +9,8 @@ name: Build and release
 #   Tempo-<version>-linux-x64.tar.gz     the Linux program with a desktop entry, icon and install script
 #   tempo-dg645_<version>_amd64.deb      Debian / Ubuntu package
 #   PKGBUILD                             Arch Linux package recipe (makepkg -si)
+#   Tempo-<version>-macos-arm64.zip      Tempo.app for Apple Silicon Macs, keeps its files in ~/Library/Application Support/Tempo
+#   Tempo-<version>-macos-x64.zip        Tempo.app for Intel Macs
 #   Tempo-Quick-Reference.pdf            two-sided quick reference card for new users
 on:
   push:
@@ -179,9 +181,74 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  macos:
+    name: macOS (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-15
+          - arch: x64
+            runner: macos-15-intel
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Build
+        run: dotnet build StanfordController.sln --configuration Release -p:Version=${VERSION}
+
+      - name: Test
+        run: dotnet test tests/StanfordController.Tests --configuration Release --no-build --logger "console;verbosity=normal"
+
+      # A self-contained folder rather than one file: macOS signs and loads each library in an app bundle on its own.
+      - name: Publish and build Tempo.app
+        run: |
+          set -euo pipefail
+          dotnet publish src/StanfordController.App --configuration Release --runtime osx-${{ matrix.arch }} --output publish/macos -p:Version=${VERSION}
+          packaging/macos/build-app.sh "${VERSION}" ${{ matrix.arch }} publish/macos dist
+          rm -rf dist/Tempo.app
+          ditto -x -k "dist/Tempo-${VERSION}-macos-${{ matrix.arch }}.zip" "$RUNNER_TEMP/unpacked"
+          file "$RUNNER_TEMP/unpacked/Tempo.app/Contents/MacOS/Tempo"
+
+      # The same smoke test as on Windows and Linux, run from the bundle that was zipped for release.
+      - name: UI smoke test
+        timeout-minutes: 6
+        run: |
+          set -euo pipefail
+          status=0
+          "$RUNNER_TEMP/unpacked/Tempo.app/Contents/MacOS/Tempo" --smoke-test "$RUNNER_TEMP/smoke-test" || status=$?
+          cat "$RUNNER_TEMP/smoke-test/smoke-test.log" || true
+          [ "$status" -eq 0 ] || { echo "The smoke test failed with exit code $status"; exit 1; }
+
+      - name: Upload smoke test screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: smoke-test-macos-${{ matrix.arch }}
+          path: ${{ runner.temp }}/smoke-test
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload program
+        uses: actions/upload-artifact@v7
+        with:
+          name: macos-${{ matrix.arch }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30
+
   release:
     name: Publish GitHub Release
-    needs: [windows, linux]
+    needs: [windows, linux, macos]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -200,6 +267,13 @@ jobs:
           name: linux
           path: dist
 
+      - name: Download the macOS programs
+        uses: actions/download-artifact@v8
+        with:
+          pattern: macos-*
+          merge-multiple: true
+          path: dist
+
       - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -207,7 +281,7 @@ jobs:
           set -euo pipefail
           cd dist
           chmod +x Tempo-linux-x64 Tempo-Portable-linux-x64
-          sha256sum Tempo-linux-x64 Tempo-Portable-linux-x64 Tempo.exe Tempo-Portable.exe Tempo-*.tar.gz tempo-dg645_* PKGBUILD Tempo-Quick-Reference.pdf > SHA256SUMS.txt
+          sha256sum Tempo-linux-x64 Tempo-Portable-linux-x64 Tempo.exe Tempo-Portable.exe Tempo-*.tar.gz tempo-dg645_* PKGBUILD Tempo-*-macos-*.zip Tempo-Quick-Reference.pdf > SHA256SUMS.txt
           cat SHA256SUMS.txt
           cat > notes.md <<NOTES
           | Download | For |
@@ -216,6 +290,8 @@ jobs:
           | **Tempo-Portable.exe** | Windows, from a USB stick or shared folder. Keeps everything in a Tempo-data folder beside it. |
           | **tempo-dg645_${VERSION}_amd64.deb** | Debian and Ubuntu: \`sudo apt install ./tempo-dg645_${VERSION}_amd64.deb\` |
           | **PKGBUILD** | Arch Linux: put it in an empty folder and run \`makepkg -si\` |
+          | **Tempo-${VERSION}-macos-arm64.zip** | Macs with Apple Silicon (M1 or later), macOS 12 or later. Unzip and drag Tempo to Applications. Not notarized: the first time, see *macOS will not open Tempo* in the user guide. |
+          | **Tempo-${VERSION}-macos-x64.zip** | Intel Macs, macOS 12 or later. |
           | **Tempo-${VERSION}-linux-x64.tar.gz** | Any x86-64 Linux desktop: unpack, then \`./install.sh\` or run \`./tempo-dg645\` |
           | **Tempo-linux-x64** / **Tempo-Portable-linux-x64** | The bare Linux program (\`chmod +x\` after downloading). |
           | **Tempo-Quick-Reference.pdf** | Two-sided quick reference card for new users (print double-sided). |
@@ -223,7 +299,8 @@ jobs:
           SHA256SUMS.txt lists the checksum of every file.
           NOTES
           gh release create "v${VERSION}" Tempo.exe Tempo-Portable.exe Tempo-linux-x64 Tempo-Portable-linux-x64 \
-            "Tempo-${VERSION}-linux-x64.tar.gz" "tempo-dg645_${VERSION}_amd64.deb" PKGBUILD Tempo-Quick-Reference.pdf SHA256SUMS.txt \
+            "Tempo-${VERSION}-linux-x64.tar.gz" "tempo-dg645_${VERSION}_amd64.deb" PKGBUILD \
+            "Tempo-${VERSION}-macos-arm64.zip" "Tempo-${VERSION}-macos-x64.zip" Tempo-Quick-Reference.pdf SHA256SUMS.txt \
             --repo "${GITHUB_REPOSITORY}" \
             --target "${GITHUB_SHA}" \
             --title "Tempo ${VERSION}" \
