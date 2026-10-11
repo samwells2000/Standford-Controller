@@ -63,7 +63,6 @@
   kbd { border: 0.25mm solid #b9b9b9; border-bottom-width: 0.5mm; border-radius: 0.8mm; padding: 0 0.9mm; background: #fafafa; white-space: nowrap; }
   code { background: var(--soft); border-radius: 0.6mm; padding: 0 0.7mm; white-space: nowrap; }
   .muted { color: var(--ink-2); }
-  h3 .aside { float: right; font-size: 7.4pt; font-weight: 400; color: var(--ink-2); padding-top: 0.6mm; }
 
   /* Front: the four steps */
   .steps { display: grid; grid-template-columns: 1fr 1fr; gap: 3mm 5mm; margin-bottom: 3.6mm; }
@@ -132,16 +131,7 @@
 
   <div class="steps">
     <div class="step">
-      <h2><span class="n">1</span>Install and start</h2>
-      <ul>
-        <li><b>Windows:</b> double-click <code>Tempo.exe</code>. If Windows says it protected your PC, choose <span class="ui">More info</span> ▸ <span class="ui">Run anyway</span>.</li>
-        <li><b>USB stick:</b> <code>Tempo-Portable.exe</code> keeps its files beside it.</li>
-        <li><b>Linux:</b> install the <code>.deb</code> (Arch: the <code>PKGBUILD</code>), then start <span class="ui">Tempo</span> from the menu or run <code>tempo-dg645</code>.</li>
-        <li><b>Mac:</b> drag <span class="ui">Tempo</span> into Applications. The first time, allow it in <span class="ui">System Settings ▸ Privacy &amp; Security</span>.</li>
-      </ul>
-    </div>
-    <div class="step">
-      <h2><span class="n">2</span>Add your instrument</h2>
+      <h2><span class="n">1</span>Add your instrument</h2>
       <ul>
         <li><span class="ui">Instrument ▸ Add…</span> <kbd>Ctrl</kbd>+<kbd>N</kbd>: a name you will recognise (e.g. <i>Laser lab DG645</i>) and its IP address, from the DG645's front-panel network settings.</li>
         <li>Or let Tempo look: <span class="ui">Instrument ▸ Find on network…</span> <kbd>Ctrl</kbd>+<kbd>F</kbd>, then <span class="ui">Scan</span>.</li>
@@ -149,7 +139,7 @@
       </ul>
     </div>
     <div class="step">
-      <h2><span class="n">3</span>Connect</h2>
+      <h2><span class="n">2</span>Connect</h2>
       <ul>
         <li>Double-click the instrument in the list, or select it and press <kbd>Ctrl</kbd>+<kbd>K</kbd>. Tempo reads every setting into the pages.</li>
         <li>The dot turns <span class="dot ok"></span>green and the header says <i>Connected</i>, with the reply time. Tempo then checks the instrument every second.</li>
@@ -157,11 +147,19 @@
       </ul>
     </div>
     <div class="step">
-      <h2><span class="n">4</span>Change a value</h2>
+      <h2><span class="n">3</span>Change a value</h2>
       <ul>
         <li>Click a field, type the value with its unit (<code>1.5 us</code>, <code>250 ns</code>, <code>10 kHz</code>), then press <kbd>Enter</kbd> or click anywhere else.</li>
         <li><b>Amber</b>: typed, not sent yet. <b>Red</b>: the instrument refused it, and the reason is underneath. <kbd>Esc</kbd> undoes.</li>
         <li>Every value is read back, so the screen shows what the instrument really holds.</li>
+      </ul>
+    </div>
+    <div class="step">
+      <h2><span class="n">4</span>Save your setup</h2>
+      <ul>
+        <li><span class="ui">File ▸ Save setups</span> <kbd>Ctrl</kbd>+<kbd>S</kbd> stores the complete setup of every connected instrument (delays, output levels, trigger and burst) on this computer.</li>
+        <li><i>Setup not saved</i> in the status bar means there are changes since the last save.</li>
+        <li>Next time, <span class="ui">Restore saved…</span> <kbd>Ctrl</kbd>+<kbd>R</kbd> puts it back on the instrument.</li>
       </ul>
     </div>
   </div>
@@ -214,11 +212,9 @@
   <div class="cols">
     <div>
       <div class="block">
-        <h3>Save a setup and put it back</h3>
+        <h3>Setups and configurations</h3>
         <ul>
-          <li><span class="ui">Save setup</span> stores the instrument's complete setup (delays, output levels, trigger and burst) on this computer. <span class="ui">File ▸ Save setups</span> <kbd>Ctrl</kbd>+<kbd>S</kbd> saves every connected instrument at once.</li>
-          <li><span class="ui">Restore saved…</span> <kbd>Ctrl</kbd>+<kbd>R</kbd> puts the saved setup back on the instrument.</li>
-          <li><i>Setup not saved</i> in the status bar means there are changes since the last save.</li>
+          <li><span class="ui">Save setup</span> on the command bar saves just this instrument; <span class="ui">Restore saved…</span> <kbd>Ctrl</kbd>+<kbd>R</kbd> puts its saved setup back.</li>
           <li>Setups are kept in a <b>configuration</b> file (<code>.tempo</code>): keep one per experiment or lab with <span class="ui">File ▸ New / Open / Save configuration as</span>. The last one opens automatically next time.</li>
         </ul>
       </div>
@@ -256,6 +252,12 @@
           <text x="185" y="54.5" class="width">2.5 µs wide</text>
         </svg>
         <p class="muted" style="margin:0.6mm 0 0">Because B follows A, moving A moves the whole pulse.</p>
+      </div>
+
+      <div class="block">
+        <h3>Output levels</h3>
+        <p style="margin:0">Each output has an <b>amplitude</b>, an <b>offset</b> (its low level) and a <b>polarity</b>: positive pulses rise from the offset,
+          negative ones fall to it. <span class="btn">TTL</span> and <span class="btn">NIM</span> set the usual logic levels.</p>
       </div>
 
       <div class="block">
@@ -299,7 +301,7 @@
       </div>
 
       <div class="block">
-        <h3>Keyboard shortcuts <span class="aside">On a Mac, Ctrl is the Control key</span></h3>
+        <h3>Keyboard shortcuts</h3>
         <table class="keys">
           <tr><td><kbd>F1</kbd></td><td>User guide, at the page you are on</td></tr>
           <tr><td><kbd>Ctrl</kbd>+<kbd>N</kbd> / <kbd>Ctrl</kbd>+<kbd>F</kbd></td><td>Add an instrument / find on network</td></tr>
@@ -328,7 +330,7 @@
   </div>
 
   <footer>
-    <span>Data folder: <code>%APPDATA%\Tempo</code> · <code>~/.config/Tempo</code> · <code>~/Library/Application Support/Tempo</code> · <code>Tempo-data</code> (portable)</span>
+    <span>Your configurations and audit trail are kept in Tempo's data folder; <b>Help ▸ About Tempo</b> shows where.</span>
     <span><b>F1</b>: user guide</span>
   </footer>
 </section>
