@@ -3,14 +3,18 @@ using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Input;
 using Avalonia.Layout;
+using Avalonia.Automation;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using Avalonia.Styling;
 using StanfordController.Presentation.Help;
 
 namespace StanfordController.App.Help;
 
 /// <summary>
 /// Shows user-guide blocks (see <see cref="Markdown"/>) with ordinary controls, styled by the app's theme.
-/// Text is selectable; links raise <see cref="LinkClicked"/>.
+/// Text is selectable; links raise <see cref="LinkClicked"/>. Pictures come from the guide's images folder, built
+/// into the program (see <see cref="GuideImages"/>), and follow the light or dark theme.
 /// </summary>
 public sealed class MarkdownView : StackPanel
 {
@@ -18,6 +22,12 @@ public sealed class MarkdownView : StackPanel
         AvaloniaProperty.Register<MarkdownView, IReadOnlyList<MdBlock>?>(nameof(Blocks));
 
     private readonly Dictionary<string, Control> _anchors = [];
+
+    public MarkdownView()
+    {
+        // The pictures have a light and a dark version.
+        ActualThemeVariantChanged += (_, _) => Rebuild();
+    }
 
     public event EventHandler<string>? LinkClicked;
 
@@ -38,6 +48,7 @@ public sealed class MarkdownView : StackPanel
             Rebuild();
         }
     }
+
 
     private void Rebuild()
     {
@@ -75,6 +86,9 @@ public sealed class MarkdownView : StackPanel
                     Classes = { "code" },
                     Child = new SelectableTextBlock { Text = code.Text, Classes = { "mono" }, TextWrapping = TextWrapping.Wrap },
                 };
+
+            case MdImage image:
+                return RenderImage(image);
 
             case MdQuote quote:
             {
@@ -115,6 +129,25 @@ public sealed class MarkdownView : StackPanel
         }
 
         return panel;
+    }
+
+    private Control RenderImage(MdImage image)
+    {
+        if (GuideImages.Load(image.Source, ActualThemeVariant == ThemeVariant.Dark) is not { } bitmap)
+        {
+            return Text([new MdText($"[{image.Alt}]")], "para");
+        }
+
+        var view = new Image
+        {
+            Source = bitmap,
+            Stretch = Stretch.Uniform,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            MaxWidth = bitmap.PixelSize.Width / GuideImages.Scale,
+            Classes = { "md-image" },
+        };
+        AutomationProperties.SetName(view, image.Alt);
+        return view;
     }
 
     private Control RenderTable(MdTable table)
@@ -296,5 +329,40 @@ internal sealed class TablePanel(int columns) : Panel
         return spare <= 0
             ? minimum
             : natural.Select((width, i) => minimum[i] + (width - minimum[i]) * spare / flexible).ToArray();
+    }
+}
+
+/// <summary>
+/// The guide's pictures (<c>docs/images/*.png</c>), built into the program. Each is drawn at twice the size it is
+/// shown, so it stays sharp on high-resolution screens; <c>name.dark.png</c> beside <c>name.png</c> is used in the
+/// dark theme.
+/// </summary>
+internal static class GuideImages
+{
+    public const double Scale = 2;
+    private const string Prefix = "Tempo.Guide.";
+    private static readonly Dictionary<string, Bitmap?> Cache = [];
+
+    /// <summary>The picture for <paramref name="source"/> (as written in the guide, e.g. images/delays.png), or null.</summary>
+    public static Bitmap? Load(string source, bool dark)
+    {
+        var name = Path.GetFileName(source);
+        if (dark && Load(Path.ChangeExtension(name, ".dark" + Path.GetExtension(name))) is { } darkVersion)
+        {
+            return darkVersion;
+        }
+
+        return Load(name);
+    }
+
+    private static Bitmap? Load(string name)
+    {
+        if (!Cache.TryGetValue(name, out var bitmap))
+        {
+            using var stream = typeof(GuideImages).Assembly.GetManifestResourceStream(Prefix + name);
+            Cache[name] = bitmap = stream is null ? null : new Bitmap(stream);
+        }
+
+        return bitmap;
     }
 }

@@ -51,6 +51,8 @@
     <AvaloniaResource Include="Assets\**" />
     <!-- The two-sided quick reference card, opened from Help (rebuild with docs/quick-reference/build.mjs). -->
     <EmbeddedResource Include="..\..\docs\Tempo-Quick-Reference.pdf" LogicalName="Tempo.QuickReference.pdf" Link="Assets\Tempo-Quick-Reference.pdf" />
+    <!-- The user guide's pictures (docs/images, rebuilt with docs/images/build.mjs). -->
+    <EmbeddedResource Include="..\..\docs\images\*.png" LogicalName="Tempo.Guide.%(Filename)%(Extension)" Link="Help\Images\%(Filename)%(Extension)" />
   </ItemGroup>
 
   <!-- SkiaSharp ships native debug symbols (~100 MB); keep them out of the published program. -->

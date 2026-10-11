@@ -61,13 +61,20 @@ Easiest of all is **Find on network…**, which looks for DG645s on this compute
 
 ## The main window
 
-- **Menu bar.** *File* opens and saves configurations and setups. *Instrument* acts on the instrument selected in the list. *View* shows the communication log and the audit trail, and sets the alert sound and the theme. *Help* opens this guide and the quick reference card.
-- **Instrument list** (left). Every instrument in the open configuration, with its address and location. The dot shows the connection: hollow when not connected, green when connected, amber while connecting or not responding, and red when the connection failed or was lost. Double-click to connect; right-click for the other actions.
-- **Header and command bar** (top of the instrument). The instrument's name, address, model, serial number and firmware, then buttons for the common actions: **Connect / Disconnect**, **Edit…**, **Refresh**, **Trigger** (which reads **Arm** or **Ready** in the [single-shot external modes](#single-shot-and-arming)), **Save setup**, **Restore saved…** and the **Log** check box. At the top right, the connection state shows the [heartbeat](#heartbeat-and-alerts): the time the instrument took to answer, or how long it has been silent.
-- **Alert bar** (across the top, when needed). Faults the instrument reports and connection problems, newest first; see [Heartbeat and alerts](#heartbeat-and-alerts).
-- **Pages.** Delays, Outputs, Trigger, Burst, Setups, Status, Interfaces and Terminal, one tab each, described below.
-- **Communication log** (bottom). Every command sent and reply received, with the time; see [Communication log](#communication-log).
-- **Status bar.** The connection state, the trigger source and rate (with a green **Ready** while a single shot is armed), whether burst mode is on, **Setup not saved** when the instrument's settings have changed since its setup was last saved, the latest message, and the name of the open configuration. **Portable** appears when you are running the portable program.
+![The main window with a DG645 connected and the Delays page open. The numbers match the list below.](images/main-window.png)
+
+1. **Menu bar.** *File* opens and saves configurations and setups. *Instrument* acts on the instrument selected in the list. *View* shows the communication log and the audit trail, and sets the alert sound and the theme. *Help* opens this guide and the quick reference card.
+2. **Instrument list.** Every instrument in the open configuration, with its address and location. The dot shows the connection: hollow when not connected, green when connected, amber while connecting or not responding, and red when the connection failed or was lost. Double-click to connect; right-click for the other actions.
+3. **Header.** The instrument's name, address, model, serial number and firmware.
+4. **Reason for changes.** Optional; recorded with each change in the [audit trail](#reason-for-changes).
+5. **Connection state.** The [heartbeat](#heartbeat-and-alerts): the time the instrument took to answer, or how long it has been silent.
+6. **Command bar.** **Connect / Disconnect**, **Edit…**, **Refresh**, **Trigger** (which reads **Arm** or **Ready** in the [single-shot external modes](#single-shot-and-arming)), **Save setup**, **Restore saved…** and the **Log** check box.
+7. **Pages.** Delays, Outputs, Trigger, Burst, Setups, Status, Interfaces and Terminal, one tab each, described below.
+8. **Value fields.** Type a value and press Enter; see [Entering values](#entering-values).
+9. **Communication log.** Every command sent and reply received, with the time; see [Communication log](#communication-log).
+10. **Status bar.** The connection state, the trigger source and rate (with a green **Ready** while a single shot is armed), whether burst mode is on, **Setup not saved** when the instrument's settings have changed since its setup was last saved, the latest message, and the name of the open configuration. **Portable** appears when you are running the portable program.
+
+When something is wrong, an **alert bar** appears across the top of the window; see [Heartbeat and alerts](#heartbeat-and-alerts).
 
 If commands typed in the [Terminal](#terminal) may have changed settings shown on the other pages, an amber **Pages may be out of date** button appears at the right of the command bar; press it (or F5) to read everything again.
 
@@ -114,6 +121,8 @@ The scan finds nothing if a firewall blocks outgoing connections on port 5025, i
 ## Configurations and saved setups
 
 A **configuration** is a file on your computer that holds your instruments and, for each, its complete saved setup: every channel delay and reference, every output's amplitude, offset and polarity, the trigger, the prescalers and burst mode. It lets you switch the system on tomorrow and have everything exactly as you left it.
+
+![A configuration file holds each instrument's connection details and saved setup. Save setup copies the instrument's settings into it, Restore saved puts them back, and on connecting Tempo compares the two.](images/configuration.png)
 
 ### The open configuration
 
@@ -186,6 +195,8 @@ Several instruments can be connected at the same time; select one in the list to
 
 While an instrument is connected, Tempo checks it every second by reading its status register. This is the **heartbeat**. Each reply shows the connection is alive and carries the instrument's fault flags. The header shows how long the last reply took (for example *Connected 4 ms*); hover over it for the time of the last reply.
 
+![The connection states: Connected; Not responding after a missed reply, which clears when the instrument answers again; and Connection lost after three missed replies or when the connection closes, from which Reconnect returns to Connected.](images/heartbeat.png)
+
 When something is wrong, an **alert** appears in the bar across the top of the window, whichever instrument you are looking at. Connection alerts clear themselves when the instrument is back; fault alerts stay until you dismiss them (×):
 
 | Alert | When | What to do |
@@ -248,6 +259,8 @@ To set a delay, type it in **Delay** and press Enter. To make a channel follow a
 
 **Example: a 2.5 µs pulse on AB, starting 1 µs after T0.** Set A to reference T0 with delay `1 us`, and B to reference A with delay `2.5 us`. B then fires 3.5 µs after T0, and because B follows A, moving A moves the whole pulse and keeps its width.
 
+![Timing of the example: T0 at 0, A one microsecond after T0, B 2.5 microseconds after A, so the AB output is a 2.5 µs pulse from 1 µs to 3.5 µs.](images/delays.png)
+
 ### Timing diagram
 
 Below the table, the diagram draws T0 and the four outputs on one time axis, from T0 to just after the last edge, with each pulse's start and end channel above it and its width beside it. Outputs set to negative polarity are drawn upside down, as they appear on an oscilloscope.
@@ -261,6 +274,8 @@ Each front-panel output (T0, AB, CD, EF, GH) has:
 - **Amplitude**: the height of the pulse, in volts.
 - **Offset**: the output's low level, in volts.
 - **Polarity**: a positive output rests at the offset and pulses up by the amplitude; a negative output rests at offset + amplitude and pulses down to the offset.
+
+![Positive polarity rests at the offset and pulses up to offset + amplitude; negative polarity rests at offset + amplitude and pulses down to the offset. The TTL preset gives 0 V between pulses and 4 V pulses; NIM gives 0 V between pulses and −0.8 V pulses.](images/output-levels.png)
 
 Under each row, Tempo shows the resulting idle and pulse levels (for example *Idle 0.00 V → pulse 2.50 V*) and when the pulse happens.
 
@@ -296,6 +311,8 @@ The trigger button on the command bar, the button under **Single shot** on this 
 - **Single shot.** The button reads **Trigger** (**Trigger now** on this page) and starts one delay cycle straight away.
 - **Single shot, external rising** or **falling.** The button reads **Arm**. Arming tells the DG645 to start one delay cycle on the next edge at its trigger input. While it waits, the button reads **Ready** in green, and the status bar shows **Ready** beside the trigger source, so it is visible from every page. When the edge arrives, the button goes back to **Arm** for the next shot. Clicking **Ready** arms the instrument again.
 
+![Arming a single shot: pressing Arm turns the button into a green Ready; an edge at the trigger input then runs one delay cycle, and the button shows Arm again.](images/arming.png)
+
 Tempo notices the shot with the [heartbeat](#heartbeat-and-alerts), which reads the instrument's status register every second, so **Ready** can stay on for up to a second afterwards. Choosing another trigger source, resetting the instrument, recalling or restoring a setup, or disconnecting clears **Ready**. If the instrument is armed from its front panel, Tempo cannot tell, and the button stays at **Arm**.
 
 ### Advanced triggering
@@ -307,6 +324,8 @@ Turn on **Advanced triggering** to use:
 
 **Example:** to fire AB on every cycle but CD on every fourth cycle, starting with the second, set CD's *Divide by N* to 4 and its *Phase* to 1.
 
+![Eight delay cycles: AB, divided by 1, pulses on every cycle; CD, divided by 4 with phase 1, pulses on the second and sixth.](images/prescalers.png)
+
 ## Burst
 
 In burst mode, each trigger starts a train of delay cycles instead of one:
@@ -317,6 +336,8 @@ In burst mode, each trigger starts a train of delay cycles instead of one:
 | Burst period | The time between the starts of consecutive cycles, from 100 ns. |
 | Burst delay | The time from the trigger to the first cycle. |
 | T0 output | Whether T0 fires on every cycle of the burst or only the first. |
+
+![A burst of four cycles: after the trigger, the burst delay passes before the first cycle, and each following cycle starts one burst period after the one before. T0 fires on the first cycle, or on every cycle if T0 output is set to every cycle.](images/burst.png)
 
 Below the settings, Tempo describes the burst in words, including when its last cycle starts. The status bar shows *Burst* followed by the count and period while burst mode is on.
 

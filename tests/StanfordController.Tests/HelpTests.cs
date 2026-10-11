@@ -100,6 +100,43 @@ public class HelpTests
     }
 
     [Fact]
+    public void APictureOnALineOfItsOwnIsAnImage()
+    {
+        var blocks = Markdown.Parse("""
+            Before the picture.
+            ![Two pulses, one inverted](images/levels.png)
+            After it, with an inline ![not a picture](x.png) mark.
+            """);
+
+        Assert.IsType<MdParagraph>(blocks[0]);
+        var image = Assert.IsType<MdImage>(blocks[1]);
+        Assert.Equal("Two pulses, one inverted", image.Alt);
+        Assert.Equal("images/levels.png", image.Source);
+        Assert.IsType<MdParagraph>(blocks[2]);
+        Assert.Contains("Two pulses, one inverted", Markdown.PlainText(blocks));
+    }
+
+    [Fact]
+    public void EveryPictureInTheGuideHasALightAndADarkVersion()
+    {
+        var docs = new DirectoryInfo(AppContext.BaseDirectory);
+        while (docs is not null && !File.Exists(Path.Combine(docs.FullName, "docs", "USER-GUIDE.md")))
+        {
+            docs = docs.Parent;
+        }
+
+        Assert.NotNull(docs);
+        var sources = HelpGuide.LoadEmbedded().ImageSources.ToList();
+        Assert.NotEmpty(sources);
+        foreach (var source in sources)
+        {
+            var light = Path.Combine(docs.FullName, "docs", source);
+            Assert.True(File.Exists(light), $"The user guide shows {source}, which is not in the docs folder.");
+            Assert.True(File.Exists(Path.ChangeExtension(light, ".dark.png")), $"{source} has no dark version.");
+        }
+    }
+
+    [Fact]
     public void HelpWindowNavigatesSearchesAndGoesBack()
     {
         var guide = HelpGuide.Parse("""

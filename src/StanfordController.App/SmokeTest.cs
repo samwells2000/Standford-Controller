@@ -12,6 +12,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using StanfordController.App.Controls;
 using StanfordController.App.Dialogs;
+using StanfordController.App.Help;
 using StanfordController.App.Infrastructure;
 using StanfordController.App.Services;
 using StanfordController.Core.Profiles;
@@ -489,6 +490,14 @@ internal sealed class SmokeTest
         await IdleAsync();
         if (_dialogs.Help is { } help)
         {
+            // Every picture in the guide is built in, in a light and a dark version.
+            foreach (var source in help.ViewModel.Guide.ImageSources)
+            {
+                var light = GuideImages.Load(source, dark: false);
+                Check(light is not null && GuideImages.Load(source, dark: true) is { } dark && !ReferenceEquals(light, dark),
+                    $"The user guide's picture {source} is not built into the program in both themes.");
+            }
+
             Capture(help, "97-help" + suffix);
             help.Navigate(HelpTopics.Shortcuts);
             await IdleAsync();

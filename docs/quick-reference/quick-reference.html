@@ -68,6 +68,17 @@
   /* Front: the four steps */
   .steps { display: grid; grid-template-columns: 1fr 1fr; gap: 3mm 5mm; margin-bottom: 3.6mm; }
   .step { padding: 2.6mm 3mm 1.6mm; border: 0.25mm solid var(--rule); border-radius: 1.2mm; background: #fff; }
+  .timing { display: block; width: 100%; margin-top: 0.6mm; }
+  .timing text { font-family: "Plex", sans-serif; font-size: 9.6px; fill: var(--ink-2); }
+  .timing .lbl { font-weight: 600; fill: var(--ink); }
+  .timing .note { text-anchor: middle; fill: var(--accent); }
+  .timing .width { text-anchor: middle; fill: var(--ink); }
+  .timing .guide { stroke: #c4c4c4; stroke-width: 0.7; stroke-dasharray: 2 2; fill: none; }
+  .timing .wave { fill: none; stroke-width: 1.6; stroke-linejoin: round; }
+  .timing .t0 { stroke: #6b6b6b; } .timing .ab { stroke: #2a78d6; }
+  .timing .fill { fill: rgba(42, 120, 214, 0.14); }
+  .timing .dim { stroke: var(--accent); stroke-width: 1; fill: none; }
+  .timing .head { fill: var(--accent); }
   .tip { margin-top: 1mm; padding: 1.2mm 2mm; background: var(--accent-soft); border-radius: 0.8mm; font-size: 7.8pt; }
 
   /* Front: annotated screenshot */
@@ -207,15 +218,14 @@
         <ul>
           <li><span class="ui">Save setup</span> stores the instrument's complete setup (delays, output levels, trigger and burst) on this computer. <span class="ui">File ▸ Save setups</span> <kbd>Ctrl</kbd>+<kbd>S</kbd> saves every connected instrument at once.</li>
           <li><span class="ui">Restore saved…</span> <kbd>Ctrl</kbd>+<kbd>R</kbd> puts the saved setup back on the instrument.</li>
-          <li><i>Setup not saved</i> in the status bar, and an asterisk in the title, mean something has changed since the last save.</li>
+          <li><i>Setup not saved</i> in the status bar means there are changes since the last save.</li>
           <li>Setups are kept in a <b>configuration</b> file (<code>.tempo</code>): keep one per experiment or lab with <span class="ui">File ▸ New / Open / Save configuration as</span>. The last one opens automatically next time.</li>
         </ul>
       </div>
 
       <div class="block">
         <h3>When an instrument connects</h3>
-        <p>Tempo compares the instrument with its saved setup. If they differ, it lists what is different and asks you to choose:</p>
-        <p><span class="btn">Load saved setup</span> puts your saved settings on the instrument. <span class="btn">Keep instrument settings</span> leaves it as it is.</p>
+        <p>If the instrument differs from its saved setup, Tempo lists the differences and asks: <span class="btn">Load saved setup</span> puts your settings on it, <span class="btn">Keep instrument settings</span> leaves it as it is.</p>
         <p class="muted">Tick <i>Remember my choice</i> to do the same every time (change it later with <span class="ui">Edit…</span>).</p>
       </div>
 
@@ -224,7 +234,7 @@
         <p>Choose the trigger <b>Source</b> on the <span class="ui">Trigger</span> page.</p>
         <ul>
           <li><b>Single shot:</b> <span class="ui">Trigger</span> <kbd>Ctrl</kbd>+<kbd>T</kbd> fires one delay cycle.</li>
-          <li><b>Single shot, external rising/falling:</b> press <span class="ui">Arm</span>. The button turns into <span class="ready">Ready</span>, on every page and in the status bar. The next edge at the trigger input fires the shot, and the button goes back to <span class="ui">Arm</span>.</li>
+          <li><b>Single shot, external rising/falling:</b> press <span class="ui">Arm</span>. The button shows <span class="ready">Ready</span> (also in the status bar) until the next edge at the trigger input fires the shot.</li>
         </ul>
       </div>
 
@@ -232,8 +242,20 @@
         <h3>How the delays work</h3>
         <p>Each channel <b>A–H</b> fires a set delay after its <b>reference</b>: T0 (the start of every cycle) or another channel. Each output pulse runs from one channel to the next:
           <b>AB</b> starts at A and ends at B, and likewise <b>CD</b>, <b>EF</b> and <b>GH</b>.</p>
-        <p class="tip" style="margin:0">Example: <code>A = T0 + 1 us</code>, <code>B = A + 2.5 us</code> gives an AB pulse <b>2.5 µs wide</b>, starting 1 µs after T0.
-          Because B follows A, moving A moves the whole pulse.</p>
+        <svg class="timing" viewBox="0 0 330 66" role="img" aria-label="A is 1 µs after T0 and B is 2.5 µs after A, so AB is a 2.5 µs pulse starting 1 µs after T0">
+          <path class="guide" d="M28,4 V62 M98,4 V62 M273,4 V62" />
+          <text x="0" y="16" class="lbl">T0</text>
+          <path class="wave t0" d="M28,18 V6 H34 V18 H322" />
+          <path class="dim" d="M28,33 H95 M98,33 H270" />
+          <path class="head" d="M95,30 L99,33 L95,36 z M270,30 L274,33 L270,36 z" />
+          <text x="63" y="29" class="note">A = T0 + 1 µs</text>
+          <text x="185" y="29" class="note">B = A + 2.5 µs</text>
+          <text x="0" y="56" class="lbl">AB</text>
+          <rect x="98" y="42" width="175" height="17" class="fill" />
+          <path class="wave ab" d="M28,59 H98 V42 H273 V59 H322" />
+          <text x="185" y="54.5" class="width">2.5 µs wide</text>
+        </svg>
+        <p class="muted" style="margin:0.6mm 0 0">Because B follows A, moving A moves the whole pulse.</p>
       </div>
 
       <div class="block">

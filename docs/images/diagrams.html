@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Tempo user guide diagrams</title>
+<!--
+  The pictures in the user guide. Each <figure> becomes docs/images/<id>.png and <id>.dark.png:
+      node docs/images/build.mjs
+  Figures are 720 px wide and are saved at twice that, so they stay sharp on high-resolution screens.
+  Colours are the program's own (src/StanfordController.App/Themes/Colors.axaml).
+-->
+<style>
+  @font-face { font-family: "Plex"; src: url("../../src/StanfordController.App/Assets/Fonts/IBMPlexSans-Regular.ttf"); font-weight: 400; }
+  @font-face { font-family: "Plex"; src: url("../../src/StanfordController.App/Assets/Fonts/IBMPlexSans-Medium.ttf"); font-weight: 500; }
+  @font-face { font-family: "Plex"; src: url("../../src/StanfordController.App/Assets/Fonts/IBMPlexSans-SemiBold.ttf"); font-weight: 600; }
+  @font-face { font-family: "Plex"; src: url("../../src/StanfordController.App/Assets/Fonts/IBMPlexSans-Italic.ttf"); font-style: italic; }
+  @font-face { font-family: "PlexMono"; src: url("../../src/StanfordController.App/Assets/Fonts/IBMPlexMono-Regular.ttf"); }
+
+  :root {
+    --page: #ffffff; --panel: #f9f9f9; --rule: #dcdcdc; --guide: #c4c4c4;
+    --ink: #1a1a1a; --ink-2: #4d4d4d; --muted: #616161;
+    --accent: #005fb8; --button: #ffffff; --button-rule: #8a8a8a;
+    --t0: #6b6b6b; --ab: #2a78d6; --ab-soft: rgba(42, 120, 214, 0.14); --cd: #eb6834; --cd-soft: rgba(235, 104, 52, 0.14);
+    --ok: #0f7b0f; --ok-soft: #dff6dd; --warn: #9d5d00; --warn-soft: #fff4ce; --warn-rule: #e3c46a;
+    --bad: #c42b1c; --bad-soft: #fde7e9; --bad-rule: #eba7ae; --band: #f0f0f0;
+  }
+  body.dark {
+    --page: #272727; --panel: #2c2c2c; --rule: #3a3a3a; --guide: #555555;
+    --ink: #f2f2f2; --ink-2: #c8c8c8; --muted: #ababab;
+    --accent: #60cdff; --button: #333333; --button-rule: #858585;
+    --t0: #a3a3a3; --ab: #3987e5; --ab-soft: rgba(57, 135, 229, 0.22); --cd: #d95926; --cd-soft: rgba(217, 89, 38, 0.24);
+    --ok: #6ccb5f; --ok-soft: #393d1b; --warn: #fce100; --warn-soft: #433519; --warn-rule: #6b5a1e;
+    --bad: #ff99a4; --bad-soft: #442726; --bad-rule: #7a3a40; --band: #333333;
+  }
+
+  html, body { margin: 0; background: var(--page); }
+  body { padding: 20px; font: 400 13px/1.4 "Plex", sans-serif; color: var(--ink); }
+  figure { width: 720px; box-sizing: border-box; margin: 0 0 24px; padding: 18px 22px; background: var(--panel);
+           border: 1px solid var(--rule); border-radius: 8px; }
+  svg { display: block; overflow: visible; }
+  svg text { font-family: "Plex", sans-serif; font-size: 12px; fill: var(--ink-2); }
+  svg .title { font-size: 13px; font-weight: 600; fill: var(--ink); }
+  svg .label { font-size: 12.5px; font-weight: 600; fill: var(--ink); }
+  svg .small { font-size: 11.5px; fill: var(--muted); }
+  svg .value { font-family: "PlexMono", monospace; font-size: 11.5px; fill: var(--ink-2); }
+  svg .accent { fill: var(--accent); }
+  .axis, .tick { stroke: var(--muted); stroke-width: 1; fill: none; }
+  .guide { stroke: var(--guide); stroke-width: 1; stroke-dasharray: 3 3; fill: none; }
+  .wave { fill: none; stroke-width: 2.25; stroke-linejoin: round; }
+  .arrow { stroke: var(--ink-2); stroke-width: 1.4; fill: none; }
+  .arrow-accent { stroke: var(--accent); stroke-width: 1.6; fill: none; }
+
+  /* The main window: a screenshot with numbered callouts. */
+  .shot { position: relative; border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
+  .shot img { display: block; width: 100%; }
+  .shot img.dark, body.dark .shot img.light { display: none; }
+  body.dark .shot img.dark { display: block; }
+  .pin { position: absolute; transform: translate(-50%, -50%); width: 19px; height: 19px; border-radius: 50%;
+         background: #005fb8; color: #fff; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .45);
+         display: grid; place-items: center; font: 600 11px/1 "Plex", sans-serif; }
+  body.dark .pin { background: #60cdff; color: #000; border-color: #272727; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill: var(--ink-2)" />
+    </marker>
+    <marker id="head-accent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill: var(--accent)" />
+    </marker>
+  </defs>
+</svg>
+
+<!-- ========================= The main window ========================= -->
+<figure id="main-window">
+  <div class="shot">
+    <img class="light" src="src/main-window-light.png" alt="">
+    <img class="dark" src="src/main-window-dark.png" alt="">
+    <span class="pin" style="left:16.7%;top:1.7%">1</span>
+    <span class="pin" style="left:8.1%;top:32.6%">2</span>
+    <span class="pin" style="left:48.6%;top:6.4%">3</span>
+    <span class="pin" style="left:62.8%;top:6.2%">4</span>
+    <span class="pin" style="left:97.2%;top:1.9%">5</span>
+    <span class="pin" style="left:64%;top:10.9%">6</span>
+    <span class="pin" style="left:59%;top:14.9%">7</span>
+    <span class="pin" style="left:43%;top:23%">8</span>
+    <span class="pin" style="left:69.4%;top:87%">9</span>
+    <span class="pin" style="left:48.6%;top:98.5%">10</span>
+  </div>
+</figure>
+
+<!-- ========================= Channel delays ========================= -->
+<figure id="delays">
+  <svg width="676" height="222" viewBox="0 0 676 222">
+    <!-- guides at T0, A and B -->
+    <path class="guide" d="M100,26 V180 M220,26 V180 M520,26 V180" />
+    <!-- T0 -->
+    <text class="label" x="0" y="52">T0</text>
+    <path class="wave" style="stroke: var(--t0)" d="M100,58 V34 H112 V58 H650" />
+    <!-- delays, each from its reference -->
+    <path class="arrow-accent" d="M100,94 H218" marker-end="url(#head-accent)" />
+    <path class="arrow-accent" d="M220,94 H518" marker-end="url(#head-accent)" />
+    <path class="tick" style="stroke: var(--accent)" d="M100,88 V100 M220,88 V100" />
+    <text class="accent" x="160" y="86" text-anchor="middle">A: T0 + 1 µs</text>
+    <text class="accent" x="370" y="86" text-anchor="middle">B: A + 2.5 µs</text>
+    <!-- AB output -->
+    <text class="label" x="0" y="148">AB output</text>
+    <rect x="220" y="124" width="300" height="36" style="fill: var(--ab-soft)" />
+    <path class="wave" style="stroke: var(--ab)" d="M100,160 H220 V124 H520 V160 H650" />
+    <text class="label" x="220" y="117" text-anchor="middle">A</text>
+    <text class="label" x="520" y="117" text-anchor="middle">B</text>
+    <text x="370" y="147" text-anchor="middle" style="fill: var(--ink)">2.5 µs wide</text>
+    <!-- time axis -->
+    <text class="small" x="0" y="200">Time after T0</text>
+    <path class="axis" d="M100,184 H650" />
+    <path class="tick" d="M100,184 v5 M220,184 v5 M340,184 v5 M460,184 v5 M580,184 v5" />
+    <text class="small" x="100" y="204" text-anchor="middle">0</text>
+    <text class="small" x="220" y="204" text-anchor="middle">1 µs</text>
+    <text class="small" x="340" y="204" text-anchor="middle">2 µs</text>
+    <text class="small" x="460" y="204" text-anchor="middle">3 µs</text>
+    <text class="small" x="580" y="204" text-anchor="middle">4 µs</text>
+    <path class="tick" style="stroke: var(--accent)" d="M520,184 v7" />
+    <text class="accent" x="520" y="218" text-anchor="middle" style="font-size: 11.5px">3.5 µs</text>
+  </svg>
+</figure>
+
+<!-- ========================= Output levels ========================= -->
+<figure id="output-levels">
+  <svg width="676" height="196" viewBox="0 0 676 196">
+    <!-- positive -->
+    <g>
+      <text class="title" x="0" y="14">Positive polarity</text>
+      <path class="guide" d="M0,50 H170 M0,120 H170" />
+      <rect x="40" y="50" width="90" height="70" style="fill: var(--ab-soft)" />
+      <path class="wave" style="stroke: var(--ab)" d="M0,120 H40 V50 H130 V120 H170" />
+      <path class="arrow" d="M58,54 V116" marker-start="url(#head)" marker-end="url(#head)" />
+      <text x="66" y="89" style="fill: var(--ink)">amplitude</text>
+      <text x="180" y="54">offset + amplitude</text>
+      <text x="180" y="124">offset</text>
+      <text class="small" x="0" y="148">Rests at the offset and pulses up</text>
+      <text class="small" x="0" y="164">by the amplitude.</text>
+      <text x="0" y="188"><tspan class="label">TTL</tspan><tspan dx="6">0 V between pulses, pulses to 4 V</tspan></text>
+    </g>
+    <!-- negative -->
+    <g transform="translate(356,0)">
+      <text class="title" x="0" y="14">Negative polarity</text>
+      <path class="guide" d="M0,50 H170 M0,120 H170" />
+      <rect x="40" y="50" width="90" height="70" style="fill: var(--ab-soft)" />
+      <path class="wave" style="stroke: var(--ab)" d="M0,50 H40 V120 H130 V50 H170" />
+      <path class="arrow" d="M58,54 V116" marker-start="url(#head)" marker-end="url(#head)" />
+      <text x="66" y="89" style="fill: var(--ink)">amplitude</text>
+      <text x="180" y="54">offset + amplitude</text>
+      <text x="180" y="124">offset</text>
+      <text class="small" x="0" y="148">Rests at offset + amplitude and pulses</text>
+      <text class="small" x="0" y="164">down to the offset.</text>
+      <text x="0" y="188"><tspan class="label">NIM</tspan><tspan dx="6">0 V between pulses, pulses to −0.8 V</tspan></text>
+    </g>
+  </svg>
+</figure>
+
+<!-- ========================= Arming a single shot ========================= -->
+<figure id="arming">
+  <svg width="676" height="120" viewBox="0 0 676 120">
+    <!-- back to Arm -->
+    <path class="arrow" d="M600,40 V20 H75 V36" marker-end="url(#head)" />
+    <rect x="198" y="11" width="280" height="18" style="fill: var(--panel)" />
+    <text x="338" y="24" text-anchor="middle">the cycle has run: the button shows Arm again</text>
+    <!-- Arm -->
+    <rect x="15" y="40" width="120" height="36" rx="4" style="fill: var(--button); stroke: var(--button-rule)" />
+    <text class="label" x="75" y="63" text-anchor="middle">Arm</text>
+    <!-- Ready -->
+    <rect x="268" y="40" width="140" height="36" rx="4" style="fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5" />
+    <circle cx="308" cy="58" r="5" style="fill: var(--ok)" />
+    <text class="label" x="322" y="63" style="fill: var(--ok)">Ready</text>
+    <!-- one delay cycle -->
+    <rect x="535" y="40" width="130" height="36" rx="4" style="fill: var(--page); stroke: var(--rule)" />
+    <path class="wave" style="stroke: var(--t0); stroke-width: 1.6" d="M545,68 H552 V48 H556 V68 H655" />
+    <path class="wave" style="stroke: var(--ab); stroke-width: 1.8" d="M545,68 H580 V50 H630 V68 H655" />
+    <!-- forward arrows -->
+    <path class="arrow" d="M137,58 H264" marker-end="url(#head)" />
+    <text x="200" y="51" text-anchor="middle">press Arm (Ctrl+T)</text>
+    <path class="arrow" d="M410,58 H531" marker-end="url(#head)" />
+    <text x="470" y="51" text-anchor="middle">edge at trigger input</text>
+    <!-- captions -->
+    <text class="small" x="75" y="98" text-anchor="middle">Source: single shot,</text>
+    <text class="small" x="75" y="114" text-anchor="middle">external rising or falling</text>
+    <text class="small" x="338" y="98" text-anchor="middle">Waiting for the edge;</text>
+    <text class="small" x="338" y="114" text-anchor="middle">also shown in the status bar</text>
+    <text class="small" x="600" y="98" text-anchor="middle">One delay cycle:</text>
+    <text class="small" x="600" y="114" text-anchor="middle">each output fires once</text>
+  </svg>
+</figure>
+
+<!-- ========================= Burst ========================= -->
+<figure id="burst">
+  <svg width="676" height="188" viewBox="0 0 676 188">
+    <text class="label" x="0" y="44">Trigger</text>
+    <path class="wave" style="stroke: var(--ink-2); stroke-width: 1.8" d="M90,50 H100 V30 H106 V50 H660" />
+    <!-- dimensions -->
+    <path class="tick" d="M100,62 v12 M190,62 v12 M290,62 v12" />
+    <path class="arrow" d="M102,68 H188" marker-start="url(#head)" marker-end="url(#head)" />
+    <path class="arrow" d="M192,68 H288" marker-start="url(#head)" marker-end="url(#head)" />
+    <text x="145" y="62" text-anchor="middle" style="font-size: 11.5px">burst delay</text>
+    <text x="240" y="62" text-anchor="middle" style="font-size: 11.5px">burst period</text>
+    <!-- T0 -->
+    <text class="label" x="0" y="100">T0</text>
+    <path class="wave" style="stroke: var(--t0)" d="M90,106 H190 V86 H198 V106 H660" />
+    <path class="wave" style="stroke: var(--t0); stroke-dasharray: 3 2; stroke-width: 1.6" d="M290,106 V86 H298 V106 M390,106 V86 H398 V106 M490,106 V86 H498 V106" />
+    <text class="small" x="520" y="84">dashed: only when T0 output</text>
+    <text class="small" x="520" y="99">is set to every cycle</text>
+    <!-- AB -->
+    <text class="label" x="0" y="148">AB</text>
+    <rect x="210" y="128" width="40" height="26" style="fill: var(--ab-soft)" />
+    <rect x="310" y="128" width="40" height="26" style="fill: var(--ab-soft)" />
+    <rect x="410" y="128" width="40" height="26" style="fill: var(--ab-soft)" />
+    <rect x="510" y="128" width="40" height="26" style="fill: var(--ab-soft)" />
+    <path class="wave" style="stroke: var(--ab)" d="M90,154 H210 V128 H250 V154 H310 V128 H350 V154 H410 V128 H450 V154 H510 V128 H550 V154 H660" />
+    <!-- cycle numbers -->
+    <text class="small" x="230" y="174" text-anchor="middle">cycle 1</text>
+    <text class="small" x="330" y="174" text-anchor="middle">2</text>
+    <text class="small" x="430" y="174" text-anchor="middle">3</text>
+    <text class="small" x="530" y="174" text-anchor="middle">4</text>
+    <text class="small" x="575" y="174">(cycles per burst: 4)</text>
+  </svg>
+</figure>
+
+<!-- ========================= Prescalers ========================= -->
+<figure id="prescalers">
+  <svg width="676" height="150" viewBox="0 0 676 150">
+    <!-- groups of four cycles -->
+    <rect x="186" y="0" width="244" height="150" rx="4" style="fill: var(--band)" />
+    <text class="small" x="308" y="146" text-anchor="middle">first group of 4</text>
+    <text class="small" x="552" y="146" text-anchor="middle">second group of 4</text>
+    <!-- cycle numbers -->
+    <text class="label" x="0" y="22">Delay cycle</text>
+    <g class="small" text-anchor="middle">
+      <text class="small" x="216" y="22" text-anchor="middle">1st</text>
+      <text class="small" x="277" y="22" text-anchor="middle">2nd</text>
+      <text class="small" x="338" y="22" text-anchor="middle">3rd</text>
+      <text class="small" x="399" y="22" text-anchor="middle">4th</text>
+      <text class="small" x="460" y="22" text-anchor="middle">5th</text>
+      <text class="small" x="521" y="22" text-anchor="middle">6th</text>
+      <text class="small" x="582" y="22" text-anchor="middle">7th</text>
+      <text class="small" x="643" y="22" text-anchor="middle">8th</text>
+    </g>
+    <!-- AB: every cycle -->
+    <text class="label" x="0" y="62">AB</text>
+    <text class="small" x="28" y="62">divide by 1</text>
+    <path class="wave" style="stroke: var(--ab)" d="M190,68 H206 V44 H226 V68 H267 V44 H287 V68 H328 V44 H348 V68 H389 V44 H409 V68 H450 V44 H470 V68 H511 V44 H531 V68 H572 V44 H592 V68 H633 V44 H653 V68 H670" />
+    <!-- CD: every fourth cycle, phase 1 -->
+    <text class="label" x="0" y="112">CD</text>
+    <text class="small" x="28" y="112">divide by 4, phase 1</text>
+    <path class="wave" style="stroke: var(--cd)" d="M190,118 H267 V94 H287 V118 H511 V94 H531 V118 H670" />
+    <path class="wave" style="stroke: var(--guide); stroke-dasharray: 3 3; stroke-width: 1.4" d="M206,118 V100 H226 V118 M328,118 V100 H348 V118 M389,118 V100 H409 V118 M450,118 V100 H470 V118 M572,118 V100 H592 V118 M633,118 V100 H653 V118" />
+  </svg>
+</figure>
+
+<!-- ========================= Heartbeat ========================= -->
+<figure id="heartbeat">
+  <svg width="676" height="170" viewBox="0 0 676 170">
+    <!-- connection closed: straight to lost -->
+    <path class="arrow" style="stroke-dasharray: 4 3" d="M85,62 V26 H591 V58" marker-end="url(#head)" />
+    <rect x="223" y="17" width="230" height="18" style="fill: var(--panel)" />
+    <text x="338" y="30" text-anchor="middle">connection closed (cable, power, network)</text>
+    <!-- states -->
+    <rect x="0" y="62" width="170" height="52" rx="6" style="fill: var(--ok-soft); stroke: var(--ok)" />
+    <circle cx="20" cy="82" r="5.5" style="fill: var(--ok)" />
+    <text class="label" x="33" y="87">Connected</text>
+    <text class="small" x="14" y="104">answering every second</text>
+
+    <rect x="253" y="62" width="170" height="52" rx="6" style="fill: var(--warn-soft); stroke: var(--warn-rule)" />
+    <circle cx="273" cy="82" r="5.5" style="fill: var(--warn)" />
+    <text class="label" x="286" y="87">Not responding</text>
+    <text class="small" x="267" y="104">clears when it answers</text>
+
+    <rect x="506" y="62" width="170" height="52" rx="6" style="fill: var(--bad-soft); stroke: var(--bad-rule)" />
+    <circle cx="526" cy="82" r="5.5" style="fill: var(--bad)" />
+    <text class="label" x="539" y="87">Connection lost</text>
+    <text class="small" x="520" y="104">alert with Reconnect</text>
+    <!-- transitions -->
+    <path class="arrow" d="M172,80 H249" marker-end="url(#head)" />
+    <text x="211" y="73" text-anchor="middle" style="font-size: 11.5px">no reply</text>
+    <path class="arrow" d="M251,98 H174" marker-end="url(#head)" />
+    <text x="211" y="124" text-anchor="middle" style="font-size: 11.5px">answers again</text>
+    <path class="arrow" d="M425,88 H502" marker-end="url(#head)" />
+    <text x="464" y="81" text-anchor="middle" style="font-size: 11.5px">3 in a row</text>
+    <!-- reconnect -->
+    <path class="arrow-accent" d="M591,116 V158 H85 V118" marker-end="url(#head-accent)" />
+    <rect x="243" y="149" width="190" height="18" style="fill: var(--panel)" />
+    <text class="accent" x="338" y="162" text-anchor="middle">Reconnect, or Connect again</text>
+  </svg>
+</figure>
+
+<!-- ========================= Configuration ========================= -->
+<figure id="configuration">
+  <svg width="676" height="210" viewBox="0 0 676 210">
+    <!-- the configuration file -->
+    <rect x="0" y="0" width="292" height="210" rx="6" style="fill: var(--page); stroke: var(--rule)" />
+    <path d="M16,14 h12 l6,6 v16 h-18 z" style="fill: none; stroke: var(--accent); stroke-width: 1.4" />
+    <text class="label" x="44" y="26">Laser lab.tempo</text>
+    <text class="small" x="44" y="42">configuration on this computer</text>
+
+    <rect x="14" y="56" width="264" height="66" rx="5" style="fill: var(--panel); stroke: var(--rule)" />
+    <circle cx="30" cy="74" r="4.5" style="fill: var(--ok)" />
+    <text class="label" x="42" y="79">Laser lab DG645</text>
+    <text class="small" x="42" y="96">192.168.1.30 · Lab 2.14</text>
+    <rect x="42" y="102" width="86" height="15" rx="3" style="fill: var(--ab-soft)" />
+    <text x="85" y="113" text-anchor="middle" style="font-size: 10.5px; fill: var(--ink)">saved setup</text>
+
+    <rect x="14" y="132" width="264" height="66" rx="5" style="fill: var(--panel); stroke: var(--rule)" />
+    <circle cx="30" cy="150" r="4.5" style="fill: none; stroke: var(--muted); stroke-width: 1.2" />
+    <text class="label" x="42" y="155">Beamline DG645</text>
+    <text class="small" x="42" y="172">dg645-bl7 · Beamline 7</text>
+    <rect x="42" y="178" width="86" height="15" rx="3" style="fill: var(--ab-soft)" />
+    <text x="85" y="189" text-anchor="middle" style="font-size: 10.5px; fill: var(--ink)">saved setup</text>
+
+    <!-- what moves between them -->
+    <path class="arrow" d="M466,64 H298" marker-end="url(#head)" />
+    <text x="382" y="57" text-anchor="middle">Save setup (Ctrl+S)</text>
+    <path class="arrow" d="M298,104 H466" marker-end="url(#head)" />
+    <text x="382" y="97" text-anchor="middle">Restore saved (Ctrl+R)</text>
+    <path class="arrow" style="stroke-dasharray: 4 3" d="M300,144 H464" marker-start="url(#head)" marker-end="url(#head)" />
+    <text x="382" y="137" text-anchor="middle">on connecting: compare</text>
+    <text class="small" x="382" y="162" text-anchor="middle">and ask if they differ</text>
+
+    <!-- the instrument -->
+    <rect x="472" y="44" width="204" height="96" rx="5" style="fill: var(--button); stroke: var(--button-rule)" />
+    <rect x="486" y="58" width="86" height="28" rx="2" style="fill: var(--ab-soft); stroke: var(--rule)" />
+    <text class="value" x="492" y="76">A = T0+1µs</text>
+    <circle cx="590" cy="64" r="5" style="fill: none; stroke: var(--muted)" />
+    <circle cx="606" cy="64" r="5" style="fill: none; stroke: var(--muted)" />
+    <circle cx="622" cy="64" r="5" style="fill: none; stroke: var(--muted)" />
+    <circle cx="638" cy="64" r="5" style="fill: none; stroke: var(--muted)" />
+    <circle cx="654" cy="64" r="5" style="fill: none; stroke: var(--muted)" />
+    <circle cx="590" cy="82" r="5" style="fill: none; stroke: var(--muted)" />
+    <circle cx="606" cy="82" r="5" style="fill: none; stroke: var(--muted)" />
+    <circle cx="622" cy="82" r="5" style="fill: none; stroke: var(--muted)" />
+    <circle cx="638" cy="82" r="5" style="fill: none; stroke: var(--muted)" />
+    <circle cx="654" cy="82" r="5" style="fill: none; stroke: var(--muted)" />
+    <g style="fill: var(--page); stroke: var(--muted)">
+      <circle cx="500" cy="118" r="6" /><circle cx="526" cy="118" r="6" /><circle cx="552" cy="118" r="6" />
+      <circle cx="578" cy="118" r="6" /><circle cx="604" cy="118" r="6" /><circle cx="630" cy="118" r="6" />
+    </g>
+    <text class="label" x="574" y="162" text-anchor="middle">DG645</text>
+    <text class="small" x="574" y="178" text-anchor="middle">the instrument</text>
+  </svg>
+</figure>
+
+</body>
+</html>
