@@ -121,6 +121,17 @@ public sealed class HelpGuide
     /// <summary>Every link target used in the guide.</summary>
     public IEnumerable<string> LinkTargets => Topics.SelectMany(t => Links(t.Blocks));
 
+    /// <summary>Every picture in the guide, as written (for example <c>images/delays.png</c>).</summary>
+    public IEnumerable<string> ImageSources => Topics.SelectMany(t => Images(t.Blocks));
+
+    private static IEnumerable<string> Images(IEnumerable<MdBlock> blocks) => blocks.SelectMany(block => block switch
+    {
+        MdImage i => [i.Source],
+        MdList l => l.Items.SelectMany(Images),
+        MdQuote q => Images(q.Blocks),
+        _ => [],
+    });
+
     private static IEnumerable<string> Links(IEnumerable<MdBlock> blocks) => blocks.SelectMany(block => block switch
     {
         MdParagraph p => Links(p.Inlines),

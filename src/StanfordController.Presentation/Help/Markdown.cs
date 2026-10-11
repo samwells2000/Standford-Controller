@@ -42,6 +42,9 @@ public sealed record MdQuote(IReadOnlyList<MdBlock> Blocks) : MdBlock;
 
 public sealed record MdRule : MdBlock;
 
+/// <summary>A picture on a line of its own: <c>![what it shows](images/name.png)</c>, relative to the guide.</summary>
+public sealed record MdImage(string Alt, string Source) : MdBlock;
+
 public static partial class Markdown
 {
     private const char HardBreak = '\u2028';
@@ -183,6 +186,9 @@ public static partial class Markdown
                 case MdQuote q:
                     builder.Append(PlainText(q.Blocks));
                     break;
+                case MdImage image:
+                    builder.AppendLine(image.Alt);
+                    break;
             }
         }
 
@@ -261,6 +267,11 @@ public static partial class Markdown
             else if (RuleLine().IsMatch(line))
             {
                 blocks.Add(new MdRule());
+                i++;
+            }
+            else if (ImageLine().Match(line) is { Success: true } image)
+            {
+                blocks.Add(new MdImage(image.Groups["alt"].Value.Trim(), image.Groups["source"].Value));
                 i++;
             }
             else if (IsQuote(line))
@@ -423,7 +434,7 @@ public static partial class Markdown
 
     private static bool StartsBlock(List<string> lines, int i) =>
         IsFence(lines[i]) || HeadingLine().IsMatch(lines[i]) || IsQuote(lines[i]) || IsTableStart(lines, i)
-        || ListItem().IsMatch(lines[i]) || RuleLine().IsMatch(lines[i]);
+        || ListItem().IsMatch(lines[i]) || RuleLine().IsMatch(lines[i]) || ImageLine().IsMatch(lines[i]);
 
     private static bool IsTableStart(List<string> lines, int i) =>
         lines[i].TrimStart().StartsWith('|') && i + 1 < lines.Count && TableSeparator().IsMatch(lines[i + 1]);
@@ -634,6 +645,9 @@ public static partial class Markdown
 
     [GeneratedRegex(@"^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$")]
     private static partial Regex TableSeparator();
+
+    [GeneratedRegex(@"^ {0,3}!\[(?<alt>[^\]]*)\]\((?<source>[^\s)]+)(\s+""[^""]*"")?\)\s*$")]
+    private static partial Regex ImageLine();
 
     [GeneratedRegex(@"<(https?://[^\s>]+)>")]
     private static partial Regex AutoLink();
