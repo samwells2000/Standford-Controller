@@ -21,6 +21,17 @@ public sealed record PulseTiming(string Output, string StartChannel, string EndC
     public double Width => IsValid ? End!.Value - Start!.Value : 0;
 }
 
+/// <summary>
+/// Burst mode as the timing diagram draws it: each trigger starts <paramref name="Count"/> delay cycles,
+/// <paramref name="Period"/> apart, the first <paramref name="Delay"/> after the trigger. T0 fires on every
+/// cycle or only the first.
+/// </summary>
+public sealed record BurstTiming(long Count, double Period, double Delay, bool T0EveryCycle)
+{
+    /// <summary>Time from the trigger to the start of delay cycle <paramref name="cycle"/> (0-based).</summary>
+    public double CycleStart(long cycle) => Delay + cycle * Period;
+}
+
 /// <summary>Everything shown for a connected instrument.</summary>
 public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentContext
 {
@@ -42,6 +53,7 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
     private int _saveSlot = 1;
     private ChoiceOption? _recallSlot;
     private IReadOnlyList<PulseTiming> _timing = [];
+    private BurstTiming? _timingBurst;
     private bool _disconnectRequested;
     private bool _settingsMayBeStale;
     private bool _hasUnsavedChanges;
@@ -101,6 +113,13 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         Burst.Enabled.ValueChanged += (_, _) => OnPropertyChanged(nameof(BurstSummary));
         Burst.Count.ValueChanged += (_, _) => OnPropertyChanged(nameof(BurstSummary));
         Burst.Period.ValueChanged += (_, _) => OnPropertyChanged(nameof(BurstSummary));
+
+        // The timing diagram repeats the pulses for each delay cycle while burst mode is on.
+        Burst.Enabled.ValueChanged += (_, _) => RecomputeBurstTiming();
+        Burst.Count.ValueChanged += (_, _) => RecomputeBurstTiming();
+        Burst.Period.ValueChanged += (_, _) => RecomputeBurstTiming();
+        Burst.Delay.ValueChanged += (_, _) => RecomputeBurstTiming();
+        Burst.T0Mode.ValueChanged += (_, _) => RecomputeBurstTiming();
     }
 
     public event EventHandler<string>? DisconnectRequested;
@@ -143,6 +162,23 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         get => _timing;
         private set => SetProperty(ref _timing, value);
     }
+
+    /// <summary>The burst the timing diagram draws, or null when burst mode is off or not yet read.</summary>
+    public BurstTiming? TimingBurst
+    {
+        get => _timingBurst;
+        private set
+        {
+            if (SetProperty(ref _timingBurst, value))
+            {
+                OnPropertyChanged(nameof(TimingCaption));
+            }
+        }
+    }
+
+    public string TimingCaption => TimingBurst is null
+        ? "Outputs relative to T0. Negative-polarity outputs are drawn inverted. Hover for exact edges."
+        : "Burst mode: outputs relative to the trigger, repeated for each delay cycle. Negative-polarity outputs are drawn inverted. Hover for exact edges.";
 
     public bool IsBusy
     {
@@ -491,6 +527,12 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
     }
 
     // ---- Timing ----
+
+    private void RecomputeBurstTiming() =>
+        TimingBurst = Burst.Enabled.IsChecked && Burst.Count is { HasValue: true, Value: >= 1 } && Burst.Period.HasValue && Burst.Delay.HasValue
+            ? new BurstTiming(Burst.Count.Value, Burst.Period.Value, Burst.Delay.Value,
+                Burst.T0Mode.SelectedValue != (int)BurstT0Mode.FirstDelayCycleOnly)
+            : null;
 
     public void RecomputeTiming()
     {

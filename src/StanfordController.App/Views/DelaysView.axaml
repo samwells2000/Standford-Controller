@@ -67,12 +67,12 @@
             </HeaderedContentControl>
 
             <HeaderedContentControl Theme="{StaticResource Section}" Header="Timing"
-                                    AutomationProperties.HelpText="A picture of the output pulses over one cycle, drawn from the delays above, so you can check the pulse order, widths and overlaps at a glance.">
+                                    AutomationProperties.HelpText="A picture of the output pulses over one cycle, drawn from the delays above, so you can check the pulse order, widths and overlaps at a glance. With burst mode on, it shows the pulses repeated for each delay cycle of the burst.">
                 <HeaderedContentControl.Tag>
-                    <TextBlock Classes="caption" Text="Outputs relative to T0. Negative-polarity outputs are drawn inverted. Hover for exact edges." />
+                    <TextBlock Classes="caption" Text="{Binding TimingCaption}" />
                 </HeaderedContentControl.Tag>
                 <Border Classes="framed">
-                    <controls:TimingDiagram Pulses="{Binding Timing}" Height="280"
+                    <controls:TimingDiagram Pulses="{Binding Timing}" Burst="{Binding TimingBurst}" Height="280"
                                             TextBrush="{DynamicResource TextBrush}" MutedBrush="{DynamicResource TextMutedBrush}"
                                             GridBrush="{DynamicResource ChartGridBrush}" AxisBrush="{DynamicResource ChartAxisBrush}"
                                             WarningBrush="{DynamicResource WarningTextBrush}" PanelBrush="{DynamicResource SurfaceBrush}"

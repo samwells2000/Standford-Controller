@@ -112,6 +112,7 @@ internal sealed class SmokeTest
 
             _viewModel.Theme = AppTheme.Light;
             await IdleAsync();
+            await CheckBurstTimingAsync(session);
 
             // The pages at the smallest window size allowed, to catch clipped layouts.
             _window.Width = _window.MinWidth;
@@ -273,6 +274,49 @@ internal sealed class SmokeTest
         }
 
         Check(!_viewModel.HasAlerts, "Dismissing did not clear the alert bar.");
+        await IdleAsync();
+    }
+
+    /// <summary>With burst mode on, the timing diagram on the Delays page repeats the pulses for each delay cycle.</summary>
+    private async Task CheckBurstTimingAsync(InstrumentSessionViewModel session)
+    {
+        using (session.BeginChange())
+        {
+            await session.Client.SetBurstCountAsync(20);
+            await session.Client.SetBurstPeriodAsync(10e-6);
+            await session.Client.SetBurstDelayAsync(2e-6);
+            await session.Client.SetBurstModeAsync(true);
+        }
+
+        await session.Burst.RefreshAsync();
+        var tabs = Tabs();
+        tabs.SelectedIndex = Enumerable.Range(0, tabs.ItemCount).First(i => (tabs.Items[i] as TabItem)?.Header?.ToString() == "Delays");
+        await IdleAsync();
+        var page = (Control)tabs.SelectedContent!;
+        var diagram = page.GetVisualDescendants().OfType<TimingDiagram>().First();
+        Check(diagram.Burst is { Count: 20 }, "The timing diagram was not given the burst settings.");
+        var viewer = page.GetVisualDescendants().OfType<ScrollViewer>().First();
+        foreach (var theme in new[] { AppTheme.Light, AppTheme.Dark })
+        {
+            _viewModel.Theme = theme;
+            viewer.Offset = new Vector(0, viewer.Extent.Height);
+            await IdleAsync();
+            diagram.SimulateHover(new Point(diagram.Bounds.Width * 0.45, diagram.Bounds.Height * 0.32));
+            await IdleAsync();
+            Capture(_window, "03-delays-burst" + (theme == AppTheme.Dark ? "-dark" : string.Empty));
+            diagram.SimulateHover(null);
+        }
+
+        _viewModel.Theme = AppTheme.Light;
+        viewer.Offset = default;
+        using (session.BeginChange())
+        {
+            await session.Client.SetBurstModeAsync(false);
+        }
+
+        await session.Burst.RefreshAsync();
+        Check(diagram.Burst is null, "The timing diagram still shows a burst after burst mode was turned off.");
+        tabs.SelectedIndex = 0;
         await IdleAsync();
     }
 
