@@ -2,9 +2,9 @@
 
 Tempo (short for *Timing & Event Manager for Pulse Outputs*) controls Stanford Research Systems **DG645** digital delay generators over Ethernet. It gives every instrument a name you choose, shows all of its settings on eight pages, and keeps complete setups in configuration files on your computer, so a day's work can be put back on the instrument with one click.
 
-This guide is built into the program: press **F1** anywhere to open it at the page you are working on. It is also in the repository as `docs/USER-GUIDE.md`.
+Press F1 anywhere in Tempo to open this guide at the page you are working on.
 
-New to Tempo? The [quick reference card](Tempo-Quick-Reference.pdf) (**Help ▸ Quick reference card**) opens in your web browser, ready to print on one sheet of A4 and keep by the instrument: getting started on one side, everyday tasks on the other.
+New to Tempo? Print the [quick reference card](Tempo-Quick-Reference.pdf) on both sides of one sheet of A4 and keep it by the instrument: getting started on one side, everyday tasks on the other. **Help ▸ Quick reference card (PDF)** opens it in your web browser.
 
 Quick links: [Getting started](#getting-started) · [Configurations and saved setups](#configurations-and-saved-setups) · [Keyboard shortcuts](#keyboard-shortcuts) · [Troubleshooting](#troubleshooting)
 
@@ -24,8 +24,10 @@ Every release on the GitHub releases page has these files:
 | `Tempo-linux-x64`, `Tempo-Portable-linux-x64` | The bare Linux program, normal and portable. |
 | `Tempo-<version>-macos-arm64.zip` | Macs with Apple Silicon (M1 or later), macOS 12 or later. |
 | `Tempo-<version>-macos-x64.zip` | Intel Macs, macOS 12 or later. |
+| `Tempo-Quick-Reference.pdf` | The quick reference card, to print. |
+| `SHA256SUMS.txt` | Checksums, to confirm a download is complete and unaltered. |
 
-Nothing else is needed: the .NET runtime, the user interface library and the fonts are all inside the program file.
+Nothing else needs installing: the .NET runtime, the user interface library and the fonts are inside the program file.
 
 ### Installing
 
@@ -44,26 +46,26 @@ Tempo on Linux needs an X11 or XWayland desktop session, which every desktop dis
 ### First connection
 
 1. Connect the DG645 to your network (or straight to the computer; see [Connecting the instrument directly](#connecting-the-instrument-directly)) and switch it on.
-2. Start Tempo. If you know the instrument's IP address, choose **Instrument ▸ Add** (Ctrl+N). If you don't, choose **Instrument ▸ Find on network** (Ctrl+F).
-3. Give the instrument a name you will recognise, such as *Laser lab DG645*, and press **Test connection** to check it answers. Then **Save**.
+2. Start Tempo. If you know the instrument's IP address, choose **Instrument ▸ Add…** (Ctrl+N). If not, choose **Instrument ▸ Find on network…** (Ctrl+F) and press **Scan**.
+3. Give the instrument a name you will recognise, such as *Laser lab DG645*, press **Test connection** to check that it answers, then press **Save**.
 4. Double-click the instrument in the list on the left (or press **Connect**). Tempo reads every setting and shows them on the pages.
-5. Change what you need. When the setup is how you want it, press **Ctrl+S** to save it in the configuration on this computer.
+5. Make your changes, then press Ctrl+S to save the setup in the configuration on this computer.
 
 No hardware to hand? **Instrument ▸ Add demo instrument** adds a simulated DG645 that behaves like the real one, so you can try every page.
 
 ### Finding the instrument's address
 
-The DG645 shows its network settings, including its current IP address, in the network (TCP/IP) settings on its front panel; the DG645 operation manual describes the keys in its remote programming chapter. If the instrument gets its address from your network (DHCP), your network administrator or your router's list of connected devices will also show it.
+The DG645 shows its IP address in the network (TCP/IP) settings on its front panel; its operation manual describes the keys. If the address comes from your network (DHCP), your network administrator or your router's list of connected devices also shows it.
 
-Easiest of all is **Find on network**, which asks every address on this computer's networks whether it is a DG645; see [Finding instruments on the network](#finding-instruments-on-the-network).
+Easiest of all is **Find on network…**, which looks for DG645s on this computer's networks; see [Finding instruments on the network](#finding-instruments-on-the-network).
 
 ## The main window
 
-- **Menu bar.** *File* handles configurations and saving setups, *Instrument* works on the instrument selected in the list, *View* shows or hides the communication log and changes the theme, and *Help* opens this guide.
-- **Instrument list** (left). Every instrument in the open configuration. The dot shows the connection: hollow when not connected, green when connected, amber while connecting, red if the connection failed. The second line is the address and location. Double-click to connect; right-click for the other actions.
+- **Menu bar.** *File* opens and saves configurations and setups. *Instrument* acts on the instrument selected in the list. *View* shows the communication log and the audit trail, and sets the alert sound and the theme. *Help* opens this guide and the quick reference card.
+- **Instrument list** (left). Every instrument in the open configuration, with its address and location. The dot shows the connection: hollow when not connected, green when connected, amber while connecting or not responding, and red when the connection failed or was lost. Double-click to connect; right-click for the other actions.
 - **Header and command bar** (top of the instrument). The instrument's name, address, model, serial number and firmware, then buttons for the common actions: **Connect / Disconnect**, **Edit…**, **Refresh**, **Trigger** (which reads **Arm** or **Ready** in the [single-shot external modes](#single-shot-and-arming)), **Save setup**, **Restore saved…** and the **Log** check box. At the top right, the connection state shows the [heartbeat](#heartbeat-and-alerts): the time the instrument took to answer, or how long it has been silent.
 - **Alert bar** (across the top, when needed). Faults the instrument reports and connection problems, newest first; see [Heartbeat and alerts](#heartbeat-and-alerts).
-- **Pages.** Delays, Outputs, Trigger, Burst, Setups, Status, Interfaces and Terminal, one tab each. Each is described below.
+- **Pages.** Delays, Outputs, Trigger, Burst, Setups, Status, Interfaces and Terminal, one tab each, described below.
 - **Communication log** (bottom). Every command sent and reply received, with the time; see [Communication log](#communication-log).
 - **Status bar.** The connection state, the trigger source and rate (with a green **Ready** while a single shot is armed), whether burst mode is on, **Setup not saved** when the instrument's settings have changed since its setup was last saved, the latest message, and the name of the open configuration. **Portable** appears when you are running the portable program.
 
@@ -75,7 +77,7 @@ Each instrument is saved once, with a friendly name, so you never need to rememb
 
 ### Adding an instrument
 
-**Instrument ▸ Add** (Ctrl+N) opens the instrument editor:
+**Instrument ▸ Add…** (Ctrl+N) opens the instrument editor:
 
 | Field | Meaning |
 | --- | --- |
@@ -84,7 +86,7 @@ Each instrument is saved once, with a friendly name, so you never need to rememb
 | TCP port | 5025, the DG645's bare-socket port. Only change it if a network device forwards a different port to the instrument. |
 | Reply timeout | How long to wait for an answer, in milliseconds. 3000 suits most networks; raise it for slow or remote links. |
 | Location, Notes | Free text, shown when the instrument is selected. |
-| On opening | Connect automatically when this configuration opens, which includes when Tempo starts. |
+| On opening | Connect automatically when this configuration opens, including when Tempo starts. |
 | Saved setup | What to do on connecting when the instrument's settings differ from the setup saved in Tempo; see [Configurations and saved setups](#configurations-and-saved-setups). |
 | On disconnecting | Return the front panel to local control (it is locked while Tempo is connected). |
 
@@ -92,26 +94,26 @@ Each instrument is saved once, with a friendly name, so you never need to rememb
 
 ### Editing, copying and removing
 
-Select an instrument and use the **Instrument** menu, the right-click menu, or the keys:
+Select an instrument, then use the **Instrument** menu or right-click it:
 
-- **Edit…** (F2) changes any of the fields above. Changing the address of a connected instrument takes effect the next time it connects.
+- **Edit…** (F2) changes any of the fields above. A new address for a connected instrument takes effect the next time it connects.
 - **Duplicate…** copies an instrument, including its saved setup, for example when several identical instruments share a setup.
-- **Move up / Move down** reorder the list.
-- **Remove…** (Delete) removes the instrument and its saved setup from the configuration. The instrument itself is not changed.
+- **Move up** and **Move down** reorder the list.
+- **Remove…** (Delete, in the list) removes the instrument and its saved setup from the configuration. The instrument itself is not changed.
 
 ### Finding instruments on the network
 
-**Instrument ▸ Find on network** (Ctrl+F) lists this computer's IPv4 networks and scans them for anything answering on the port shown (5025), then asks each answer for its identity (`*IDN?`). Networks larger than 256 addresses are narrowed to the 256 around this computer's own address to keep the scan quick.
+**Instrument ▸ Find on network…** (Ctrl+F) lists this computer's IPv4 networks. **Scan** looks for anything answering on the port shown (5025) and asks each answer for its identity (`*IDN?`). To keep the scan quick, a network of more than 1,022 addresses is narrowed to the 254 around this computer's own address.
 
-To check a single address instead, type it under **One address** and press **Check**; this is the way to reach an instrument on another subnet or a directly connected one.
+To check one address instead, type it under **One address** and press **Check**. This is the way to reach an instrument on another subnet, or one connected directly to the computer.
 
-Select a result and choose **Add selected…** (or double-click it) to open the instrument editor with the address filled in. If the address is already saved, Tempo selects the existing instrument instead.
+Select a result and choose **Add selected…** (or double-click it) to open the instrument editor with the address filled in. If the address is already saved, Tempo selects that instrument instead.
 
 The scan finds nothing if a firewall blocks outgoing connections on port 5025, if the instrument's bare-socket interface is turned off, or if the instrument is on a network this computer is not directly attached to.
 
 ## Configurations and saved setups
 
-A **configuration** is a file on your computer that holds your instruments and, for each, its complete saved setup: every channel delay and reference, every output's amplitude, offset and polarity, the trigger, the prescalers and burst mode. It is what lets you switch the system on tomorrow and have everything exactly as you left it.
+A **configuration** is a file on your computer that holds your instruments and, for each, its complete saved setup: every channel delay and reference, every output's amplitude, offset and polarity, the trigger, the prescalers and burst mode. It lets you switch the system on tomorrow and have everything exactly as you left it.
 
 ### The open configuration
 
@@ -128,26 +130,26 @@ Tempo always has one configuration open; its name is in the title bar and at the
 
 Configuration files end in `.tempo` and contain plain JSON, so they can be kept with your experiment notes, put under version control, or copied to another computer.
 
-A sensible way to work is one configuration per experiment or per lab: *Laser lab.tempo*, *Beamline 7.tempo*, and so on.
+A good way to work is one configuration per experiment or lab, such as *Laser lab.tempo* or *Beamline 7.tempo*.
 
 ### Saving a setup
 
 When an instrument is set up the way you want, save its setup:
 
-- **Ctrl+S** (File ▸ Save setups) saves every connected instrument at once.
+- **File ▸ Save setups** (Ctrl+S) saves every connected instrument at once.
 - **Save setup** on the command bar or the [Setups](#setups) page saves just this instrument.
 
 Tempo reads every setting back from the instrument, so what is saved is exactly what the instrument is doing. After you change anything, the status bar shows **Setup not saved** and the title bar gains an asterisk; if you close Tempo or open another configuration with unsaved setups, it asks whether to save them.
 
 ### Putting a saved setup back
 
-**Restore saved…** (Ctrl+R) writes the saved setup to the instrument and reads every page back. Tempo applies the settings in an order that avoids temporary conflicts between linked channels, so a restore always ends with exactly the saved setup.
+**Restore saved…** (Ctrl+R) writes the saved setup to the instrument and reads every page back. Tempo applies the settings in an order that avoids temporary conflicts between linked channels, so the instrument ends up with exactly the saved setup.
 
 ### When an instrument connects
 
-Since the setup was saved, the instrument may have been changed at its front panel, by another program, or by a reset. So when an instrument with a saved setup connects, Tempo reads its settings and compares them with the saved setup:
+The instrument may have been changed since its setup was saved: at its front panel, by another program, or by a reset. So when an instrument with a saved setup connects, Tempo compares its settings with the saved setup:
 
-- If they match, nothing happens; the status line says so.
+- If they match, the status bar says so and nothing else happens.
 - If they differ, Tempo lists what differs (for example *Delay C*, *Trigger rate*, *CD amplitude*) and asks whether to **Load saved setup** or **Keep instrument settings**.
 
 Tick **Remember my choice for this instrument** to stop the question; you can change the choice later under **Saved setup** in the instrument editor (F2):
@@ -176,7 +178,7 @@ Double-click an instrument, press **Connect** or press Ctrl+K. Tempo:
 
 While Tempo is connected the DG645 is in remote mode and its front panel is locked. **Disconnect** (Ctrl+Shift+K) closes the connection and, unless you untick the option in the instrument editor, returns the front panel to local control. Closing Tempo disconnects every instrument.
 
-If the connection drops (the cable is pulled, the instrument is switched off, the network fails), the heartbeat notices within seconds and an alert appears; see below. Connect again when it is back.
+If the connection drops (the cable is pulled, the instrument is switched off, the network fails), the heartbeat notices within seconds and an alert appears (see below).
 
 Several instruments can be connected at the same time; select one in the list to see its pages.
 
@@ -184,27 +186,27 @@ Several instruments can be connected at the same time; select one in the list to
 
 While an instrument is connected, Tempo checks it every second by reading its status register. This is the **heartbeat**. Each reply shows the connection is alive and carries the instrument's fault flags. The header shows how long the last reply took (for example *Connected 4 ms*); hover over it for the time of the last reply.
 
-When something is wrong, an **alert** appears in the bar across the top of the window. It stays until you dismiss it (×), even if you are looking at another instrument:
+When something is wrong, an **alert** appears in the bar across the top of the window, whichever instrument you are looking at. Connection alerts clear themselves when the instrument is back; fault alerts stay until you dismiss them (×):
 
 | Alert | When | What to do |
 | --- | --- | --- |
 | **Not responding** (amber) | The instrument missed a heartbeat. Its dot turns amber and the header shows how long it has been silent. | Usually nothing: the alert clears by itself as soon as the instrument answers again. Check that it is switched on and its network cable is in. |
-| **Connection lost** (red) | The instrument missed three heartbeats in a row (about 10 seconds), or the connection was closed. Its dot turns red. | Check power and cabling, then press **Reconnect** in the alert. Reconnecting clears the alert. |
+| **Connection lost** (red) | The instrument missed three heartbeats in a row (about 10 seconds with the default reply timeout), or the connection was closed. Its dot turns red. | Check power and cabling, then press **Reconnect** in the alert. Reconnecting clears the alert. |
 | **Timebase PLL unlocked** (red) | The DG645 reports its 100 MHz phase-locked loop came unlocked (*PLL_UNLOCK*), so timing may have been wrong. | Check the timebase, and the external 10 MHz reference if one is used. |
 | **Rubidium timebase unlocked** (red) | An optional rubidium timebase reports it is unlocked (*RB_UNLOCK*). | Wait for it to lock after power-on (several minutes); if it persists, check the instrument. |
 | **Timebase changed** (red) | The timebase in use changed, for example from *External reference* to *Internal crystal*. Checked every 10 seconds. | An external reference may have been unplugged or lost. |
 
-The same problem happening again updates its alert ("3 times since 14:03") rather than adding another. **Show** selects the instrument. When an alert appears, the window asks for attention (on Windows its taskbar button flashes if another program is in front) and plays the system alert sound. Turn the sound off with **View ▸ Alert sound**. Every alert is also recorded in the [audit trail](#audit-trail), with the time the instrument answered again.
+A problem that happens again updates its alert (*3 times since 14:03:12, last at 14:05:40*) instead of adding another. **Show** selects the instrument. When an alert appears, the window asks for attention (on Windows, its taskbar button flashes if another program is in front) and, on Windows, plays the system alert sound; **View ▸ Alert sound** turns the sound off. Every alert is also recorded in the [audit trail](#audit-trail), as is the time the instrument answered again.
 
 ### Connecting the instrument directly
 
-With an Ethernet cable straight from the computer to the DG645 and no network in between, neither end gets an address from DHCP. If **Auto-IP** is enabled on the instrument (see [Interfaces](#interfaces)), both pick a link-local address in `169.254.x.x` after a minute or so. Read the address from the DG645's front-panel network settings and enter it in the instrument editor, or under **One address** in **Find on network**. (A full scan cannot help here: the link-local range has 65,536 addresses, and Tempo only scans the 256 around the computer's own address.)
+With an Ethernet cable straight from the computer to the DG645 and no network in between, neither end gets an address from DHCP. If **Auto-IP** is enabled on the instrument (see [Interfaces](#interfaces)), both pick a link-local address in `169.254.x.x` after a minute or so. Read the address from the DG645's front-panel network settings and enter it in the instrument editor, or under **One address** in the **Find on network** window. (A scan does not help here: the link-local network has 65,536 addresses, so Tempo scans only the 254 around the computer's own.)
 
 ## Entering values
 
 Every value field works the same way:
 
-- Type the new value and press **Enter** to send it to the instrument. Moving to another field, or clicking anywhere outside the field, sends it too. **Esc** puts the instrument's value back.
+- Type the new value and press Enter to send it to the instrument. Moving to another field, or clicking anywhere outside the field, sends it too. Esc puts the instrument's value back.
 - While you are typing, the field is amber: the value has not been sent yet.
 - After sending, Tempo reads the value back, so the field always shows what the instrument actually holds, including any rounding it applied.
 - If the instrument rejects the value, the field turns red and the reason appears under it, for example *Illegal delay (error 12)*.
@@ -213,13 +215,13 @@ Numbers take the usual SI prefixes, with or without the unit and with or without
 
 | Kind | Examples | Prefixes |
 | --- | --- | --- |
-| Time | `1.5 us`, `1.5µs`, `250ns`, `2 ms`, `1e-6`, `0.5 s` | `p` `n` `u` (or `µ`) `m`, and `k` |
+| Time | `1.5 us`, `1.5µs`, `250ns`, `2 ms`, `1e-6`, `0.5 s` | `p` `n` `u` (or `µ`) `m` |
 | Frequency | `10 kHz`, `2.5k`, `1MHz`, `500 mHz` | `u` `m` `k` `M` `G` |
-| Voltage | `2.5 V`, `800 mV`, `-0.8` | `m` `k` |
+| Voltage | `2.5 V`, `800 mV`, `-0.8` | `m` |
 
 A number with no prefix is in seconds, hertz or volts. Tempo always uses a full stop as the decimal point, whatever your computer's regional settings.
 
-The **up and down** buttons beside some fields step the value by the step size set for it (the DG645 keeps its own step sizes).
+The up and down buttons beside some fields step the value by its step size, which the DG645 keeps for each setting.
 
 ## Delays and timing
 
@@ -229,7 +231,7 @@ The DG645 has eight delay channels, A to H, plus T0, which marks the start of ea
 
 > *channel time = reference time + delay*
 
-So with A referenced to T0 at 1 µs and B referenced to A at 2.5 µs, B fires 3.5 µs after T0. The **From T0** column works out each channel's time after T0 through the whole chain of references.
+The **From T0** column works out each channel's time after T0 through the whole chain of references.
 
 Pairs of channels make the four front-panel output pulses:
 
@@ -244,7 +246,7 @@ The coloured bar beside each channel shows which output it belongs to; the **Pul
 
 To set a delay, type it in **Delay** and press Enter. To make a channel follow another, choose its **Reference**; the delay value stays the same, so its time from T0 changes. The up and down buttons move a delay by its **Step size** (the instrument's `SPDL` step).
 
-**Example — a 2.5 µs pulse on AB starting 1 µs after T0:** set A to reference T0 with delay `1 us`, then B to reference A with delay `2.5 us`. Because B follows A, moving A later moves the whole pulse and keeps its width.
+**Example: a 2.5 µs pulse on AB, starting 1 µs after T0.** Set A to reference T0 with delay `1 us`, and B to reference A with delay `2.5 us`. B then fires 3.5 µs after T0, and because B follows A, moving A moves the whole pulse and keeps its width.
 
 ### Timing diagram
 
@@ -256,9 +258,9 @@ Hover over the diagram to see the time under the pointer and, for the row you ar
 
 Each front-panel output (T0, AB, CD, EF, GH) has:
 
-- **Amplitude**: the size of the pulse, in volts.
-- **Offset**: the level between pulses, in volts.
-- **Polarity**: positive pulses go up from the offset; negative pulses go down.
+- **Amplitude**: the height of the pulse, in volts.
+- **Offset**: the output's low level, in volts.
+- **Polarity**: a positive output rests at the offset and pulses up by the amplitude; a negative output rests at offset + amplitude and pulses down to the offset.
 
 Under each row, Tempo shows the resulting idle and pulse levels (for example *Idle 0.00 V → pulse 2.50 V*) and when the pulse happens.
 
@@ -292,7 +294,7 @@ The source decides what starts each delay cycle:
 The trigger button on the command bar, the button under **Single shot** on this page and Ctrl+T all send `*TRG`. They are available only when the source is a single-shot mode, and what they do depends on which:
 
 - **Single shot.** The button reads **Trigger** (**Trigger now** on this page) and starts one delay cycle straight away.
-- **Single shot, external rising** or **falling.** The button reads **Arm**. Arming tells the DG645 to start one delay cycle on the next edge at its trigger input. While it waits, the button reads **Ready** in green, on the command bar above every page, and the status bar shows **Ready** beside the trigger source. When the edge arrives and the delay cycle has run, the button goes back to **Arm** for the next shot. Clicking **Ready** arms the instrument again.
+- **Single shot, external rising** or **falling.** The button reads **Arm**. Arming tells the DG645 to start one delay cycle on the next edge at its trigger input. While it waits, the button reads **Ready** in green, and the status bar shows **Ready** beside the trigger source, so it is visible from every page. When the edge arrives, the button goes back to **Arm** for the next shot. Clicking **Ready** arms the instrument again.
 
 Tempo notices the shot with the [heartbeat](#heartbeat-and-alerts), which reads the instrument's status register every second, so **Ready** can stay on for up to a second afterwards. Choosing another trigger source, resetting the instrument, recalling or restoring a setup, or disconnecting clears **Ready**. If the instrument is armed from its front panel, Tempo cannot tell, and the button stays at **Arm**.
 
@@ -322,10 +324,10 @@ Below the settings, Tempo describes the burst in words, including when its last 
 
 The Setups page gathers every way of keeping and restoring settings:
 
-- **Saved setup on this computer**: when the setup was last saved in the configuration, with **Save setup** and **Restore saved setup…**. See [Configurations and saved setups](#configurations-and-saved-setups).
+- **Saved setup on this computer**: when the setup was last saved in the configuration, with **Save setup** and **Restore saved setup…** (see [Configurations and saved setups](#configurations-and-saved-setups)).
 - **Setup files**: export this instrument's setup to a `.dg645.json` file, or import one and apply it.
 - **Instrument memory**: the DG645 stores nine setups in its own memory. **Save current to** a location 1 to 9, or **Recall** one; location 0 recalls the factory defaults. These setups stay in the instrument and can also be recalled from its front panel.
-- **Reset**: returns the instrument to its default settings (`*RST`).
+- **Reset to defaults…** returns the instrument to its default settings (`*RST`).
 
 Recall, import and reset ask before replacing the current settings.
 
@@ -359,14 +361,14 @@ Take care: turning off the LAN, the bare socket, or every way of getting an addr
 
 **RS-232 and GPIB.** Enable the rear-panel serial and GPIB interfaces, set the baud rate and GPIB address, and reset each interface.
 
-**Remote control.** *Go to local* unlocks the front panel while staying connected; *Go to remote* locks it again. **Request lock** gives this connection sole control: other interfaces cannot change settings until you **Release lock** (or disconnect).
+**Remote control.** **Go to local** unlocks the front panel while staying connected; **Go to remote** locks it again. **Request lock** gives this connection sole control: other interfaces cannot change settings until you **Release lock** (or disconnect).
 
 ## Terminal
 
 The Terminal sends any DG645 command directly and shows the reply, for anything not on the other pages or for checking exactly what the instrument says.
 
-- Type a command and press **Enter**. Queries end in `?`, for example `DLAY?2` (channel A's delay) or `TRAT?` (the trigger rate). Several commands can go on one line, separated by `;`.
-- **Up** and **Down** recall earlier commands.
+- Type a command and press Enter. Queries end in `?`, for example `DLAY?2` (channel A's delay) or `TRAT?` (the trigger rate). Several commands can go on one line, separated by `;`.
+- The Up and Down arrow keys recall earlier commands.
 - With **Check for errors** ticked, Tempo asks the instrument for errors (`LERR?`) after each command and shows any it reports.
 
 The **Command reference** beside it lists every DG645 command with its syntax and meaning; type in the search box to filter it, and double-click a command to put its example in the input line. In the syntax, *c* is a channel number (0 T0, 1 T1, 2 A … 9 H) and *b* an output number (0 T0, 1 AB, 2 CD, 3 EF, 4 GH). The full reference is also in [DG645-Command-Reference.md](DG645-Command-Reference.md).
@@ -381,7 +383,7 @@ Show or hide the log with the **Log** check box, **View ▸ Communication log** 
 
 ## Audit trail
 
-Tempo keeps a permanent record of every change it makes to an instrument, and to the saved instruments, for quality systems such as ISO 9001 (records of changes, clause 7.5.3; control of changes, clause 8.5.6). Each record says:
+Tempo keeps a permanent record of every change it makes to an instrument, and to the saved instruments, for quality systems such as ISO 9001 (control of documented information, clause 7.5.3; control of changes, clause 8.5.6). Each record says:
 
 - **when**, to the millisecond, with the time zone;
 - **who**: the computer account, for example `LAB\jsmith`, and the computer's name;
@@ -401,9 +403,10 @@ ISO 9001 certifies an organisation's quality management system rather than any p
 | Actions on the instrument | Triggering and arming, saving to the instrument's memory, clearing status, self test and auto calibration (with the result), interface resets, local and remote control, and the interface lock. |
 | Commands typed in the Terminal | Every command that can change something, as typed, with any error the instrument reported. Queries are not recorded. |
 | Connections | Connecting (with the instrument's identity), disconnecting, losing the connection, and keeping the instrument's own settings when they differ from the saved setup. |
+| Heartbeat alerts | Faults the instrument reports, the instrument not responding, and when it answers again. |
 | The saved instruments | Adding, importing and removing an instrument; each detail changed in the instrument editor; and saving a setup, with each setting that differs from the setup saved before. |
 
-As a safety net, anything else Tempo sends that could change the instrument is recorded as a command, so no change Tempo makes goes unrecorded. Reading values is not recorded. Neither are changes made at the instrument's front panel or by other programs, which Tempo cannot see. When an instrument with a saved setup connects, though, Tempo does show any differences from the saved setup ([When an instrument connects](#when-an-instrument-connects)).
+As a safety net, anything else Tempo sends that could change the instrument is recorded as a command, so no change Tempo makes goes unrecorded. Reading values is not recorded, and neither are changes made at the front panel or by other programs, which Tempo cannot see. When an instrument with a saved setup connects, though, Tempo shows any differences from the saved setup (see [When an instrument connects](#when-an-instrument-connects)).
 
 ### Reason for changes
 
@@ -411,11 +414,11 @@ While an instrument is connected, a **Reason for changes** box appears in its he
 
 ### Viewing the audit trail
 
-**View ▸ Audit trail…** shows one month at a time, newest first. Choose an instrument to see only its records, or type in the search box to find a setting, value, user or reason. Select a record to see it in full below the list, including its details and hash. **F5** reads the files again; Tempo also does so whenever it records something. **Ctrl+F** goes to the search box.
+**View ▸ Audit trail…** shows one month at a time, newest first. Choose an instrument to see only its records, or type in the search box to find a setting, value, user or reason. Select a record to see it in full below the list, including its details and hash. **Refresh** (F5) reads the files again; Tempo also does this whenever it records something. Ctrl+F goes to the search box.
 
 ### Where it is kept
 
-The audit trail is a set of CSV files, one per computer per month, for example `Tempo audit trail 2026-10 LABPC1.csv`. They are in the **Audit trail** folder inside the [data folder](#files-and-folders), or in a folder you choose with **Change folder…** in the audit trail window. A shared network folder that is backed up is a good choice. Each computer writes its own file, so several computers can share one folder. The files open in any spreadsheet program, and Tempo marks them read-only between writes.
+The audit trail is a set of CSV files, one per computer per month, for example `Tempo audit trail 2026-10 LABPC1.csv`. They are in the **Audit trail** folder inside the [data folder](#files-and-folders), or in a folder you choose with **Change folder…** in the audit trail window (**Use default folder** goes back). A shared network folder that is backed up is a good choice. Each computer writes its own file, so several computers can share one folder. The files open in any spreadsheet program, and Tempo marks them read-only between writes.
 
 If the folder cannot be written, for example because the network share is offline, records wait in Tempo and are written as soon as the folder is back. Meanwhile the status bar shows **Audit trail not written** in red. If they still cannot be written when Tempo closes, they are written to the default folder instead, and Tempo says so if even that fails.
 
@@ -427,7 +430,7 @@ Each record ends with a hash: a fingerprint of the record and of the record befo
 
 **View ▸ Theme** chooses **Light**, **Dark** or **System**, which follows your operating system's light or dark setting. Both themes meet the WCAG AA contrast guidelines, and the four output colours were chosen to stay distinguishable with the common forms of colour blindness; every coloured mark also has a text label beside it.
 
-Tempo remembers the theme, the window's size and position, whether the log is shown, and which instrument was selected.
+Tempo remembers the theme, the alert sound setting, the window's size and position, whether the log is shown, and which instrument was selected.
 
 ## Keyboard shortcuts
 
@@ -438,10 +441,9 @@ On a Mac, *Ctrl* means the **Control** key, not Command.
 | F1 | Open this guide at the page you are on |
 | Ctrl+N | Add an instrument |
 | Ctrl+F | Find instruments on the network |
-| Enter or Ctrl+K | Connect the selected instrument |
+| Ctrl+K | Connect the selected instrument |
 | Ctrl+Shift+K | Disconnect |
 | F2 | Edit the selected instrument |
-| Delete | Remove the selected instrument (in the list) |
 | Ctrl+S | Save the setups of all connected instruments |
 | Ctrl+R | Restore the selected instrument's saved setup |
 | Ctrl+O | Open a configuration |
@@ -449,9 +451,11 @@ On a Mac, *Ctrl* means the **Control** key, not Command.
 | F5 | Read every setting from the instrument again |
 | Ctrl+T | Trigger a single shot, or arm a single shot on the next external edge (`*TRG`) |
 | Ctrl+L | Show or hide the communication log |
+| Enter / Delete | In the instrument list: connect / remove the selected instrument |
 | Enter / Esc | In a value field: send the value / put the instrument's value back |
 | Up / Down | In the Terminal: previous / next command |
 | Alt+Left / Alt+Right | In this guide: back / forward |
+| Ctrl+F | In this guide: search |
 | F5 / Ctrl+F | In the audit trail: read the files again / search |
 
 ## Troubleshooting

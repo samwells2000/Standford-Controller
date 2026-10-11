@@ -19,6 +19,7 @@
         <KeyBinding Gesture="Ctrl+Shift+S" Command="{Binding SaveConfigurationAsCommand}" />
         <KeyBinding Gesture="Ctrl+K" Command="{Binding ConnectSelectedCommand}" />
         <KeyBinding Gesture="Ctrl+Shift+K" Command="{Binding DisconnectSelectedCommand}" />
+        <KeyBinding Gesture="F2" Command="{Binding EditInstrumentCommand}" />
         <KeyBinding Gesture="Ctrl+R" Command="{Binding RestoreSelectedSetupCommand}" />
         <KeyBinding Gesture="F5" Command="{Binding RefreshCommand}" />
         <KeyBinding Gesture="Ctrl+T" Command="{Binding TriggerCommand}" />

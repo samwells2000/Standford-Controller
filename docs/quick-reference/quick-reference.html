@@ -63,6 +63,7 @@
   kbd { border: 0.25mm solid #b9b9b9; border-bottom-width: 0.5mm; border-radius: 0.8mm; padding: 0 0.9mm; background: #fafafa; white-space: nowrap; }
   code { background: var(--soft); border-radius: 0.6mm; padding: 0 0.7mm; white-space: nowrap; }
   .muted { color: var(--ink-2); }
+  h3 .aside { float: right; font-size: 7.4pt; font-weight: 400; color: var(--ink-2); padding-top: 0.6mm; }
 
   /* Front: the four steps */
   .steps { display: grid; grid-template-columns: 1fr 1fr; gap: 3mm 5mm; margin-bottom: 3.6mm; }
@@ -123,15 +124,16 @@
       <h2><span class="n">1</span>Install and start</h2>
       <ul>
         <li><b>Windows:</b> double-click <code>Tempo.exe</code>. If Windows says it protected your PC, choose <span class="ui">More info</span> ▸ <span class="ui">Run anyway</span>.</li>
-        <li><b>USB stick:</b> <code>Tempo-Portable.exe</code> keeps everything in a <code>Tempo-data</code> folder beside it.</li>
+        <li><b>USB stick:</b> <code>Tempo-Portable.exe</code> keeps its files beside it.</li>
         <li><b>Linux:</b> install the <code>.deb</code> (Arch: the <code>PKGBUILD</code>), then start <span class="ui">Tempo</span> from the menu or run <code>tempo-dg645</code>.</li>
+        <li><b>Mac:</b> drag <span class="ui">Tempo</span> into Applications. The first time, allow it in <span class="ui">System Settings ▸ Privacy &amp; Security</span>.</li>
       </ul>
     </div>
     <div class="step">
       <h2><span class="n">2</span>Add your instrument</h2>
       <ul>
         <li><span class="ui">Instrument ▸ Add…</span> <kbd>Ctrl</kbd>+<kbd>N</kbd>: a name you will recognise (e.g. <i>Laser lab DG645</i>) and its IP address, from the DG645's front-panel network settings.</li>
-        <li>Or let Tempo look: <span class="ui">Instrument ▸ Find on network…</span> <kbd>Ctrl</kbd>+<kbd>F</kbd>.</li>
+        <li>Or let Tempo look: <span class="ui">Instrument ▸ Find on network…</span> <kbd>Ctrl</kbd>+<kbd>F</kbd>, then <span class="ui">Scan</span>.</li>
         <li><span class="ui">Test connection</span>, then <span class="ui">Save</span>. No hardware? <span class="ui">Instrument ▸ Add demo instrument</span>.</li>
       </ul>
     </div>
@@ -264,7 +266,7 @@
           <span><span class="dot bad"></span>Connection lost</span><span>No answer for about 10 s, or the link was closed.</span>
           <span><span class="dot off"></span>Not connected</span><span>Double-click to connect.</span>
         </div>
-        <p>Problems appear in an <b>alert bar</b> at the top of the window, with a sound (<span class="ui">View ▸ Alert sound</span>):</p>
+        <p>Problems appear in an <b>alert bar</b> at the top of the window, with a sound on Windows (<span class="ui">View ▸ Alert sound</span>):</p>
         <div class="alert warn"><span class="icon">!</span><span><span class="t">Not responding</span> · clears itself when it answers again</span>
           <span class="d">Check that it is switched on and its network cable is plugged in.</span></div>
         <div class="alert bad"><span class="icon">×</span><span><span class="t">Connection lost</span> · <span class="btn">Reconnect</span></span>
@@ -275,7 +277,7 @@
       </div>
 
       <div class="block">
-        <h3>Keyboard shortcuts</h3>
+        <h3>Keyboard shortcuts <span class="aside">On a Mac, Ctrl is the Control key</span></h3>
         <table class="keys">
           <tr><td><kbd>F1</kbd></td><td>User guide, at the page you are on</td></tr>
           <tr><td><kbd>Ctrl</kbd>+<kbd>N</kbd> / <kbd>Ctrl</kbd>+<kbd>F</kbd></td><td>Add an instrument / find on network</td></tr>
@@ -304,8 +306,8 @@
   </div>
 
   <footer>
-    <span>Files: <code>%APPDATA%\Tempo</code> (Windows) · <code>~/.config/Tempo</code> (Linux) · <code>Tempo-data</code> beside the portable program</span>
-    <span><b>Help ▸ User guide</b> for everything else</span>
+    <span>Data folder: <code>%APPDATA%\Tempo</code> · <code>~/.config/Tempo</code> · <code>~/Library/Application Support/Tempo</code> · <code>Tempo-data</code> (portable)</span>
+    <span><b>F1</b>: user guide</span>
   </footer>
 </section>
 
