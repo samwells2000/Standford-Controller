@@ -142,6 +142,32 @@ public class ViewModelTests
     }
 
     [Fact]
+    public async Task TheTimingDiagramRepeatsThePulsesWhileBurstModeIsOn()
+    {
+        var (session, simulator) = await CreateSessionAsync();
+        Assert.Null(session.TimingBurst);
+        Assert.StartsWith("Outputs relative to T0", session.TimingCaption);
+
+        session.Burst.Enabled.IsChecked = true;
+        await WaitUntilAsync(() => simulator.GetReceivedLines().Contains("BURM 1") && !session.Burst.Enabled.IsBusy);
+        session.Burst.Delay.Text = "2 us";
+        await ((Presentation.Mvvm.AsyncRelayCommand)session.Burst.Delay.CommitCommand).ExecuteAsync();
+        session.Burst.T0Mode.Selected = session.Burst.T0Mode.Options.Single(o => o.Value == (int)BurstT0Mode.FirstDelayCycleOnly);
+        await WaitUntilAsync(() => simulator.GetReceivedLines().Contains("BURT 1") && !session.Burst.T0Mode.IsBusy);
+
+        var burst = session.TimingBurst;
+        Assert.NotNull(burst);
+        Assert.Equal(10, burst.Count);
+        Assert.Equal(1e-6, burst.Period, 1e-15);
+        Assert.False(burst.T0EveryCycle);
+        Assert.Equal(2e-6 + 3 * 1e-6, burst.CycleStart(3), 1e-15);
+        Assert.StartsWith("Burst mode", session.TimingCaption);
+
+        session.Burst.Enabled.IsChecked = false;
+        await WaitUntilAsync(() => session.TimingBurst is null);
+    }
+
+    [Fact]
     public async Task InvalidInputIsRejectedBeforeReachingTheInstrument()
     {
         var (session, simulator) = await CreateSessionAsync();

@@ -12,12 +12,15 @@ namespace StanfordController.App.Controls;
 /// <summary>
 /// Draws T0 and the AB/CD/EF/GH output pulses on a common time axis. Hovering shows a crosshair with
 /// the time under the pointer and the exact edges of the row under it. Colours are styled properties,
-/// set from DynamicResource, so the diagram follows the theme.
+/// set from DynamicResource, so the diagram follows the theme. With <see cref="Burst"/> set, the time axis
+/// starts at the trigger and the pulses repeat for each delay cycle of the burst, up to <see cref="MaxDrawnCycles"/>.
 /// </summary>
 public sealed class TimingDiagram : Control
 {
     public static readonly StyledProperty<IReadOnlyList<PulseTiming>?> PulsesProperty =
         AvaloniaProperty.Register<TimingDiagram, IReadOnlyList<PulseTiming>?>(nameof(Pulses));
+    public static readonly StyledProperty<BurstTiming?> BurstProperty =
+        AvaloniaProperty.Register<TimingDiagram, BurstTiming?>(nameof(Burst));
     public static readonly StyledProperty<IBrush?> TextBrushProperty =
         AvaloniaProperty.Register<TimingDiagram, IBrush?>(nameof(TextBrush));
     public static readonly StyledProperty<IBrush?> MutedBrushProperty =
@@ -46,6 +49,9 @@ public sealed class TimingDiagram : Control
     private const double TopPadding = 10;
     private const double RightPadding = 24;
 
+    /// <summary>Most delay cycles of a burst drawn; beyond this the pulses get too thin to read.</summary>
+    internal const int MaxDrawnCycles = 8;
+
     private static readonly Typeface LabelFace = new(new FontFamily(Program.FontFamilyUri), FontStyle.Normal, FontWeight.SemiBold);
     private static readonly Typeface SmallFace = new(new FontFamily(Program.FontFamilyUri), FontStyle.Normal, FontWeight.Normal);
 
@@ -53,7 +59,7 @@ public sealed class TimingDiagram : Control
 
     static TimingDiagram()
     {
-        AffectsRender<TimingDiagram>(PulsesProperty, TextBrushProperty, MutedBrushProperty, GridBrushProperty, AxisBrushProperty,
+        AffectsRender<TimingDiagram>(PulsesProperty, BurstProperty, TextBrushProperty, MutedBrushProperty, GridBrushProperty, AxisBrushProperty,
             WarningBrushProperty, PanelBrushProperty, T0BrushProperty, ABBrushProperty, CDBrushProperty, EFBrushProperty, GHBrushProperty);
     }
 
@@ -64,6 +70,9 @@ public sealed class TimingDiagram : Control
     }
 
     public IReadOnlyList<PulseTiming>? Pulses { get => GetValue(PulsesProperty); set => SetValue(PulsesProperty, value); }
+
+    /// <summary>Burst mode settings, or null when burst mode is off.</summary>
+    public BurstTiming? Burst { get => GetValue(BurstProperty); set => SetValue(BurstProperty, value); }
 
     public IBrush? TextBrush { get => GetValue(TextBrushProperty); set => SetValue(TextBrushProperty, value); }
 
@@ -137,8 +146,14 @@ public sealed class TimingDiagram : Control
         var gridPen = new Pen(GridBrush ?? Brushes.LightGray, 1);
         var axisPen = new Pen(AxisBrush ?? Brushes.Gray, 1);
 
-        // Time range: from T0 to a little past the latest edge, rounded to whole ticks.
-        var latest = pulses.SelectMany(p => new[] { p.Start, p.End }).Where(t => t is not null).Select(t => t!.Value).DefaultIfEmpty(0).Max();
+        // Delay cycles drawn: one starting at T0, or the first few of a burst, measured from the trigger.
+        var burst = Burst;
+        var drawnCycles = burst is null ? 1 : (int)Math.Min(burst.Count, MaxDrawnCycles);
+        var cycleStarts = Enumerable.Range(0, drawnCycles).Select(k => burst?.CycleStart(k) ?? 0).ToArray();
+        var origin = burst is null ? "T0" : "trigger";
+
+        // Time range: from the trigger to a little past the latest edge of the last drawn cycle, rounded to whole ticks.
+        var latest = cycleStarts[^1] + pulses.SelectMany(p => new[] { p.Start, p.End }).Where(t => t is not null).Select(t => t!.Value).DefaultIfEmpty(0).Max();
         var span = latest > 0 ? latest * 1.15 : 1e-6;
         var tickStep = NiceStep(span / 6);
         span = Math.Ceiling(span / tickStep) * tickStep;
@@ -155,9 +170,10 @@ public sealed class TimingDiagram : Control
 
         dc.DrawLine(axisPen, new Point(plotLeft, rowsBottom + 0.5), new Point(plotRight, rowsBottom + 0.5));
 
-        // Rows: T0 is a short marker at time zero; AB…GH are the output pulses.
+        // Rows: T0 is a short marker at the start of each cycle it fires on; AB…GH are the output pulses.
         var hoveredRow = _pointer is { } m && m.Y >= rowsTop && m.Y < rowsBottom ? (int)((m.Y - rowsTop) / Math.Max(rowHeight, 1)) : -1;
-        DrawRow(0, "T0", T0Brush ?? Brushes.Gray, positive: true, start: 0, end: span * 0.012, startLabel: null, endLabel: null, note: null, showWidth: false);
+        var t0Starts = burst is { T0EveryCycle: false } ? cycleStarts[..1] : cycleStarts;
+        DrawRow(0, "T0", T0Brush ?? Brushes.Gray, positive: true, start: 0, end: span * 0.012, startLabel: null, endLabel: null, note: null, showWidth: false, t0Starts);
         for (var i = 0; i < pulses.Count; i++)
         {
             var pulse = pulses[i];
@@ -173,7 +189,17 @@ public sealed class TimingDiagram : Control
 
             DrawRow(i + 1, pulse.Output, BrushFor(pulse.Output), pulse.Positive,
                 note is null ? pulse.Start : null, note is null ? pulse.End : null,
-                pulse.StartChannel, pulse.EndChannel, note, showWidth: true);
+                pulse.StartChannel, pulse.EndChannel, note, showWidth: true, cycleStarts);
+        }
+
+        if (burst is not null)
+        {
+            var shown = burst.Count > drawnCycles ? $", first {drawnCycles} shown" : string.Empty;
+            var burstText = Text($"Burst of {burst.Count:N0} cycle{(burst.Count == 1 ? "" : "s")}, {EngineeringUnits.Format(burst.Period, Quantity.Time)} apart{shown}",
+                SmallFace, 11, muted);
+            var at = new Point(plotRight - burstText.Width, rowsTop + rowHeight * 0.28 - burstText.Height - 1);
+            dc.DrawRectangle(PanelBrush ?? Brushes.Transparent, null, new Rect(at, new Size(burstText.Width, burstText.Height)));
+            dc.DrawText(burstText, at);
         }
 
         if (_pointer is { } pointer && pointer.X >= plotLeft && pointer.X <= plotRight && pointer.Y >= rowsTop && pointer.Y <= rowsBottom)
@@ -181,7 +207,8 @@ public sealed class TimingDiagram : Control
             DrawHover(pointer, TimeAt(pointer.X));
         }
 
-        void DrawRow(int row, string name, IBrush color, bool positive, double? start, double? end, string? startLabel, string? endLabel, string? note, bool showWidth)
+        void DrawRow(int row, string name, IBrush color, bool positive, double? start, double? end, string? startLabel, string? endLabel, string? note, bool showWidth,
+            IReadOnlyList<double> offsets)
         {
             var top = rowsTop + row * rowHeight;
             var high = top + rowHeight * 0.28;
@@ -213,13 +240,35 @@ public sealed class TimingDiagram : Control
                 return;
             }
 
-            var x1 = X(s);
-            var x2 = Math.Max(X(e), x1 + 1.5);
-            dc.DrawRectangle(Tint(color, 0x2E), null, new Rect(new Point(x1, high), new Point(x2, low)));
-            dc.DrawGeometry(null, pen, new PolylineGeometry(
-            [
-                new Point(plotLeft, idle), new Point(x1, idle), new Point(x1, active), new Point(x2, active), new Point(x2, idle), new Point(plotRight, idle),
-            ], isFilled: false));
+            // One pulse per cycle; pulses that overlap (a burst period shorter than the pulse) merge into one.
+            var spans = new List<(double X1, double X2)>();
+            foreach (var offset in offsets)
+            {
+                var a = X(offset + s);
+                var b = Math.Max(X(offset + e), a + 1.5);
+                if (spans.Count > 0 && a <= spans[^1].X2)
+                {
+                    spans[^1] = (spans[^1].X1, Math.Max(spans[^1].X2, b));
+                }
+                else
+                {
+                    spans.Add((a, b));
+                }
+            }
+
+            var outline = new List<Point> { new(plotLeft, idle) };
+            foreach (var (a, b) in spans)
+            {
+                dc.DrawRectangle(Tint(color, 0x2E), null, new Rect(new Point(a, high), new Point(b, low)));
+                outline.AddRange([new Point(a, idle), new Point(a, active), new Point(b, active), new Point(b, idle)]);
+            }
+
+            outline.Add(new Point(plotRight, idle));
+            dc.DrawGeometry(null, pen, new PolylineGeometry(outline, isFilled: false));
+
+            // Labels go on the first cycle only.
+            var x1 = X(offsets[0] + s);
+            var x2 = Math.Max(X(offsets[0] + e), x1 + 1.5);
 
             // Edge names above the pulse.
             if (startLabel is not null)
@@ -238,9 +287,10 @@ public sealed class TimingDiagram : Control
             if (showWidth)
             {
                 var widthText = Text(EngineeringUnits.Format(e - s, Quantity.Time), SmallFace, 10.5, muted);
+                var room = (offsets.Count > 1 ? X(offsets[1] + s) - 4 : plotRight + RightPadding - 2) - x2;
                 var inside = x2 - x1 > widthText.Width + 10;
                 var tx = inside ? (x1 + x2 - widthText.Width) / 2 : x2 + 6;
-                if (tx + widthText.Width <= plotRight + RightPadding - 2)
+                if (inside || widthText.Width + 6 <= room)
                 {
                     dc.DrawText(widthText, new Point(tx, low + 1));
                 }
@@ -256,10 +306,17 @@ public sealed class TimingDiagram : Control
             var perPixel = span / plotWidth;
             var resolution = Math.Pow(10, Math.Ceiling(Math.Log10(perPixel)));
             var rounded = Math.Round(Math.Max(0, time) / resolution) * resolution;
-            var lines = new List<(string Text, IBrush Brush)> { ($"t ≈ T0 + {EngineeringUnits.Format(rounded, Quantity.Time)}", text) };
+            var lines = new List<(string Text, IBrush Brush)> { ($"t ≈ {origin} + {EngineeringUnits.Format(rounded, Quantity.Time)}", text) };
             if (hoveredRow >= 1 && hoveredRow <= pulses.Count)
             {
                 var pulse = pulses[hoveredRow - 1];
+                if (pulse.IsValid && burst is not null)
+                {
+                    // The cycle under the pointer: the last one to start before it.
+                    var cycle = Math.Clamp((long)Math.Floor((time - burst.Delay) / Math.Max(burst.Period, 1e-12)), 0, burst.Count - 1);
+                    lines.Add(($"Cycle {cycle + 1:N0} of {burst.Count:N0}: T0 = trigger + {EngineeringUnits.Format(burst.CycleStart(cycle), Quantity.Time)}", muted));
+                }
+
                 if (pulse.IsValid)
                 {
                     lines.Add(($"{pulse.Output}: {pulse.StartChannel} = T0 + {EngineeringUnits.Format(pulse.Start!.Value, Quantity.Time)}", text));
