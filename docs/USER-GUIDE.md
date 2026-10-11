@@ -267,7 +267,7 @@ Below the table, the diagram draws T0 and the four outputs on one time axis, fro
 
 Hover over the diagram to see the time under the pointer and, for the row you are on, the exact times of both edges, the pulse width and the polarity. If an output has its end before its start, the diagram says so instead of drawing a pulse.
 
-With [burst mode](#burst) on, the time axis starts at the trigger instead and the diagram repeats every output once per delay cycle: the first cycle starts after the burst delay, and each next one a burst period later. T0 is drawn on every cycle or only the first, following the burst's T0 setting. If the burst has more than 8 cycles, the first 8 are drawn and the top right of the diagram gives the full count. Hovering also shows which cycle the pointer is in and when that cycle starts.
+With [burst mode](#burst) on, the time axis starts at the trigger instead and the diagram repeats every output once per delay cycle: the first cycle starts after the burst delay, and each next one a burst period later. T0 is drawn on every cycle or only the first, following the burst's T0 setting. Every cycle of the burst is drawn, and the top right of the diagram gives the count. Only a very long burst, with more cycles than fit side by side, is cut short; the diagram then says how many of them it shows. Hovering also shows which cycle the pointer is in and when that cycle starts.
 
 ## Outputs
 

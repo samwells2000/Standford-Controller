@@ -769,7 +769,8 @@ public sealed class Dg645Simulator
         public double BurstPeriod = 1e-6;
         public int BurstT0;
         public int[] Reference = new int[10];
-        public double[] Delay = new double[10];
+        // T0, T1, A…H. The end channels B, D, F and H start 1 ns after T0, so every output gives a 1 ns pulse.
+        public double[] Delay = [0, 0, 0, 1e-9, 0, 1e-9, 0, 1e-9, 0, 1e-9];
         public double[] DelayStep = Enumerable.Repeat(1e-9, 10).ToArray();
         public double[] Amplitude = [2.5, 2.5, 2.5, 2.5, 2.5];
         public double[] Offset = new double[5];

@@ -282,7 +282,7 @@ internal sealed class SmokeTest
     {
         using (session.BeginChange())
         {
-            await session.Client.SetBurstCountAsync(20);
+            await session.Client.SetBurstCountAsync(10);
             await session.Client.SetBurstPeriodAsync(10e-6);
             await session.Client.SetBurstDelayAsync(2e-6);
             await session.Client.SetBurstModeAsync(true);
@@ -294,7 +294,7 @@ internal sealed class SmokeTest
         await IdleAsync();
         var page = (Control)tabs.SelectedContent!;
         var diagram = page.GetVisualDescendants().OfType<TimingDiagram>().First();
-        Check(diagram.Burst is { Count: 20 }, "The timing diagram was not given the burst settings.");
+        Check(diagram.Burst is { Count: 10 }, "The timing diagram was not given the burst settings.");
         var viewer = page.GetVisualDescendants().OfType<ScrollViewer>().First();
         foreach (var theme in new[] { AppTheme.Light, AppTheme.Dark })
         {
