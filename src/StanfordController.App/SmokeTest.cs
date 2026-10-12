@@ -172,6 +172,7 @@ internal sealed class SmokeTest
             await CheckClickAwayAsync(session);
             await CheckAuditTrailAsync(session);
             await CheckAlertsAsync(item);
+            await CheckOlderFirmwareAsync(item);
 
             await item.DisconnectAsync();
             await IdleAsync();
@@ -466,6 +467,40 @@ internal sealed class SmokeTest
         }
 
         return condition();
+    }
+
+    /// <summary>
+    /// An instrument whose older firmware lacks some commands: those settings are greyed out as "Not available" and
+    /// everything else still works.
+    /// </summary>
+    private async Task CheckOlderFirmwareAsync(InstrumentItemViewModel item)
+    {
+        if (item.Session is not { } session)
+        {
+            Check(false, "No session for the older-firmware check.");
+            return;
+        }
+
+        var simulator = ((SimulatorTransport)session.Client.Transport).Simulator;
+        simulator.UnsupportedCommands.Add("HOLD");
+        simulator.UnsupportedCommands.Add("PRES");
+        session.Client.QueryTimeout = TimeSpan.FromMilliseconds(300);
+        await session.RefreshAllAsync();
+
+        var tabs = Tabs();
+        tabs.SelectedIndex = 2;
+        await IdleAsync();
+        var holdoff = _window.GetVisualDescendants().OfType<TextBox>()
+            .FirstOrDefault(b => AutomationProperties.GetName(b) == session.Trigger.Holdoff.Label);
+        Check(holdoff is { IsEnabled: false, PlaceholderText: "Not available" } && !session.Trigger.Holdoff.HasError,
+            "A setting the firmware does not have is not greyed out as Not available.");
+        Check(session.StatusMessage?.Contains("does not have HOLD, PRES") == true && !session.StatusIsError,
+            $"The status bar does not say which commands the firmware lacks: {session.StatusMessage}");
+        Capture(_window, "93-older-firmware");
+
+        simulator.UnsupportedCommands.Clear();
+        tabs.SelectedIndex = 0;
+        await IdleAsync();
     }
 
     private TabControl Tabs() =>

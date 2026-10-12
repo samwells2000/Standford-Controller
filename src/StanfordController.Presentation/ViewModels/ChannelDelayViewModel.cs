@@ -129,7 +129,7 @@ public sealed class ChannelDelayViewModel : ParameterViewModel
 
     public override async Task RefreshAsync()
     {
-        await RunAsync(ReadBackAsync);
+        await RunAsync(ReadBackAsync, reading: true);
         await StepSize.RefreshAsync();
     }
 

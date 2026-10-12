@@ -12,8 +12,8 @@ Product page: <https://www.thinksrs.com/products/dg645.html>
 
 ## Adding the PDFs to this folder
 
-The PDFs could not be downloaded when this project was created (the build environment had no access
-to thinksrs.com), so this folder may contain only this README. Either of these fetches them:
+The manual is Revision 1.1 (September 2008), which is still the version Stanford Research Systems
+publishes; it describes firmware 1.00.x. To fetch newer copies of the documents:
 
 * **From GitHub:** open the repository's **Actions** tab, choose **Fetch DG645 manuals**, and click
   **Run workflow**. It downloads the documents and commits them to the branch you pick.

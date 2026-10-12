@@ -170,11 +170,11 @@ public sealed class StatusViewModel : ParameterViewModel
     public override Task RefreshAsync() => RunAsync(async () =>
     {
         await ReadRegistersAsync();
-        Latch(InstrumentBits, (int)await Client.GetInstrumentStatusEnableAsync(), enable: true);
-        Latch(EventBits, (int)await Client.GetStandardEventEnableAsync(), enable: true);
-        Latch(StatusByteBits, (int)await Client.GetServiceRequestEnableAsync(), enable: true);
+        await IfSupportedAsync(async () => Latch(InstrumentBits, (int)await Client.GetInstrumentStatusEnableAsync(), enable: true));
+        await IfSupportedAsync(async () => Latch(EventBits, (int)await Client.GetStandardEventEnableAsync(), enable: true));
+        await IfSupportedAsync(async () => Latch(StatusByteBits, (int)await Client.GetServiceRequestEnableAsync(), enable: true));
         await PowerOnStatusClear.RefreshAsync();
-        await ReadDisplayAsync();
+        await IfSupportedAsync(ReadDisplayAsync);
 
         // Ask once per session: firmware without TIMB? would otherwise time out on every refresh.
         if (!_timebaseUnsupported)
@@ -184,13 +184,26 @@ public sealed class StatusViewModel : ParameterViewModel
                 Timebase = Dg645Names.Describe(await Client.GetTimebaseAsync());
                 _timebaseKnown = true;
             }
-            catch (TimeoutException)
+            catch (Exception ex) when (ex is Dg645UnsupportedCommandException or TimeoutException)
             {
                 _timebaseUnsupported = true;
                 Timebase = "Not reported by this firmware";
             }
         }
     });
+
+    /// <summary>Reads something the instrument's firmware may not have; without it, the page shows the rest.</summary>
+    private static async Task IfSupportedAsync(Func<Task> read)
+    {
+        try
+        {
+            await read();
+        }
+        catch (Dg645UnsupportedCommandException)
+        {
+            // Logged once by the client.
+        }
+    }
 
     /// <summary>
     /// Raised with the bits each time the instrument status register is read. Reading clears the register,

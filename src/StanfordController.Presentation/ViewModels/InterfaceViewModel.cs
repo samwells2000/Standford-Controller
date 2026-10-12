@@ -1,4 +1,5 @@
 using System.Windows.Input;
+using StanfordController.Core;
 using StanfordController.Core.Audit;
 using StanfordController.Core.Protocol;
 using StanfordController.Presentation.Mvvm;
@@ -119,7 +120,17 @@ public sealed class InterfaceViewModel : ParameterViewModel
             await parameter.RefreshAsync();
         }
 
-        await RunAsync(async () => MacAddress = await Client.GetMacAddressAsync());
+        await RunAsync(async () =>
+        {
+            try
+            {
+                MacAddress = await Client.GetMacAddressAsync();
+            }
+            catch (Dg645UnsupportedCommandException)
+            {
+                MacAddress = "Not reported by this firmware";
+            }
+        });
     }
 
     private ToggleParameterViewModel Toggle(InterfaceSetting setting, string? confirmOff = null) =>

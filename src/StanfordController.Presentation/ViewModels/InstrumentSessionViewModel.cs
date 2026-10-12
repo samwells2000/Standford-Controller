@@ -415,7 +415,10 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
 
         if (!_statusIsError)
         {
-            SetStatus($"Settings read at {DateTime.Now:HH:mm:ss}.");
+            var missing = Client.UnsupportedCommands;
+            SetStatus(missing.Count == 0
+                ? $"Settings read at {DateTime.Now:HH:mm:ss}."
+                : $"Settings read at {DateTime.Now:HH:mm:ss}. This instrument's firmware does not have {string.Join(", ", missing)}; those settings are greyed out.");
         }
     }
 

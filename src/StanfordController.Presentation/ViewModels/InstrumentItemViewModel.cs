@@ -214,6 +214,12 @@ public sealed class InstrumentItemViewModel : ObservableObject
 
         _profile.LastKnownIdentity = client.Identity;
         _profile.LastConnectedUtc = DateTime.UtcNow;
+        if (_profile.UnsupportedCommandsIdentity == client.Identity)
+        {
+            // Known from last time: do not wait for commands this firmware does not have.
+            client.AssumeUnsupported(_profile.UnsupportedCommands);
+        }
+
         OnPropertyChanged(nameof(LastSeen));
         _profileChanged(this);
 
@@ -224,7 +230,22 @@ public sealed class InstrumentItemViewModel : ObservableObject
         State = ConnectionState.Connected;
         AlertResolved?.Invoke(this, InstrumentAlert.ConnectionLost);
         await session.InitializeAsync();
+        RememberUnsupportedCommands(client);
         await OfferStoredSetupAsync(session);
+    }
+
+    /// <summary>Keeps what this instrument's firmware lacks with its profile, so the next connection need not find out again.</summary>
+    private void RememberUnsupportedCommands(Dg645Client client)
+    {
+        var found = client.UnsupportedCommands.ToArray();
+        if (client.Identity is null || (_profile.UnsupportedCommandsIdentity == client.Identity && found.SequenceEqual(_profile.UnsupportedCommands)))
+        {
+            return;
+        }
+
+        _profile.UnsupportedCommands = found;
+        _profile.UnsupportedCommandsIdentity = client.Identity;
+        _profileChanged(this);
     }
 
     /// <summary>
@@ -406,6 +427,7 @@ public sealed class InstrumentItemViewModel : ObservableObject
 
         session.StopHeartbeat();
         Session = null;
+        RememberUnsupportedCommands(session.Client);
         var returnToLocal = failureReason is null && _profile.ReturnToLocalOnDisconnect;
         try
         {

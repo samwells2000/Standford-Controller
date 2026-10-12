@@ -59,11 +59,11 @@ public class ClientSimulatorTests
     }
 
     [Fact]
-    public async Task UnsupportedQueryTimesOutAndTheLinkStaysUsable()
+    public async Task UnsupportedQueryIsRecognisedAndTheLinkStaysUsable()
     {
         var (client, _) = await ConnectAsync();
-        await Assert.ThrowsAsync<TimeoutException>(() => client.QueryAsync("FOOO?"));
-        Assert.Equal(111, await client.GetLastErrorAsync());
+        await Assert.ThrowsAsync<Dg645UnsupportedCommandException>(() => client.QueryAsync("FOOO?"));
+        Assert.Equal(0, await client.GetLastErrorAsync()); // the 111 was read, so it is not blamed on a later command
         Assert.Equal(TriggerSource.Internal, await client.GetTriggerSourceAsync());
     }
 
