@@ -13,7 +13,8 @@ namespace StanfordController.App.Controls;
 /// Draws T0 and the AB/CD/EF/GH output pulses on a common time axis. Hovering shows a crosshair with
 /// the time under the pointer and the exact edges of the row under it. Colours are styled properties,
 /// set from DynamicResource, so the diagram follows the theme. With <see cref="Burst"/> set, the time axis
-/// starts at the trigger and the pulses repeat for each delay cycle of the burst, up to <see cref="MaxDrawnCycles"/>.
+/// starts at the trigger and the pulses repeat for each delay cycle of the burst, as many as fit at
+/// <see cref="MinCycleSpacing"/> apart.
 /// </summary>
 public sealed class TimingDiagram : Control
 {
@@ -49,8 +50,8 @@ public sealed class TimingDiagram : Control
     private const double TopPadding = 10;
     private const double RightPadding = 24;
 
-    /// <summary>Most delay cycles of a burst drawn; beyond this the pulses get too thin to read.</summary>
-    internal const int MaxDrawnCycles = 8;
+    /// <summary>Closest the delay cycles of a burst are drawn, in pixels; any more and they blur into a block.</summary>
+    internal const double MinCycleSpacing = 8;
 
     private static readonly Typeface LabelFace = new(new FontFamily(Program.FontFamilyUri), FontStyle.Normal, FontWeight.SemiBold);
     private static readonly Typeface SmallFace = new(new FontFamily(Program.FontFamilyUri), FontStyle.Normal, FontWeight.Normal);
@@ -146,9 +147,10 @@ public sealed class TimingDiagram : Control
         var gridPen = new Pen(GridBrush ?? Brushes.LightGray, 1);
         var axisPen = new Pen(AxisBrush ?? Brushes.Gray, 1);
 
-        // Delay cycles drawn: one starting at T0, or the first few of a burst, measured from the trigger.
+        // Delay cycles drawn: one starting at T0, or every cycle of a burst measured from the trigger (only the first
+        // ones if a very long burst would leave them too close together to see).
         var burst = Burst;
-        var drawnCycles = burst is null ? 1 : (int)Math.Min(burst.Count, MaxDrawnCycles);
+        var drawnCycles = burst is null ? 1 : (int)Math.Min(burst.Count, Math.Max(1, Math.Floor(plotWidth / 1.15 / MinCycleSpacing)));
         var cycleStarts = Enumerable.Range(0, drawnCycles).Select(k => burst?.CycleStart(k) ?? 0).ToArray();
         var origin = burst is null ? "T0" : "trigger";
 

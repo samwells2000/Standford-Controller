@@ -103,7 +103,7 @@ public class ViewModelTests
         var (session, _) = await CreateSessionAsync();
 
         Assert.Equal(8, session.Channels.Count);
-        Assert.All(session.Channels, c => Assert.Equal("0 s", c.DelayText));
+        Assert.All(session.Channels, c => Assert.Equal(c.Channel is Dg645Channel.B or Dg645Channel.D or Dg645Channel.F or Dg645Channel.H ? "1 ns" : "0 s", c.DelayText));
         Assert.All(session.Outputs, o => Assert.Equal("2.50 V", o.Amplitude.Text));
         Assert.Equal("10 kHz", session.Trigger.Rate.Text);
         Assert.Equal("Internal", session.Trigger.Source.Selected?.Label);
@@ -139,6 +139,20 @@ public class ViewModelTests
         var ab = session.Timing.Single(p => p.Output == "AB");
         Assert.True(ab.IsValid);
         Assert.Equal(250e-9, ab.Width, 1e-15);
+    }
+
+    [Fact]
+    public async Task TheSimulatorStartsWithA1NanosecondPulseOnEveryOutput()
+    {
+        var (session, _) = await CreateSessionAsync();
+
+        Assert.Equal(["AB", "CD", "EF", "GH"], session.Timing.Select(p => p.Output));
+        Assert.All(session.Timing, p =>
+        {
+            Assert.True(p.IsValid);
+            Assert.Equal(0, p.Start!.Value, 1e-15);
+            Assert.Equal(1e-9, p.Width, 1e-15);
+        });
     }
 
     [Fact]
