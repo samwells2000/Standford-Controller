@@ -301,6 +301,9 @@
         <Setter Property="MinWidth" Value="0" />
         <Setter Property="Padding" Value="0" />
     </Style>
+    <Style Selector="Button.step:disabled Path">
+        <Setter Property="Opacity" Value="0.35" />
+    </Style>
 
     <!-- ============================== Inputs ============================== -->
     <Style Selector="TextBox">

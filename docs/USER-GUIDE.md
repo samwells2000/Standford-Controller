@@ -503,6 +503,12 @@ The scan only covers networks this computer is directly attached to, and only ad
 
 The red message under the field gives the instrument's reason. *Illegal value* or *Illegal delay* usually means the value is outside the allowed range; *Illegal link* means a channel's reference would make a loop (A referenced to B referenced to A). The instrument keeps its previous value, which the field shows again when you press Esc.
 
+### Some settings are greyed out
+
+An instrument with older firmware may not have every command Tempo uses, for example the prescalers or the timebase report. When the instrument does not know a command (error 111, *Undefined command*), Tempo greys that setting out with *Not available on this instrument's firmware* and carries on with the rest; the status bar lists those commands after the settings are read. Saved setups leave them out, and every other setting works as usual.
+
+Tempo remembers this for the instrument and its firmware version, so the next connection does not wait for those commands again; after a firmware update it checks afresh. If you need a missing setting, ask Stanford Research Systems about updating the instrument's firmware.
+
 ### The front panel is locked
 
 The DG645 locks its front panel while it is controlled remotely. Disconnecting returns it to local control; while connected, **Go to local** on the [Interfaces](#interfaces) page unlocks it. If Tempo closed without disconnecting (for example after a power cut), connect and disconnect again, use the instrument's own way of returning to local control (see its manual), or switch it off and on.
@@ -580,7 +586,7 @@ These are the codes the DG645 reports, as shown in the Errors list and under rej
 | 32 | No listener (GPIB) |
 | 40–91 | Self-test or calibration failures of a particular circuit; the Errors list names it |
 | 110 | Illegal command |
-| 111 | Undefined command |
+| 111 | Undefined command: the instrument does not know the command, usually because its firmware is older (see [Some settings are greyed out](#some-settings-are-greyed-out)) |
 | 112 | Illegal query |
 | 113 | Illegal set: this setting can only be read |
 | 114 | Null parameter |

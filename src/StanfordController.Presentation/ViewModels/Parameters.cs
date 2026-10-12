@@ -46,8 +46,12 @@ public sealed record ChoiceOption(int Value, string Label)
 /// <summary>Base for anything that reads or writes the instrument and can show an error inline.</summary>
 public abstract class ParameterViewModel(IInstrumentContext context, string label) : ObservableObject
 {
+    /// <summary>Shown in place of a setting the instrument's firmware does not have.</summary>
+    public const string UnsupportedText = "Not available on this instrument's firmware";
+
     private string? _error;
     private bool _isBusy;
+    private bool _isUnsupported;
 
     protected IInstrumentContext Context { get; } = context;
 
@@ -72,6 +76,30 @@ public abstract class ParameterViewModel(IInstrumentContext context, string labe
 
     public bool HasError => _error is not null;
 
+    /// <summary>The instrument's firmware does not have this setting (reading it gave error 111).</summary>
+    public bool IsUnsupported
+    {
+        get => _isUnsupported;
+        private set
+        {
+            if (SetProperty(ref _isUnsupported, value))
+            {
+                OnPropertyChanged(nameof(Placeholder));
+                OnPropertyChanged(nameof(ToolTipText));
+                if (value)
+                {
+                    OnUnsupported();
+                }
+            }
+        }
+    }
+
+    /// <summary>Shown inside a greyed-out field the firmware does not have.</summary>
+    public string? Placeholder => IsUnsupported ? "Not available" : null;
+
+    /// <summary>The setting's explanation, or why it is greyed out.</summary>
+    public string? ToolTipText => IsUnsupported ? UnsupportedText : Hint;
+
     public bool IsBusy
     {
         get => _isBusy;
@@ -80,15 +108,33 @@ public abstract class ParameterViewModel(IInstrumentContext context, string labe
 
     public abstract Task RefreshAsync();
 
-    /// <summary>Runs an instrument operation, capturing any failure as <see cref="Error"/>.</summary>
-    protected async Task<bool> RunAsync(Func<Task> action)
+    /// <summary>The firmware turned out not to have this setting: forget any value shown.</summary>
+    protected virtual void OnUnsupported()
+    {
+    }
+
+    /// <summary>
+    /// Runs an instrument operation, capturing any failure as <see cref="Error"/>. When <paramref name="reading"/> the
+    /// setting, a firmware without the command marks it <see cref="IsUnsupported"/> instead of failing.
+    /// </summary>
+    protected async Task<bool> RunAsync(Func<Task> action, bool reading = false)
     {
         IsBusy = true;
         Error = null;
         try
         {
             await action();
+            if (reading)
+            {
+                IsUnsupported = false;
+            }
+
             return true;
+        }
+        catch (Dg645UnsupportedCommandException) when (reading)
+        {
+            IsUnsupported = true;
+            return false;
         }
         catch (Exception ex)
         {
@@ -165,6 +211,7 @@ public abstract class ParameterViewModel(IInstrumentContext context, string labe
     public static string DescribeError(Exception exception) => exception switch
     {
         Dg645Exception dg => $"{dg.ErrorDescription} (error {dg.ErrorCode})",
+        Dg645UnsupportedCommandException => UnsupportedText,
         TimeoutException => "No reply from the instrument",
         _ => exception.Message,
     };
@@ -249,7 +296,7 @@ public sealed class EditableParameterViewModel<T> : TextParameterViewModel
 
     public override ICommand RevertCommand { get; }
 
-    public override Task RefreshAsync() => RunAsync(async () => SetValue(await _read(CancellationToken.None)));
+    public override Task RefreshAsync() => RunAsync(async () => SetValue(await _read(CancellationToken.None)), reading: true);
 
     public void SetValue(T value)
     {
@@ -285,6 +332,17 @@ public sealed class EditableParameterViewModel<T> : TextParameterViewModel
     {
         Text = _committedText;
         Error = null;
+    }
+
+    protected override void OnUnsupported()
+    {
+        _value = default;
+        _hasValue = false;
+        _committedText = string.Empty;
+        Text = string.Empty;
+        OnPropertyChanged(nameof(Value));
+        OnPropertyChanged(nameof(HasValue));
+        OnPropertyChanged(nameof(IsDirty));
     }
 
     private async Task TryReadBackAsync()
@@ -338,7 +396,7 @@ public sealed class ChoiceParameterViewModel(
 
     public int? SelectedValue => _selected?.Value;
 
-    public override Task RefreshAsync() => RunAsync(async () => SetValue(await read(CancellationToken.None)));
+    public override Task RefreshAsync() => RunAsync(async () => SetValue(await read(CancellationToken.None)), reading: true);
 
     public void SetValue(int value)
     {
@@ -408,7 +466,7 @@ public sealed class ToggleParameterViewModel(
         }
     }
 
-    public override Task RefreshAsync() => RunAsync(async () => SetValue(await read(CancellationToken.None)));
+    public override Task RefreshAsync() => RunAsync(async () => SetValue(await read(CancellationToken.None)), reading: true);
 
     public void SetValue(bool value)
     {

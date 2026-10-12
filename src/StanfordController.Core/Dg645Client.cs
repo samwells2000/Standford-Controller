@@ -32,6 +32,19 @@ public sealed class Dg645Exception(string command, int errorCode)
     public string ErrorDescription => Dg645Names.DescribeError(ErrorCode);
 }
 
+/// <summary>
+/// The instrument does not know a command (error 111, undefined command): its firmware is older than the command.
+/// Once this has happened, the client stops sending that command for the rest of the connection.
+/// </summary>
+public sealed class Dg645UnsupportedCommandException(string command)
+    : Exception($"This instrument's firmware does not have the {Dg645Client.Mnemonic(command)} command.")
+{
+    public string Command { get; } = command;
+
+    /// <summary>The command's name, e.g. PRES for <c>PRES?1</c>.</summary>
+    public string Mnemonic { get; } = Dg645Client.Mnemonic(command);
+}
+
 /// <summary>Responses and errors from a raw terminal command.</summary>
 public sealed record RawCommandResult(IReadOnlyList<string> Responses, IReadOnlyList<int> Errors, bool TimedOut);
 
@@ -41,9 +54,13 @@ public sealed record RawCommandResult(IReadOnlyList<string> Responses, IReadOnly
 /// </summary>
 public sealed class Dg645Client(IDg645Transport transport) : IAsyncDisposable
 {
+    /// <summary>The DG645's error for a command it does not know.</summary>
+    public const int UndefinedCommandError = 111;
+
     private static readonly AsyncLocal<bool> QuietTraffic = new();
     private static readonly AsyncLocal<bool> AuditedChange = new();
     private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly HashSet<string> _unsupported = new(StringComparer.OrdinalIgnoreCase);
 
     public TimeSpan QueryTimeout { get; set; } = TimeSpan.FromSeconds(3);
 
@@ -58,6 +75,18 @@ public sealed class Dg645Client(IDg645Transport transport) : IAsyncDisposable
     public bool IsConnected => transport.IsConnected;
 
     public string? Identity { get; private set; }
+
+    /// <summary>Commands this instrument's firmware does not have: found while connected, or given to <see cref="AssumeUnsupported"/>.</summary>
+    public IReadOnlyList<string> UnsupportedCommands
+    {
+        get
+        {
+            lock (_unsupported)
+            {
+                return _unsupported.Order(StringComparer.Ordinal).ToList();
+            }
+        }
+    }
 
     public event EventHandler<CommunicationEventArgs>? Communication;
 
@@ -80,7 +109,7 @@ public sealed class Dg645Client(IDg645Transport transport) : IAsyncDisposable
         try
         {
             await transport.DrainAsync(TimeSpan.FromMilliseconds(100), ct).ConfigureAwait(false);
-            Identity = await QueryCoreAsync("*IDN?", QueryTimeout, ct).ConfigureAwait(false);
+            Identity = await QueryCoreAsync("*IDN?", QueryTimeout, ct, diagnose: false).ConfigureAwait(false);
 
             // Start with an empty error queue so later errors belong to our own commands.
             var stale = await ReadErrorQueueCoreAsync(ct).ConfigureAwait(false);
@@ -120,27 +149,114 @@ public sealed class Dg645Client(IDg645Transport transport) : IAsyncDisposable
     public ValueTask DisposeAsync() => transport.DisposeAsync();
 
     // ------------------------------------------------------------------------------------------
+    // Firmware
+    // ------------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Commands already known to be missing from this instrument's firmware, so they are not sent (and waited for)
+    /// again. Typed commands in the terminal are always sent.
+    /// </summary>
+    public void AssumeUnsupported(IEnumerable<string> commands)
+    {
+        lock (_unsupported)
+        {
+            foreach (var command in commands)
+            {
+                _unsupported.Add(Mnemonic(command));
+            }
+        }
+    }
+
+    /// <summary>False once the firmware has turned out not to have <paramref name="command"/>.</summary>
+    public bool Supports(string command)
+    {
+        lock (_unsupported)
+        {
+            return !_unsupported.Contains(Mnemonic(command));
+        }
+    }
+
+    /// <summary>A command's name: <c>PRES?1</c> gives PRES, <c>*IDN?</c> gives *IDN.</summary>
+    public static string Mnemonic(string command)
+    {
+        var text = command.TrimStart();
+        var end = text.StartsWith('*') ? 1 : 0;
+        while (end < text.Length && char.IsLetter(text[end]))
+        {
+            end++;
+        }
+
+        return text[..end].ToUpperInvariant();
+    }
+
+    private void ThrowIfUnsupported(string command)
+    {
+        if (!Supports(command))
+        {
+            throw new Dg645UnsupportedCommandException(command);
+        }
+    }
+
+    private void MarkUnsupported(string command)
+    {
+        var mnemonic = Mnemonic(command);
+        bool added;
+        lock (_unsupported)
+        {
+            added = _unsupported.Add(mnemonic);
+        }
+
+        if (added)
+        {
+            Log(CommunicationDirection.Info,
+                $"This instrument's firmware does not have the {mnemonic} command (error {UndefinedCommandError}); it will not be sent again.");
+        }
+    }
+
+    // ------------------------------------------------------------------------------------------
     // Raw access
     // ------------------------------------------------------------------------------------------
 
     /// <summary>Sends a command without checking the error queue.</summary>
     public Task SendAsync(string command, CancellationToken ct = default) =>
-        RunAsync(() => WriteCoreAsync(command, ct), ct);
+        RunAsync(() =>
+        {
+            ThrowIfUnsupported(command);
+            return WriteCoreAsync(command, ct);
+        }, ct);
 
-    /// <summary>Sends a command, then reads LERR? and throws <see cref="Dg645Exception"/> if it was rejected.</summary>
+    /// <summary>
+    /// Sends a command, then reads LERR? and throws <see cref="Dg645Exception"/> if it was rejected, or
+    /// <see cref="Dg645UnsupportedCommandException"/> if the firmware does not have the command.
+    /// </summary>
     public Task ExecuteAsync(string command, CancellationToken ct = default) =>
         RunAsync(async () =>
         {
+            ThrowIfUnsupported(command);
             await WriteCoreAsync(command, ct).ConfigureAwait(false);
             var errors = await ReadErrorQueueCoreAsync(ct).ConfigureAwait(false);
+            if (errors is [UndefinedCommandError] && !command.Contains(';'))
+            {
+                MarkUnsupported(command);
+                throw new Dg645UnsupportedCommandException(command);
+            }
+
             if (errors.Count > 0)
             {
                 throw new Dg645Exception(command, errors[0]);
             }
         }, ct);
 
+    /// <summary>
+    /// Sends a query and returns the reply. Throws <see cref="Dg645UnsupportedCommandException"/> if the firmware does
+    /// not have the command, and <see cref="TimeoutException"/> if there is no reply for another reason.
+    /// </summary>
     public Task<string> QueryAsync(string query, TimeSpan? timeout = null, CancellationToken ct = default) =>
-        RunAsync(() => QueryCoreAsync(query, timeout ?? QueryTimeout, ct), ct);
+        RunAsync(() =>
+        {
+            ThrowIfUnsupported(query);
+            return QueryCoreAsync(query, timeout ?? QueryTimeout, ct);
+        }, ct);
 
     /// <summary>
     /// Sends a line typed by the user. Collects every response line (a line may hold several
@@ -467,91 +583,98 @@ public sealed class Dg645Client(IDg645Transport transport) : IAsyncDisposable
     // Whole-instrument snapshots
     // ------------------------------------------------------------------------------------------
 
+    /// <summary>
+    /// Reads the instrument's whole setup. A setting its firmware does not have keeps its default value (see
+    /// <see cref="UnsupportedCommands"/>), so older firmware still gives a complete snapshot.
+    /// </summary>
     public async Task<Dg645Settings> ReadSettingsAsync(CancellationToken ct = default)
     {
         var settings = new Dg645Settings { SourceIdentity = Identity, SavedUtc = DateTime.UtcNow };
 
         var trigger = settings.Trigger;
-        trigger.Source = await GetTriggerSourceAsync(ct).ConfigureAwait(false);
-        trigger.RateHz = await GetTriggerRateAsync(ct).ConfigureAwait(false);
-        trigger.LevelVolts = await GetTriggerLevelAsync(ct).ConfigureAwait(false);
-        trigger.HoldoffSeconds = await GetHoldoffAsync(ct).ConfigureAwait(false);
-        trigger.Inhibit = await GetInhibitAsync(ct).ConfigureAwait(false);
-        trigger.AdvancedTriggering = await GetAdvancedTriggeringAsync(ct).ConfigureAwait(false);
+        trigger.Source = await OrDefaultAsync(GetTriggerSourceAsync(ct), trigger.Source).ConfigureAwait(false);
+        trigger.RateHz = await OrDefaultAsync(GetTriggerRateAsync(ct), trigger.RateHz).ConfigureAwait(false);
+        trigger.LevelVolts = await OrDefaultAsync(GetTriggerLevelAsync(ct), trigger.LevelVolts).ConfigureAwait(false);
+        trigger.HoldoffSeconds = await OrDefaultAsync(GetHoldoffAsync(ct), trigger.HoldoffSeconds).ConfigureAwait(false);
+        trigger.Inhibit = await OrDefaultAsync(GetInhibitAsync(ct), trigger.Inhibit).ConfigureAwait(false);
+        trigger.AdvancedTriggering = await OrDefaultAsync(GetAdvancedTriggeringAsync(ct), trigger.AdvancedTriggering).ConfigureAwait(false);
         trigger.PrescaleFactors.Clear();
         trigger.PrescalePhases.Clear();
         foreach (var input in Enum.GetValues<PrescaleInput>())
         {
-            trigger.PrescaleFactors.Add(await GetPrescaleFactorAsync(input, ct).ConfigureAwait(false));
+            trigger.PrescaleFactors.Add(await OrDefaultAsync(GetPrescaleFactorAsync(input, ct), 1L).ConfigureAwait(false));
             if (input != PrescaleInput.Trigger)
             {
-                trigger.PrescalePhases.Add(await GetPrescalePhaseAsync(input, ct).ConfigureAwait(false));
+                trigger.PrescalePhases.Add(await OrDefaultAsync(GetPrescalePhaseAsync(input, ct), 0L).ConfigureAwait(false));
             }
         }
 
         var burst = settings.Burst;
-        burst.Enabled = await GetBurstModeAsync(ct).ConfigureAwait(false);
-        burst.Count = await GetBurstCountAsync(ct).ConfigureAwait(false);
-        burst.DelaySeconds = await GetBurstDelayAsync(ct).ConfigureAwait(false);
-        burst.PeriodSeconds = await GetBurstPeriodAsync(ct).ConfigureAwait(false);
-        burst.T0Mode = await GetBurstT0ModeAsync(ct).ConfigureAwait(false);
+        burst.Enabled = await OrDefaultAsync(GetBurstModeAsync(ct), burst.Enabled).ConfigureAwait(false);
+        burst.Count = await OrDefaultAsync(GetBurstCountAsync(ct), burst.Count).ConfigureAwait(false);
+        burst.DelaySeconds = await OrDefaultAsync(GetBurstDelayAsync(ct), burst.DelaySeconds).ConfigureAwait(false);
+        burst.PeriodSeconds = await OrDefaultAsync(GetBurstPeriodAsync(ct), burst.PeriodSeconds).ConfigureAwait(false);
+        burst.T0Mode = await OrDefaultAsync(GetBurstT0ModeAsync(ct), burst.T0Mode).ConfigureAwait(false);
 
         foreach (var channel in Dg645Names.DelayChannels)
         {
-            var (reference, seconds) = await GetDelayAsync(channel, ct).ConfigureAwait(false);
-            settings.Delays.Add(new ChannelDelaySettings { Channel = channel, Reference = reference, DelaySeconds = seconds });
+            var delay = new ChannelDelaySettings { Channel = channel };
+            (delay.Reference, delay.DelaySeconds) =
+                await OrDefaultAsync(GetDelayAsync(channel, ct), (delay.Reference, delay.DelaySeconds)).ConfigureAwait(false);
+            settings.Delays.Add(delay);
         }
 
         foreach (var output in Dg645Names.Outputs)
         {
-            settings.Outputs.Add(new OutputLevelSettings
-            {
-                Output = output,
-                AmplitudeVolts = await GetAmplitudeAsync(output, ct).ConfigureAwait(false),
-                OffsetVolts = await GetOffsetAsync(output, ct).ConfigureAwait(false),
-                Polarity = await GetPolarityAsync(output, ct).ConfigureAwait(false),
-            });
+            var levels = new OutputLevelSettings { Output = output };
+            levels.AmplitudeVolts = await OrDefaultAsync(GetAmplitudeAsync(output, ct), levels.AmplitudeVolts).ConfigureAwait(false);
+            levels.OffsetVolts = await OrDefaultAsync(GetOffsetAsync(output, ct), levels.OffsetVolts).ConfigureAwait(false);
+            levels.Polarity = await OrDefaultAsync(GetPolarityAsync(output, ct), levels.Polarity).ConfigureAwait(false);
+            settings.Outputs.Add(levels);
         }
 
         return settings;
     }
 
-    /// <summary>Writes a snapshot to the instrument. Stops at the first rejected command.</summary>
+    /// <summary>
+    /// Writes a snapshot to the instrument. Stops at the first rejected command; a setting the firmware does not have
+    /// is left out.
+    /// </summary>
     public async Task ApplySettingsAsync(Dg645Settings settings, IProgress<string>? progress = null, CancellationToken ct = default)
     {
         var trigger = settings.Trigger;
         progress?.Report("Trigger");
-        await SetAdvancedTriggeringAsync(trigger.AdvancedTriggering, ct).ConfigureAwait(false);
+        await SkipIfUnsupportedAsync(SetAdvancedTriggeringAsync(trigger.AdvancedTriggering, ct)).ConfigureAwait(false);
         for (var i = 0; i < trigger.PrescaleFactors.Count && i <= (int)PrescaleInput.GH; i++)
         {
-            await SetPrescaleFactorAsync((PrescaleInput)i, trigger.PrescaleFactors[i], ct).ConfigureAwait(false);
+            await SkipIfUnsupportedAsync(SetPrescaleFactorAsync((PrescaleInput)i, trigger.PrescaleFactors[i], ct)).ConfigureAwait(false);
         }
 
         for (var i = 0; i < trigger.PrescalePhases.Count && i < 4; i++)
         {
-            await SetPrescalePhaseAsync((PrescaleInput)(i + 1), trigger.PrescalePhases[i], ct).ConfigureAwait(false);
+            await SkipIfUnsupportedAsync(SetPrescalePhaseAsync((PrescaleInput)(i + 1), trigger.PrescalePhases[i], ct)).ConfigureAwait(false);
         }
 
-        await SetTriggerSourceAsync(trigger.Source, ct).ConfigureAwait(false);
-        await SetTriggerRateAsync(trigger.RateHz, ct).ConfigureAwait(false);
-        await SetTriggerLevelAsync(trigger.LevelVolts, ct).ConfigureAwait(false);
-        await SetHoldoffAsync(trigger.HoldoffSeconds, ct).ConfigureAwait(false);
-        await SetInhibitAsync(trigger.Inhibit, ct).ConfigureAwait(false);
+        await SkipIfUnsupportedAsync(SetTriggerSourceAsync(trigger.Source, ct)).ConfigureAwait(false);
+        await SkipIfUnsupportedAsync(SetTriggerRateAsync(trigger.RateHz, ct)).ConfigureAwait(false);
+        await SkipIfUnsupportedAsync(SetTriggerLevelAsync(trigger.LevelVolts, ct)).ConfigureAwait(false);
+        await SkipIfUnsupportedAsync(SetHoldoffAsync(trigger.HoldoffSeconds, ct)).ConfigureAwait(false);
+        await SkipIfUnsupportedAsync(SetInhibitAsync(trigger.Inhibit, ct)).ConfigureAwait(false);
 
         progress?.Report("Burst");
         var burst = settings.Burst;
-        await SetBurstCountAsync(burst.Count, ct).ConfigureAwait(false);
-        await SetBurstPeriodAsync(burst.PeriodSeconds, ct).ConfigureAwait(false);
-        await SetBurstDelayAsync(burst.DelaySeconds, ct).ConfigureAwait(false);
-        await SetBurstT0ModeAsync(burst.T0Mode, ct).ConfigureAwait(false);
-        await SetBurstModeAsync(burst.Enabled, ct).ConfigureAwait(false);
+        await SkipIfUnsupportedAsync(SetBurstCountAsync(burst.Count, ct)).ConfigureAwait(false);
+        await SkipIfUnsupportedAsync(SetBurstPeriodAsync(burst.PeriodSeconds, ct)).ConfigureAwait(false);
+        await SkipIfUnsupportedAsync(SetBurstDelayAsync(burst.DelaySeconds, ct)).ConfigureAwait(false);
+        await SkipIfUnsupportedAsync(SetBurstT0ModeAsync(burst.T0Mode, ct)).ConfigureAwait(false);
+        await SkipIfUnsupportedAsync(SetBurstModeAsync(burst.Enabled, ct)).ConfigureAwait(false);
 
         progress?.Report("Outputs");
         foreach (var output in settings.Outputs)
         {
-            await SetAmplitudeAsync(output.Output, output.AmplitudeVolts, ct).ConfigureAwait(false);
-            await SetOffsetAsync(output.Output, output.OffsetVolts, ct).ConfigureAwait(false);
-            await SetPolarityAsync(output.Output, output.Polarity, ct).ConfigureAwait(false);
+            await SkipIfUnsupportedAsync(SetAmplitudeAsync(output.Output, output.AmplitudeVolts, ct)).ConfigureAwait(false);
+            await SkipIfUnsupportedAsync(SetOffsetAsync(output.Output, output.OffsetVolts, ct)).ConfigureAwait(false);
+            await SkipIfUnsupportedAsync(SetPolarityAsync(output.Output, output.Polarity, ct)).ConfigureAwait(false);
         }
 
         // Re-reference every channel to T0 first so the new links can never form a temporary cycle
@@ -565,6 +688,31 @@ public sealed class Dg645Client(IDg645Transport transport) : IAsyncDisposable
         foreach (var delay in OrderByReference(settings.Delays))
         {
             await SetDelayAsync(delay.Channel, delay.Reference, delay.DelaySeconds, ct).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>A setting the firmware may not have: its value, or <paramref name="fallback"/>.</summary>
+    private static async Task<T> OrDefaultAsync<T>(Task<T> read, T fallback)
+    {
+        try
+        {
+            return await read.ConfigureAwait(false);
+        }
+        catch (Dg645UnsupportedCommandException)
+        {
+            return fallback;
+        }
+    }
+
+    private static async Task SkipIfUnsupportedAsync(Task write)
+    {
+        try
+        {
+            await write.ConfigureAwait(false);
+        }
+        catch (Dg645UnsupportedCommandException)
+        {
+            // Not on this firmware; the client has logged it once.
         }
     }
 
@@ -661,7 +809,13 @@ public sealed class Dg645Client(IDg645Transport transport) : IAsyncDisposable
         return line;
     }
 
-    private async Task<string> QueryCoreAsync(string query, TimeSpan timeout, CancellationToken ct)
+    /// <summary>
+    /// Sends a query and reads the reply. With <paramref name="diagnose"/>, a query that gets no reply is followed by
+    /// LERR?: the DG645 says nothing to a command its firmware does not have, but records error 111. Reading the
+    /// error here also stops it being blamed on the next command. Background polling (see
+    /// <see cref="SuppressTrafficLogging"/>) skips this, so a lost connection is still noticed quickly.
+    /// </summary>
+    private async Task<string> QueryCoreAsync(string query, TimeSpan timeout, CancellationToken ct, bool diagnose = true)
     {
         var stale = await transport.DrainAsync(TimeSpan.Zero, ct).ConfigureAwait(false);
         if (stale.Length > 0)
@@ -683,7 +837,28 @@ public sealed class Dg645Client(IDg645Transport transport) : IAsyncDisposable
                 Log(CommunicationDirection.Info, $"Discarded late reply: {late.Trim()}");
             }
 
-            var message = $"No reply to '{query}' within {timeout.TotalSeconds:0.#} s. The command may not be supported by this firmware, or the connection was lost.";
+            var answering = false;
+            if (diagnose && !QuietTraffic.Value)
+            {
+                try
+                {
+                    var errors = await ReadErrorQueueCoreAsync(ct).ConfigureAwait(false);
+                    answering = true;
+                    if (errors.Contains(UndefinedCommandError))
+                    {
+                        MarkUnsupported(query);
+                        throw new Dg645UnsupportedCommandException(query);
+                    }
+                }
+                catch (TimeoutException)
+                {
+                    // No reply to LERR? either: the connection is the problem, reported below.
+                }
+            }
+
+            var message = answering
+                ? $"No reply to '{query}' within {timeout.TotalSeconds:0.#} s, although the instrument is answering."
+                : $"No reply to '{query}' within {timeout.TotalSeconds:0.#} s. The connection may have been lost.";
             Log(CommunicationDirection.Error, message);
             throw new TimeoutException(message);
         }
@@ -696,7 +871,7 @@ public sealed class Dg645Client(IDg645Transport transport) : IAsyncDisposable
         // The DG645 buffers up to 20 errors; stop a little past that in case of a misbehaving link.
         for (var i = 0; i < 25; i++)
         {
-            var code = F.ParseInt(await QueryCoreAsync("LERR?", QueryTimeout, ct).ConfigureAwait(false));
+            var code = F.ParseInt(await QueryCoreAsync("LERR?", QueryTimeout, ct, diagnose: false).ConfigureAwait(false));
             if (code == 0)
             {
                 break;

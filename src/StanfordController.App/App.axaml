@@ -21,7 +21,8 @@
         <DataTemplate DataType="vm:TextParameterViewModel">
             <StackPanel>
                 <TextBox Classes="param" Classes.dirty="{Binding IsDirty}" Classes.rejected="{Binding HasError}"
-                         Text="{Binding Text}" IsReadOnly="{Binding IsReadOnly}" ToolTip.Tip="{Binding Hint}"
+                         Text="{Binding Text}" IsReadOnly="{Binding IsReadOnly}" IsEnabled="{Binding !IsUnsupported}" PlaceholderText="{Binding Placeholder}"
+                         ToolTip.Tip="{Binding ToolTipText}" ToolTip.ShowOnDisabled="True"
                          AutomationProperties.Name="{Binding Label}"
                          inf:FieldBehavior.CommitCommand="{Binding CommitCommand}"
                          inf:FieldBehavior.RevertCommand="{Binding RevertCommand}" />
@@ -32,8 +33,8 @@
         <!-- A fixed list of options: applied as soon as one is chosen. -->
         <DataTemplate DataType="vm:ChoiceParameterViewModel">
             <StackPanel>
-                <ComboBox ItemsSource="{Binding Options}" SelectedItem="{Binding Selected}" ToolTip.Tip="{Binding Hint}"
-                          AutomationProperties.Name="{Binding Label}" />
+                <ComboBox ItemsSource="{Binding Options}" SelectedItem="{Binding Selected}" ToolTip.Tip="{Binding ToolTipText}" ToolTip.ShowOnDisabled="True"
+                          IsEnabled="{Binding !IsUnsupported}" PlaceholderText="{Binding Placeholder}" AutomationProperties.Name="{Binding Label}" />
                 <TextBlock Classes="error" Text="{Binding Error}" IsVisible="{Binding HasError}" />
             </StackPanel>
         </DataTemplate>
@@ -41,7 +42,8 @@
         <!-- On/off: applied when ticked. The label is beside the check box. -->
         <DataTemplate DataType="vm:ToggleParameterViewModel">
             <StackPanel>
-                <CheckBox IsChecked="{Binding IsChecked}" Content="{Binding Label}" ToolTip.Tip="{Binding Hint}" />
+                <CheckBox IsChecked="{Binding IsChecked}" Content="{Binding Label}" ToolTip.Tip="{Binding ToolTipText}" ToolTip.ShowOnDisabled="True"
+                          IsEnabled="{Binding !IsUnsupported}" />
                 <TextBlock Classes="error" Text="{Binding Error}" IsVisible="{Binding HasError}" />
             </StackPanel>
         </DataTemplate>

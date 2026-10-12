@@ -57,6 +57,15 @@ public sealed class InstrumentProfile
 
     public DateTime? LastConnectedUtc { get; set; }
 
+    /// <summary>
+    /// Commands the instrument's firmware does not have (error 111), so they are not tried, and waited for, every time
+    /// it connects. Only used while <see cref="UnsupportedCommandsIdentity"/> matches: new firmware starts afresh.
+    /// </summary>
+    public string[] UnsupportedCommands { get; set; } = [];
+
+    /// <summary>The identity (model, serial number and firmware version) <see cref="UnsupportedCommands"/> belongs to.</summary>
+    public string? UnsupportedCommandsIdentity { get; set; }
+
     [JsonIgnore]
     public string Address => IsSimulator ? "Simulated instrument" : Port == TcpTransport.DefaultPort ? Host : $"{Host}:{Port}";
 

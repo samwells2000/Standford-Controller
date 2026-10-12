@@ -43,6 +43,12 @@ public sealed class Dg645Simulator
     /// </summary>
     public bool IsResponding { get; set; } = true;
 
+    /// <summary>
+    /// Commands to behave as if the firmware did not have them, like an instrument with older firmware: no reply,
+    /// and error 111 (undefined command) in the error queue. For example PRES, PHAS and TIMB.
+    /// </summary>
+    public ISet<string> UnsupportedCommands { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>Sets bits in the instrument status register, e.g. PLL_UNLOCK, as the hardware would on a fault.</summary>
     public void RaiseStatus(InstrumentStatusFlags flags)
     {
@@ -141,6 +147,11 @@ public sealed class Dg645Simulator
         }
 
         var mnemonic = command[..i].ToUpperInvariant();
+        if (UnsupportedCommands.Contains(mnemonic))
+        {
+            throw new SimulatedError(111);
+        }
+
         var rest = command[i..].TrimStart();
         var isQuery = rest.StartsWith('?');
         if (isQuery)
