@@ -4,16 +4,27 @@ A working reference for the Stanford Research Systems **DG645 Digital Delay Gene
 interface, as implemented by this program. The authoritative source is chapter 4, *Remote
 Programming*, of the DG645 operation manual; see [`manuals/`](manuals/README.md) for the official PDFs.
 
-> **About this document.** The official manual could not be downloaded while this project was
-> written, so this reference was compiled from the manual's command set and cross-checked against
-> four independent, field-tested open-source DG645 drivers:
+> **About this document.** This reference was first compiled from the manual's command set and
+> cross-checked against four independent, field-tested open-source DG645 drivers:
 > [EPICS delaygen](https://github.com/epics-modules/delaygen),
 > [QCoDeS contrib drivers](https://github.com/QCoDeS/Qcodes_contrib_drivers),
 > [InstrumentKit](https://github.com/instrumentkit/InstrumentKit) and
 > [Labber drivers](https://github.com/Labber-software/Drivers).
-> Commands marked **†** are standard IEEE-488.2 or SRS commands that none of those drivers use;
-> they follow the manual's command list but have not been cross-checked. Please confirm them
-> against the PDF once it is in `docs/manuals/`.
+> Commands marked **†** are standard IEEE-488.2 or SRS commands that none of those drivers use.
+> Every command, parameter number and query form this program uses has since been checked against
+> the manual itself ([`manuals/DG645m.pdf`](manuals/DG645m.pdf), Revision 1.1, September 2008).
+
+## Firmware versions
+
+The manual (still Revision 1.1, September 2008, which describes firmware 1.00.x) is the only command
+list Stanford Research Systems publishes, and it does not say which commands later firmware added.
+Every command this program uses is in it, so an instrument from 2008 onwards should know them all.
+If an instrument does not know one (it does not reply, and `LERR?` gives 111, *undefined command*),
+the program greys that setting out and remembers it for that instrument and firmware version; see
+*Some settings are greyed out* in the [user guide](USER-GUIDE.md).
+
+The manual notes that `LCAL` (go to local) acts only on telnet and RS-232 connections, while `REMT`
+also acts on the raw socket (port 5025) that this program uses.
 
 ## Connecting over TCP/IP
 
