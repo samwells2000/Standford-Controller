@@ -42,6 +42,9 @@ public sealed class AppSettings
     /// <summary>The configuration file open last time; reopened at startup.</summary>
     public string? ConfigurationPath { get; set; }
 
+    /// <summary>Connect every instrument when a configuration opens, not only those marked to connect on opening.</summary>
+    public bool ConnectAllOnOpen { get; set; }
+
     /// <summary>Recently opened configuration files, most recent first.</summary>
     public List<string> RecentConfigurations { get; set; } = [];
 

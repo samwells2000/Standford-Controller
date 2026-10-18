@@ -43,6 +43,8 @@
                     </MenuItem.Styles>
                 </MenuItem>
                 <MenuItem Header="Save configuration _as…" Command="{Binding SaveConfigurationAsCommand}" InputGesture="Ctrl+Shift+S" />
+                <MenuItem Header="_Connect all instruments on opening" ToggleType="CheckBox" IsChecked="{Binding ConnectAllOnOpen}"
+                          ToolTip.Tip="When a configuration opens, connect every instrument in it, not only those marked to connect on opening" />
                 <Separator />
                 <MenuItem Header="_Save setups" Command="{Binding SaveSetupsCommand}" InputGesture="Ctrl+S"
                           ToolTip.Tip="Store the complete setup of every connected instrument in this configuration" />

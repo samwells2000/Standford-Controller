@@ -15,6 +15,9 @@ internal sealed class FakeDialogs : IDialogService
     /// <summary>The answer to every Yes/No/Cancel question.</summary>
     public DialogAnswer AskAnswer { get; set; } = new(DialogChoice.Cancel);
 
+    /// <summary>Answers given in turn to the next questions, before falling back to <see cref="AskAnswer"/>.</summary>
+    public Queue<DialogAnswer> AskAnswers { get; } = new();
+
     public List<string> Errors { get; } = [];
 
     public List<string> Questions { get; } = [];
@@ -36,7 +39,7 @@ internal sealed class FakeDialogs : IDialogService
     public Task<DialogAnswer> AskAsync(string title, string message, string yesText, string noText, string? rememberText = null, bool showCancel = true)
     {
         Questions.Add(message);
-        return Task.FromResult(AskAnswer);
+        return Task.FromResult(AskAnswers.TryDequeue(out var answer) ? answer : AskAnswer);
     }
 
     public Task ShowErrorAsync(string title, string message)

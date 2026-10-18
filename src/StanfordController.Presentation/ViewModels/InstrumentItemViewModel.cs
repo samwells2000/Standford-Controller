@@ -184,11 +184,17 @@ public sealed class InstrumentItemViewModel : ObservableObject
         RaiseSetupCommands();
     }
 
-    public async Task ConnectAsync()
+    public Task ConnectAsync() => ConnectAsync(inBatch: false);
+
+    /// <summary>
+    /// Connects. <paramref name="inBatch"/> is true while connecting several instruments, such as on opening a
+    /// configuration; returns false if the user then asked to stop connecting the rest.
+    /// </summary>
+    public async Task<bool> ConnectAsync(bool inBatch)
     {
         if (_state is ConnectionState.Connecting or ConnectionState.Connected)
         {
-            return;
+            return true;
         }
 
         _connectionLost = false;
@@ -209,7 +215,13 @@ public sealed class InstrumentItemViewModel : ObservableObject
                 : $"Could not connect to {_profile.Address}: {ex.Message}";
             Log.Add(CommunicationDirection.Error, LastError);
             State = ConnectionState.Failed;
-            return;
+            return true;
+        }
+
+        var (identityNote, keepGoing) = await ConfirmSameInstrumentAsync(client, inBatch);
+        if (identityNote is null)
+        {
+            return keepGoing;
         }
 
         _profile.LastKnownIdentity = client.Identity;
@@ -225,13 +237,58 @@ public sealed class InstrumentItemViewModel : ObservableObject
 
         var session = new InstrumentSessionViewModel(_profile, client, _dialogs, Log, _audit) { Owner = this };
         session.DisconnectRequested += async (_, reason) => await DisconnectAsync(reason);
-        session.Audit(AuditActions.Connected, details: client.Identity);
+        session.Audit(AuditActions.Connected, details: client.Identity + identityNote);
         Session = session;
         State = ConnectionState.Connected;
         AlertResolved?.Invoke(this, InstrumentAlert.ConnectionLost);
         await session.InitializeAsync();
         RememberUnsupportedCommands(client);
         await OfferStoredSetupAsync(session);
+        return true;
+    }
+
+    /// <summary>
+    /// If a different DG645 (another serial number) answers at this address than last time, asks whether to use it in
+    /// place of the old one, so a saved setup is not put on the wrong unit without asking. Returns a note for the audit
+    /// trail (empty when the unit is the same), or null, disconnected, if the user cancelled; then KeepGoing is false
+    /// if they also asked to stop connecting the rest of a batch.
+    /// </summary>
+    private async Task<(string? Note, bool KeepGoing)> ConfirmSameInstrumentAsync(Dg645Client client, bool inBatch)
+    {
+        var expected = InstrumentProfile.SerialNumberOf(_profile.LastKnownIdentity);
+        var found = InstrumentProfile.SerialNumberOf(client.Identity);
+        if (expected is null || found is null || string.Equals(expected, found, StringComparison.OrdinalIgnoreCase))
+        {
+            return (string.Empty, true);
+        }
+
+        var setup = _profile.StoredSetup is null ? string.Empty : " Tempo then compares it with the saved setup as usual.";
+        var message = $"A different DG645 answered at {_profile.Address}.\n\nSaved for {Name}: serial {expected}\nAnswering now: serial {found}\n\n" +
+                      $"Use the new unit in place of the old one?{setup}";
+        var answer = inBatch
+            ? await _dialogs.AskAsync("Different instrument",
+                message + "\n\nSkip leaves this instrument disconnected and goes on to the next; Cancel stops connecting the rest.",
+                "Use new unit", "Skip", showCancel: true)
+            : await _dialogs.AskAsync("Different instrument", message, "Use new unit", "Cancel", showCancel: false);
+        if (answer.Choice == DialogChoice.Yes)
+        {
+            Log.Add(CommunicationDirection.Info, $"Serial {found} answered instead of {expected}; using it in place of the old unit as {Name}.");
+            return ($". A different unit answered (serial {found}, previously {expected}) and was used in place of the old one", true);
+        }
+
+        try
+        {
+            await client.DisconnectAsync(_profile.ReturnToLocalOnDisconnect);
+        }
+        catch (Exception ex)
+        {
+            Log.Add(CommunicationDirection.Error, $"Error while disconnecting: {ex.Message}");
+        }
+
+        LastError = $"Not connected: serial {found} answered at {_profile.Address}, but {Name} is serial {expected}.";
+        Log.Add(CommunicationDirection.Error, LastError);
+        State = ConnectionState.Failed;
+        return (null, !inBatch || answer.Choice == DialogChoice.No);
     }
 
     /// <summary>Keeps what this instrument's firmware lacks with its profile, so the next connection need not find out again.</summary>
