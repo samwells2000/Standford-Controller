@@ -71,6 +71,16 @@ public sealed class InstrumentProfile
 
     public InstrumentProfile Clone() => (InstrumentProfile)MemberwiseClone();
 
+    /// <summary>
+    /// The serial number in an *IDN? reply ("Stanford Research Systems,DG645,s/n001234,ver1.14.10E" gives "s/n001234"),
+    /// or null if the reply has none.
+    /// </summary>
+    public static string? SerialNumberOf(string? identity)
+    {
+        var parts = identity?.Split(',');
+        return parts is { Length: > 2 } && parts[2].Trim() is { Length: > 0 } serial ? serial : null;
+    }
+
     /// <summary>"192.168.1.300" or "10.0.1" would otherwise pass as DNS names and fail only when connecting.</summary>
     private static bool LooksLikeBadIPv4(string host) =>
         host.All(c => char.IsDigit(c) || c == '.')

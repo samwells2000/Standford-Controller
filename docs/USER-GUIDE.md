@@ -131,9 +131,10 @@ Tempo always has one configuration open; its name is in the title bar and at the
 | File menu | What it does |
 | --- | --- |
 | New configuration… | Starts an empty configuration in a new file. |
-| Open configuration… (Ctrl+O) | Switches to another configuration file. Connected instruments are disconnected first. |
+| Open configuration… (Ctrl+O) | Switches to another configuration file. Connected instruments are disconnected first, then Tempo connects the new file's instruments; see [Opening a configuration](#opening-a-configuration). |
 | Open recent | The configurations opened most recently. |
 | Save configuration as… (Ctrl+Shift+S) | Saves everything, including the current setup of every connected instrument, under a new name, and switches to that file. |
+| Connect all instruments on opening | When ticked, opening a configuration connects every instrument in it without asking. |
 | Save setups (Ctrl+S) | Saves the complete setup of every connected instrument into the open configuration. |
 | Import instruments… | Adds the instruments from another configuration file to this one. |
 
@@ -170,6 +171,26 @@ Tick **Remember my choice for this instrument** to stop the question; you can ch
 | Keep the settings on the instrument | The instrument is left as it is; the status bar shows *Setup not saved* until you save or restore. |
 
 Combined with **Connect when this configuration opens**, *Load the setup saved in Tempo* gives a system that is fully set up a few seconds after the computer and instruments are switched on.
+
+### Opening a configuration
+
+A configuration can hold several DG645s, so opening one can put a whole bench back as it was. When you open a configuration with **File ▸ Open configuration…**, Tempo connects its instruments one after another:
+
+- Instruments with **Connect when this configuration opens** ticked always connect.
+- If some are not ticked, Tempo lists them all and asks **Connect all**, or connect only the ticked ones (*Not now* if none are). Tick **Always connect every instrument when I open a configuration** to stop the question; **File ▸ Connect all instruments on opening** turns it back off.
+- As each instrument connects, Tempo compares it with its saved setup as described in [When an instrument connects](#when-an-instrument-connects).
+- An instrument that cannot be reached turns red in the list and is skipped, and the others still connect. The status bar says which ones did not connect.
+
+When Tempo starts, it reopens the last configuration and connects the ticked instruments (or all of them, if you chose that) without asking.
+
+### A different unit at the same address
+
+Tempo remembers the serial number of the DG645 at each address. If a different unit answers there (for example, after an instrument has been swapped or its IP address reused), Tempo shows the serial number saved for that instrument and the one answering now, before doing anything else:
+
+- **Use new unit** connects it in place of the old one. Tempo remembers the new serial number, then compares the instrument with the saved setup as usual. The audit trail records the change of unit.
+- **Cancel** leaves it disconnected and keeps the old serial number.
+
+While a configuration is opening, the choices are **Use new unit**, **Skip** (leave this instrument disconnected and go on to the next) and **Cancel** (stop connecting the rest).
 
 ### Setup files for one instrument
 

@@ -192,6 +192,21 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>Whether opening a configuration connects all of its instruments, not only those marked to connect on opening.</summary>
+    public bool ConnectAllOnOpen
+    {
+        get => _settings.ConnectAllOnOpen;
+        set
+        {
+            if (_settings.ConnectAllOnOpen != value)
+            {
+                _settings.ConnectAllOnOpen = value;
+                OnPropertyChanged();
+                SaveSettings();
+            }
+        }
+    }
+
     /// <summary>Whether communication logs are shown under the instrument pages (applies to every instrument).</summary>
     public bool ShowLog
     {
@@ -338,13 +353,73 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
-    /// <summary>Connects the instruments marked "connect automatically", one after another.</summary>
+    /// <summary>
+    /// Connects the instruments marked "connect automatically" (or all of them, if the user chose that), one after
+    /// another. One that cannot be reached is marked failed and the rest still connect.
+    /// </summary>
     public async Task ConnectStartupInstrumentsAsync()
     {
-        foreach (var item in Instruments.Where(i => i.Profile.ConnectOnStartup).ToList())
+        await ConnectEachAsync(Instruments.Where(i => _settings.ConnectAllOnOpen || i.Profile.ConnectOnStartup).ToList());
+    }
+
+    /// <summary>Connects instruments one after another, until the user asks to stop. Returns false if they did.</summary>
+    private static async Task<bool> ConnectEachAsync(IReadOnlyList<InstrumentItemViewModel> items)
+    {
+        foreach (var item in items)
         {
-            await item.ConnectAsync();
+            if (!await item.ConnectAsync(inBatch: true))
+            {
+                return false;
+            }
         }
+
+        return true;
+    }
+
+    /// <summary>
+    /// After the user opens a configuration: offers to connect all of its instruments when some are not marked to
+    /// connect on opening, then connects them. Each saved setup is then checked as each instrument connects.
+    /// </summary>
+    private async Task ConnectOnOpeningAsync()
+    {
+        var unmarked = Instruments.Count(i => !i.Profile.ConnectOnStartup);
+        if (unmarked == 0 || _settings.ConnectAllOnOpen)
+        {
+            await ConnectStartupInstrumentsAsync();
+            return;
+        }
+
+        var marked = Instruments.Count - unmarked;
+        var names = string.Join("\n", Instruments.Select(i => "  •  " + i.Name + (i.Profile.ConnectOnStartup ? " (connects on opening)" : string.Empty)));
+        var answer = await _dialogs.AskAsync(
+            "Connect instruments",
+            $"{ConfigurationName}{ConfigurationStore.FileExtension} has {Plural(Instruments.Count, "instrument")}:\n\n{names}\n\n" +
+            "Connect to all of them now? As each one connects, Tempo compares it with its saved setup.",
+            "Connect all",
+            marked == 0 ? "Not now" : $"Only the {Plural(marked, "marked one")}",
+            "Always connect every instrument when I open a configuration",
+            showCancel: false);
+        if (answer.Choice != DialogChoice.Yes)
+        {
+            await ConnectStartupInstrumentsAsync();
+            return;
+        }
+
+        if (answer.Remember)
+        {
+            ConnectAllOnOpen = true;
+        }
+
+        if (!await ConnectEachAsync(Instruments.ToList()))
+        {
+            StatusMessage = $"Stopped connecting the instruments in {Path.GetFileName(_store.FilePath)}.";
+            return;
+        }
+
+        var failed = Instruments.Where(i => i.State == ConnectionState.Failed).ToList();
+        StatusMessage = failed.Count == 0
+            ? $"Connected {Plural(Instruments.Count, "instrument")} from {Path.GetFileName(_store.FilePath)}."
+            : $"Connected {Instruments.Count - failed.Count} of {Instruments.Count} instruments; not connected: {string.Join(", ", failed.Select(i => i.Name))}.";
     }
 
     /// <summary>
@@ -434,7 +509,7 @@ public sealed class MainViewModel : ObservableObject
         {
             SelectedInstrument = Instruments.FirstOrDefault();
             StatusMessage = $"Opened {Path.GetFileName(path)} ({Plural(Instruments.Count, "instrument")}).";
-            await ConnectStartupInstrumentsAsync();
+            await ConnectOnOpeningAsync();
         }
     }
 
