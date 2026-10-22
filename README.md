@@ -1,8 +1,7 @@
 # Tempo
 
 Desktop software for controlling **Stanford Research Systems DG645 digital delay generators** over
-Ethernet, for Windows 10/11, macOS 12 or later (Apple Silicon and Intel) and Linux (Debian, Ubuntu, Arch
-and other x86-64 distributions).
+Ethernet, for Windows 10/11 and Linux (Debian, Ubuntu, Arch and other x86-64 distributions).
 
 Save each instrument once under a name you choose ("Laser lab DG645", "Beamline trigger") and pick it
 from a list, with no IP addresses to remember. Every setting the DG645 exposes over its remote
@@ -25,16 +24,11 @@ Get the program from the [latest release](../../releases/latest):
 | **`PKGBUILD`** | Arch Linux: put it in an empty folder and run `makepkg -si`. |
 | **`Tempo-<version>-linux-x64.tar.gz`** | Any x86-64 Linux desktop: unpack, then `./install.sh` (or just run `./tempo-dg645`). |
 | `Tempo-linux-x64`, `Tempo-Portable-linux-x64` | The bare Linux program, normal and portable (`chmod +x` after downloading). |
-| **`Tempo-<version>-macos-arm64.zip`** | Macs with Apple Silicon. Unzip and drag `Tempo.app` to Applications. Keeps its files in `~/Library/Application Support/Tempo`. |
-| **`Tempo-<version>-macos-x64.zip`** | Intel Macs. |
 | **`Tempo-Quick-Reference.pdf`** | A two-sided quick reference card for new users, on one sheet of A4. Print it double-sided at actual size. In the program, **Help ▸ Quick reference card** opens it in your web browser. |
 
 Each program is a single self-contained file: the .NET runtime, the Avalonia user interface, the
 renderer and the fonts are all inside, so there is nothing else to install. Windows SmartScreen may ask
 for confirmation the first time because the program is not code-signed (**More info ▸ Run anyway**).
-The Mac app is not notarized either, so macOS blocks it the first time: open it once, then choose
-**Open Anyway** in **System Settings ▸ Privacy & Security** (see the
-[user guide](docs/USER-GUIDE.md#macos-will-not-open-tempo)).
 
 A new release is built automatically every time `main` changes (see
 [How releases are made](#how-releases-are-made)).
@@ -119,23 +113,22 @@ The audit trail: every change with its old and new values, the reason given, and
 
 ## Building from source
 
-Requirements: the [.NET 10 SDK](https://dotnet.microsoft.com/download), on Windows, Linux or macOS.
+Requirements: the [.NET 10 SDK](https://dotnet.microsoft.com/download), on Windows or Linux. It also
+builds and runs on a Mac with `dotnet run`, for development only: there is no Mac release.
 
 ```sh
 dotnet test                                    # unit, simulator and user-guide tests
 dotnet run --project src/StanfordController.App
 dotnet publish src/StanfordController.App -c Release -r win-x64   -o publish/win     # publish/win/Tempo.exe
 dotnet publish src/StanfordController.App -c Release -r linux-x64 -o publish/linux   # publish/linux/Tempo
-dotnet publish src/StanfordController.App -c Release -r osx-arm64 -o publish/macos   # a folder, not one file
 # add -p:PortableBuild=true for the portable variant
 packaging/linux/build-packages.sh <version> publish/linux/Tempo dist    # .tar.gz, .deb and PKGBUILD
-packaging/macos/build-app.sh <version> arm64 publish/macos dist         # Tempo.app and its zip (on a Mac)
 ```
 
 `Tempo --smoke-test <folder> [--headless]` runs the real program against the simulated instrument,
 visits every page and dialog in both themes and at the minimum window size, saves a setup to a
 configuration, writes screenshots to the folder, and exits with a non-zero code on any exception or
-binding error. CI runs it on Windows, on Linux (under a virtual X display) and on macOS.
+binding error. CI runs it on Windows, and on Linux (under a virtual X display).
 
 ### Project layout
 
@@ -145,16 +138,16 @@ binding error. CI runs it on Windows, on Linux (under a virtual X display) and o
 | `src/StanfordController.Presentation` | View models for every page and dialog, the user-guide reader, data folders and preferences; no UI framework dependency, fully unit-tested. |
 | `src/StanfordController.App` | The Avalonia desktop application (builds `Tempo`): windows, pages, styles, timing diagram, help window, smoke test. |
 | `tests/StanfordController.Tests` | Unit tests, simulator tests, real-socket tests and checks of the user guide. |
-| `packaging/` | Linux desktop entry, install script, Debian package and Arch PKGBUILD builders; macOS app bundle builder. |
+| `packaging/` | Linux desktop entry, install script, Debian package and Arch PKGBUILD builders. |
 | `docs/` | User guide, command reference and official documents. |
 | `.github/workflows/` | CI/release and manual-download workflows. |
 
 ## How releases are made
 
 [`.github/workflows/build-and-release.yml`](.github/workflows/build-and-release.yml) runs for every pull
-request and every push to `main`, on Windows, Linux and macOS (Apple Silicon and Intel): it builds, runs the tests,
+request and every push to `main`, on Windows and Linux: it builds, runs the tests,
 publishes the normal and portable single-file programs, runs the UI smoke test on each, on Linux builds
-the `.deb`, tarball and `PKGBUILD`, and on macOS builds an ad-hoc-signed `Tempo.app` and zips it. The programs are attached to each run as artifacts for 3 days.
+the `.deb`, tarball and `PKGBUILD`. The programs are attached to each run as artifacts for 3 days.
 The Linux job can run on your own Ubuntu server instead of GitHub's machines: see
 [docs/SELF-HOSTED-RUNNER.md](docs/SELF-HOSTED-RUNNER.md).
 
