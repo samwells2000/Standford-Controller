@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using StanfordController.Core.Protocol;
 using StanfordController.Core.Transport;
 
 namespace StanfordController.Core.Profiles;
@@ -53,6 +54,12 @@ public sealed class InstrumentProfile
     /// <summary>What to do when the instrument connects and its settings differ from <see cref="StoredSetup"/>.</summary>
     public SetupOnConnect SetupOnConnect { get; set; } = SetupOnConnect.Ask;
 
+    /// <summary>
+    /// The user's names for the delay channels, e.g. "A" = "Q-switch", so it is clear what each one drives.
+    /// Channels without a label are left out.
+    /// </summary>
+    public Dictionary<string, string> ChannelLabels { get; set; } = [];
+
     public string? LastKnownIdentity { get; set; }
 
     public DateTime? LastConnectedUtc { get; set; }
@@ -69,7 +76,37 @@ public sealed class InstrumentProfile
     [JsonIgnore]
     public string Address => IsSimulator ? "Simulated instrument" : Port == TcpTransport.DefaultPort ? Host : $"{Host}:{Port}";
 
-    public InstrumentProfile Clone() => (InstrumentProfile)MemberwiseClone();
+    public InstrumentProfile Clone()
+    {
+        var clone = (InstrumentProfile)MemberwiseClone();
+        clone.ChannelLabels = new Dictionary<string, string>(ChannelLabels);
+        return clone;
+    }
+
+    /// <summary>The label given to <paramref name="channel"/>, or an empty string if it has none.</summary>
+    public string LabelOf(Dg645Channel channel) =>
+        ChannelLabels.TryGetValue(channel.ToString(), out var label) ? label : string.Empty;
+
+    /// <summary>Sets or (with a blank label) removes the label of <paramref name="channel"/>. Returns false if nothing changed.</summary>
+    public bool SetLabel(Dg645Channel channel, string? label)
+    {
+        label = label?.Trim() ?? string.Empty;
+        if (label == LabelOf(channel))
+        {
+            return false;
+        }
+
+        if (label.Length == 0)
+        {
+            ChannelLabels.Remove(channel.ToString());
+        }
+        else
+        {
+            ChannelLabels[channel.ToString()] = label;
+        }
+
+        return true;
+    }
 
     /// <summary>
     /// The serial number in an *IDN? reply ("Stanford Research Systems,DG645,s/n001234,ver1.14.10E" gives "s/n001234"),

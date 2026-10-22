@@ -69,7 +69,7 @@ Easiest of all is **Find on network…**, which looks for DG645s on this compute
 4. **Reason for changes.** Optional; recorded with each change in the [audit trail](#reason-for-changes).
 5. **Connection state.** The [heartbeat](#heartbeat-and-alerts): the time the instrument took to answer, or how long it has been silent.
 6. **Command bar.** **Connect / Disconnect**, **Edit…**, **Refresh**, **Trigger** (which reads **Arm** or **Ready** in the [single-shot external modes](#single-shot-and-arming)), **Save setup**, **Restore saved…** and the **Log** check box.
-7. **Pages.** Delays, Outputs, Trigger, Burst, Setups, Status, Interfaces and Terminal, one tab each, described below.
+7. **Pages.** Delays, Outputs, Trigger, Burst, Setups, Status, Interfaces and Terminal, one tab each, described below, and **All channels**, which lists the channels of every connected instrument.
 8. **Value fields.** Type a value and press Enter; see [Entering values](#entering-values).
 9. **Communication log.** Every command sent and reply received, with the time; see [Communication log](#communication-log).
 10. **Status bar.** The connection state, the trigger source and rate (with a green **Ready** while a single shot is armed), whether burst mode is on, **Setup not saved** when the instrument's settings have changed since its setup was last saved, the latest message, and the name of the open configuration. **Portable** appears when you are running the portable program.
@@ -282,6 +282,12 @@ To set a delay, type it in **Delay** and press Enter. To make a channel follow a
 
 ![Timing of the example: T0 at 0, A one microsecond after T0, B 2.5 microseconds after A, so the AB output is a 2.5 µs pulse from 1 µs to 3.5 µs.](images/delays.png)
 
+### Channel labels
+
+The **Label** column at the right of the table names each channel after what it drives, such as *Q-switch* or *Camera gate*. Click in it, type, and press Enter (or click elsewhere); Esc puts the previous label back, and clearing the text removes the label. A channel without a label shows a faint *Add label*.
+
+Labels belong to the instrument, not to its setup: they are written to the open configuration straight away, without **Save setup**, come back whenever the instrument connects, and are not changed by restoring, importing or recalling a setup. Each change is recorded in the [audit trail](#audit-trail). Resting the pointer on a channel's letter shows its label with its role, and the [All channels](#all-channels) page lists the labels of every connected instrument.
+
 ### Timing diagram
 
 Below the table, the diagram draws T0 and the four outputs on one time axis, from T0 to just after the last edge, with each pulse's start and end channel above it and its width beside it. Outputs set to negative polarity are drawn upside down, as they appear on an oscilloscope.
@@ -419,6 +425,17 @@ The **Command reference** beside it lists every DG645 command with its syntax an
 
 Commands sent from the Terminal can change settings shown on other pages; when they might have, Tempo shows **Pages may be out of date** until you refresh.
 
+## All channels
+
+The **All channels** page lists the eight delay channels of every connected instrument, grouped by instrument in the order of the instrument list, with each channel's label, the pulse it belongs to, its delay and its time from T0. It is the same page whichever instrument is selected, and it follows the instruments as they connect, disconnect and change. Use it to find which unit and channel drives a piece of equipment before changing anything.
+
+- Type in the search box to show only matching channels. Tempo looks in the labels, the channel letter (`A`), the output (`AB`) and the instrument's name and location; several words must all match, so `probe gh` finds channels G and H of the instrument called Probe. Esc clears the search.
+- Under each instrument's channels is its [timing diagram](#timing-diagram), the same as on its Delays page, so the pulses of every unit can be compared on one page. Hovering a pulse shows its edges with their labels, here and on the Delays page.
+- Labels can be typed here as well as on the Delays page.
+- **Show** beside an instrument selects it in the instrument list.
+
+Instruments that are not connected are not listed; the line at the top says how many there are.
+
 ## Communication log
 
 The log under the pages records every command sent (→), reply received (←), error (✕) and connection event, with the time to the millisecond. Untick **Commands and replies** to show only connection events and errors. **Copy** puts the whole log on the clipboard and **Save…** writes it to a text file, which is the most useful thing to include when reporting a problem.
@@ -448,7 +465,7 @@ ISO 9001 certifies an organisation's quality management system rather than any p
 | Commands typed in the Terminal | Every command that can change something, as typed, with any error the instrument reported. Queries are not recorded. |
 | Connections | Connecting (with the instrument's identity), disconnecting, losing the connection, and keeping the instrument's own settings when they differ from the saved setup. |
 | Heartbeat alerts | Faults the instrument reports, the instrument not responding, and when it answers again. |
-| The saved instruments | Adding, importing and removing an instrument; each detail changed in the instrument editor; and saving a setup, with each setting that differs from the setup saved before. |
+| The saved instruments | Adding, importing and removing an instrument; each detail changed in the instrument editor; each channel label added, changed or removed; and saving a setup, with each setting that differs from the setup saved before. |
 
 As a safety net, anything else Tempo sends that could change the instrument is recorded as a command, so no change Tempo makes goes unrecorded. Reading values is not recorded, and neither are changes made at the front panel or by other programs, which Tempo cannot see. When an instrument with a saved setup connects, though, Tempo shows any differences from the saved setup (see [When an instrument connects](#when-an-instrument-connects)).
 

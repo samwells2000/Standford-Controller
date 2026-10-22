@@ -16,6 +16,11 @@ namespace StanfordController.Presentation.ViewModels;
 /// <summary>One pulse for the timing diagram, in seconds from T0.</summary>
 public sealed record PulseTiming(string Output, string StartChannel, string EndChannel, double? Start, double? End, bool Positive)
 {
+    /// <summary>The labels of the start and end channels, for the hover read-out; empty if they have none.</summary>
+    public string StartLabel { get; init; } = string.Empty;
+
+    public string EndLabel { get; init; } = string.Empty;
+
     public bool IsValid => Start is not null && End is not null && End >= Start;
 
     public double Width => IsValid ? End!.Value - Start!.Value : 0;
@@ -73,6 +78,12 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         Client.UnrecordedCommandSent += (_, line) => Audit(AuditActions.Command, newValue: line, details: "Sent by Tempo");
 
         Channels = Dg645Names.DelayChannels.Select(c => new ChannelDelayViewModel(this, c)).ToList();
+        foreach (var channel in Channels)
+        {
+            channel.ApplyLabel(profile.LabelOf(channel.Channel));
+            channel.LabelCommitted += OnChannelLabelCommitted;
+        }
+
         Outputs = Dg645Names.Outputs.Select(o => new OutputViewModel(this, o)).ToList();
         Trigger = new TriggerViewModel(this);
         Burst = new BurstViewModel(this);
@@ -467,6 +478,34 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
     public void Audit(string action, string? setting = null, string? oldValue = null, string? newValue = null, string? details = null) =>
         _audit?.Record(Profile, SerialNumber.Length > 0 ? SerialNumber : null, action, setting, oldValue, newValue, _changeReason, details);
 
+    // ---- Channel labels ----
+
+    /// <summary>Keeps a new channel label with the instrument in the configuration, and records it in the audit trail.</summary>
+    private void OnChannelLabelCommitted(object? sender, (string Before, string After) change)
+    {
+        if (sender is not ChannelDelayViewModel channel)
+        {
+            return;
+        }
+
+        // The saved instrument, which an edit (Instrument ▸ Edit) replaces while connected.
+        var profile = Owner?.Profile ?? Profile;
+        if (!profile.SetLabel(channel.Channel, change.After))
+        {
+            return;
+        }
+
+        Owner?.SaveProfile();
+        RecomputeTiming();
+        Audit(AuditActions.ChannelLabelled, $"Channel {channel.Channel} label", Blank(change.Before), Blank(change.After),
+            "Saved in the configuration");
+        SetStatus(change.After.Length == 0
+            ? $"Removed the label of channel {channel.Channel}."
+            : $"Labelled channel {channel.Channel} \"{change.After}\".");
+
+        static string Blank(string label) => label.Length == 0 ? "(none)" : label;
+    }
+
     // ---- Saved setups ----
 
     /// <summary>Reads the instrument's complete setup, or returns null (with the error reported) if it could not be read.</summary>
@@ -552,7 +591,11 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
             var name = output.Output.ToString();
             var start = Enum.Parse<Dg645Channel>(name[..1]);
             var end = Enum.Parse<Dg645Channel>(name[1..]);
-            pulses.Add(new PulseTiming(name, start.ToString(), end.ToString(), absolute[start], absolute[end], output.IsPositive));
+            pulses.Add(new PulseTiming(name, start.ToString(), end.ToString(), absolute[start], absolute[end], output.IsPositive)
+            {
+                StartLabel = Channels.First(c => c.Channel == start).ChannelLabel,
+                EndLabel = Channels.First(c => c.Channel == end).ChannelLabel,
+            });
         }
 
         Timing = pulses;

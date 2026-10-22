@@ -78,6 +78,13 @@ public sealed class ConfigurationStore(string path)
                 $"The file was written by a newer version of Tempo (format {file.FormatVersion}). Update Tempo to open it.");
         }
 
-        return file.Instruments ?? [];
+        var instruments = file.Instruments ?? [];
+        foreach (var instrument in instruments)
+        {
+            // Written by hand, or by a release without channel labels.
+            instrument.ChannelLabels ??= [];
+        }
+
+        return instruments;
     }
 }

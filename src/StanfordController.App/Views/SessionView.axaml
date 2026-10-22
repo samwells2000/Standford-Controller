@@ -67,6 +67,10 @@
             <TabItem Header="Terminal">
                 <views:TerminalView />
             </TabItem>
+            <!-- Every connected instrument, not only this one. -->
+            <TabItem Header="All channels">
+                <views:ChannelOverviewView DataContext="{ReflectionBinding $parent[Window].DataContext.ChannelOverview}" />
+            </TabItem>
         </TabControl>
     </DockPanel>
 </UserControl>

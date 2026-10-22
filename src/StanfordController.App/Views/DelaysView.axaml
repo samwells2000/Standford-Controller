@@ -25,6 +25,7 @@
                             <TextBlock Grid.Column="5" Classes="header" Text="Step" Margin="6,0,0,0" />
                             <TextBlock Grid.Column="6" Classes="header" Text="From T0" Margin="10,0,0,0" />
                             <TextBlock Grid.Column="7" Classes="header" Text="Step size" />
+                            <TextBlock Grid.Column="8" Classes="header" Text="Label" Margin="16,0,0,0" />
                         </Grid>
                     </Border>
                     <ItemsControl ItemsSource="{Binding Channels}">
@@ -32,7 +33,7 @@
                             <DataTemplate x:DataType="vm:ChannelDelayViewModel">
                                 <Border Classes="table-row">
                                     <Grid ColumnDefinitions="52,84,92,18,150,62,138,112,*" RowDefinitions="Auto,Auto">
-                                        <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center" ToolTip.Tip="{Binding Role}">
+                                        <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center" ToolTip.Tip="{Binding RoleAndLabel}">
                                             <controls:SeriesSwatch Output="{Binding Output}" Width="4" Height="20" CornerRadius="1" />
                                             <TextBlock Text="{Binding Name}" Classes="strong" FontSize="14" VerticalAlignment="Center" />
                                         </StackPanel>
@@ -57,6 +58,12 @@
                                         </StackPanel>
                                         <TextBlock Grid.Column="6" Text="{Binding AbsoluteText}" Classes="mono secondary" Margin="10,0,8,0" />
                                         <ContentControl Grid.Column="7" Content="{Binding StepSize}" />
+                                        <TextBox Grid.Column="8" Classes="label" Margin="10,0,0,0" MaxWidth="280" HorizontalAlignment="Left"
+                                                 Text="{Binding LabelText}" PlaceholderText="Add label"
+                                                 AutomationProperties.Name="{Binding Name, StringFormat='Label for channel {0}'}"
+                                                 ToolTip.Tip="Your name for this channel, e.g. what it is wired to. Kept with the instrument in this configuration and shown on the All channels page."
+                                                 inf:FieldBehavior.CommitCommand="{Binding CommitLabelCommand}"
+                                                 inf:FieldBehavior.RevertCommand="{Binding RevertLabelCommand}" />
                                         <TextBlock Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="7" Classes="error" Text="{Binding Error}" IsVisible="{Binding HasError}" />
                                     </Grid>
                                 </Border>

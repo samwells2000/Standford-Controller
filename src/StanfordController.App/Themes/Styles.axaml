@@ -330,6 +330,22 @@
         <Setter Property="Background" Value="{DynamicResource ErrorFieldBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource DangerTextBrush}" />
     </Style>
+    <!-- Channel labels: read as plain text until pointed at or edited. -->
+    <Style Selector="TextBox.label /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="TextBox.label:pointerover /template/ Border#PART_BorderElement">
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    </Style>
+    <Style Selector="TextBox.label:focus /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="TextBox.label /template/ TextBlock#PART_Placeholder">
+        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+        <Setter Property="FontStyle" Value="Italic" />
+    </Style>
     <Style Selector="ComboBox">
         <Setter Property="MinHeight" Value="28" />
         <Setter Property="Padding" Value="8,3,6,3" />

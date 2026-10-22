@@ -33,6 +33,7 @@ public static class AuditActions
     public const string InstrumentAdded = "Instrument added";
     public const string InstrumentEdited = "Instrument edited";
     public const string InstrumentRemoved = "Instrument removed";
+    public const string ChannelLabelled = "Channel labelled";
 }
 
 /// <summary>One entry in the audit trail: who did what to which instrument, when, and why.</summary>

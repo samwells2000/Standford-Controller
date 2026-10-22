@@ -16,6 +16,8 @@ public sealed class ChannelDelayViewModel : ParameterViewModel
     private double _delaySeconds;
     private Dg645Channel _readReference;
     private double? _absoluteSeconds;
+    private string _label = string.Empty;
+    private string _labelText = string.Empty;
 
     public ChannelDelayViewModel(IInstrumentContext context, Dg645Channel channel)
         : base(context, $"Channel {channel}")
@@ -41,7 +43,12 @@ public sealed class ChannelDelayViewModel : ParameterViewModel
         RevertCommand = new RelayCommand(Revert);
         StepUpCommand = new AsyncRelayCommand(() => StepAsync(up: true));
         StepDownCommand = new AsyncRelayCommand(() => StepAsync(up: false));
+        CommitLabelCommand = new RelayCommand(CommitLabel);
+        RevertLabelCommand = new RelayCommand(() => LabelText = _label);
     }
+
+    /// <summary>The user has changed the label: (old label, new label). Blank means no label.</summary>
+    public event EventHandler<(string Before, string After)>? LabelCommitted;
 
     public Dg645Channel Channel { get; }
 
@@ -62,6 +69,25 @@ public sealed class ChannelDelayViewModel : ParameterViewModel
 
     /// <summary>e.g. "AB start" for the table column.</summary>
     public string RoleShort => StartsPulse ? $"{Output} start" : $"{Output} end";
+
+    /// <summary>The user's name for the channel, e.g. "Q-switch", kept with the instrument in the configuration; empty if none.</summary>
+    public string ChannelLabel => _label;
+
+    public bool HasLabel => _label.Length > 0;
+
+    /// <summary>The label as typed, applied on Enter or on leaving the field.</summary>
+    public string LabelText
+    {
+        get => _labelText;
+        set => SetProperty(ref _labelText, value ?? string.Empty);
+    }
+
+    /// <summary>e.g. "Start of AB pulse: Q-switch", for the channel's tooltip.</summary>
+    public string RoleAndLabel => HasLabel ? $"{Role}: {_label}" : Role;
+
+    public ICommand CommitLabelCommand { get; }
+
+    public ICommand RevertLabelCommand { get; }
 
     public IReadOnlyList<ChoiceOption> ReferenceOptions { get; }
 
@@ -115,6 +141,9 @@ public sealed class ChannelDelayViewModel : ParameterViewModel
         }
     }
 
+    /// <summary>The delay as read, e.g. "A + 1.5 µs".</summary>
+    public string DelaySummary => _reference is null ? "—" : ReadingText;
+
     public string AbsoluteText => _absoluteSeconds is { } a ? "T0 + " + EngineeringUnits.Format(a, Quantity.Time) : "—";
 
     public EditableParameterViewModel<double> StepSize { get; }
@@ -151,11 +180,32 @@ public sealed class ChannelDelayViewModel : ParameterViewModel
             _committedDelayText = EngineeringUnits.Format(seconds, Quantity.Time);
             DelayText = _committedDelayText;
             OnPropertyChanged(nameof(DelaySeconds));
+            OnPropertyChanged(nameof(DelaySummary));
             OnPropertyChanged(nameof(IsDirty));
         }
         finally
         {
             _updating = false;
+        }
+    }
+
+    /// <summary>Shows <paramref name="label"/> without reporting it as changed, e.g. the label saved in the configuration.</summary>
+    public void ApplyLabel(string? label)
+    {
+        _label = label?.Trim() ?? string.Empty;
+        LabelText = _label;
+        OnPropertyChanged(nameof(ChannelLabel));
+        OnPropertyChanged(nameof(HasLabel));
+        OnPropertyChanged(nameof(RoleAndLabel));
+    }
+
+    private void CommitLabel()
+    {
+        var before = _label;
+        ApplyLabel(LabelText);
+        if (_label != before)
+        {
+            LabelCommitted?.Invoke(this, (before, _label));
         }
     }
 

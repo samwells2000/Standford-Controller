@@ -1,0 +1,97 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:StanfordController.Presentation.ViewModels;assembly=StanfordController.Presentation"
+             xmlns:help="clr-namespace:StanfordController.Presentation.Help;assembly=StanfordController.Presentation"
+             xmlns:controls="clr-namespace:StanfordController.App.Controls"
+             xmlns:inf="clr-namespace:StanfordController.App.Infrastructure"
+             x:Class="StanfordController.App.Views.ChannelOverviewView"
+             x:DataType="vm:ChannelOverviewViewModel"
+             inf:HelpContext.Topic="{x:Static help:HelpTopics.AllChannels}">
+    <ScrollViewer>
+        <StackPanel Margin="20,16,20,12">
+
+            <!-- Find a channel by its label, letter or instrument. -->
+            <DockPanel Margin="0,0,0,18">
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="6">
+                    <TextBox Text="{Binding Filter}" Width="300" PlaceholderText="Find a label, channel or instrument"
+                             AutomationProperties.Name="Find a channel"
+                             ToolTip.Tip="Shows only the channels whose label, channel letter (e.g. A), output (e.g. AB) or instrument contains what you type">
+                        <TextBox.KeyBindings>
+                            <KeyBinding Gesture="Escape" Command="{Binding ClearFilterCommand}" />
+                        </TextBox.KeyBindings>
+                    </TextBox>
+                    <Button Classes="tool" Command="{Binding ClearFilterCommand}" IsVisible="{Binding IsFiltered}"
+                            ToolTip.Tip="Show every channel (Esc)" AutomationProperties.Name="Clear the search">
+                        <Path Classes="glyph" Data="{StaticResource GlyphClose}" />
+                    </Button>
+                </StackPanel>
+                <TextBlock Classes="caption" Text="{Binding Summary}" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="16,0,0,0" />
+            </DockPanel>
+
+            <TextBlock Classes="secondary" Margin="0,0,0,16" IsVisible="{Binding NothingMatches}" TextWrapping="Wrap"
+                       Text="No channel matches. Labels are set in the Label column of each instrument's Delays page, or here." />
+
+            <ItemsControl ItemsSource="{Binding Groups}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ChannelOverviewGroup">
+                        <HeaderedContentControl Theme="{StaticResource Section}" Header="{Binding Instrument.Name}" IsVisible="{Binding IsVisible}"
+                                                AutomationProperties.HelpText="The delay channels of this connected instrument, with the labels you have given them and their current delays, and its timing diagram. Type in a label to change it; hover the diagram for exact edges with their labels.">
+                            <HeaderedContentControl.Tag>
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <TextBlock Classes="caption" Text="{Binding Details}" VerticalAlignment="Center" />
+                                    <Button Classes="link" Content="Show" Command="{Binding ShowCommand}" VerticalAlignment="Center"
+                                            ToolTip.Tip="Select this instrument in the list" />
+                                </StackPanel>
+                            </HeaderedContentControl.Tag>
+                            <StackPanel>
+                                <Border Classes="table-header">
+                                    <Grid ColumnDefinitions="52,290,84,160,*">
+                                        <TextBlock Classes="header" Text="Channel" />
+                                        <TextBlock Grid.Column="1" Classes="header" Text="Label" Margin="6,0,0,0" />
+                                        <TextBlock Grid.Column="2" Classes="header" Text="Pulse" Margin="12,0,0,0" />
+                                        <TextBlock Grid.Column="3" Classes="header" Text="Delay" Margin="12,0,0,0" />
+                                        <TextBlock Grid.Column="4" Classes="header" Text="From T0" />
+                                    </Grid>
+                                </Border>
+                                <ItemsControl ItemsSource="{Binding VisibleChannels}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:ChannelDelayViewModel">
+                                            <Border Classes="table-row" Padding="8,2">
+                                                <Grid ColumnDefinitions="52,290,84,160,*">
+                                                    <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center" ToolTip.Tip="{Binding RoleAndLabel}">
+                                                        <controls:SeriesSwatch Output="{Binding Output}" Width="4" Height="20" CornerRadius="1" />
+                                                        <TextBlock Text="{Binding Name}" Classes="strong" FontSize="14" VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                    <TextBox Grid.Column="1" Classes="label" Text="{Binding LabelText}" PlaceholderText="Add label"
+                                                             AutomationProperties.Name="{Binding Name, StringFormat='Label for channel {0}'}"
+                                                             ToolTip.Tip="Your name for this channel, e.g. what it is wired to. Kept with the instrument in this configuration."
+                                                             inf:FieldBehavior.CommitCommand="{Binding CommitLabelCommand}"
+                                                             inf:FieldBehavior.RevertCommand="{Binding RevertLabelCommand}" />
+                                                    <TextBlock Grid.Column="2" Text="{Binding RoleShort}" Classes="secondary" VerticalAlignment="Center" Margin="12,0,0,0" />
+                                                    <TextBlock Grid.Column="3" Text="{Binding DelaySummary}" Classes="mono secondary" VerticalAlignment="Center" Margin="12,0,0,0" />
+                                                    <TextBlock Grid.Column="4" Text="{Binding AbsoluteText}" Classes="mono secondary" VerticalAlignment="Center" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <!-- The same timing diagram as on the instrument's Delays page. -->
+                                <Border Classes="framed" Margin="0,10,0,0">
+                                    <controls:TimingDiagram Pulses="{Binding Session.Timing}" Burst="{Binding Session.TimingBurst}" Height="230"
+                                                            TextBrush="{DynamicResource TextBrush}" MutedBrush="{DynamicResource TextMutedBrush}"
+                                                            GridBrush="{DynamicResource ChartGridBrush}" AxisBrush="{DynamicResource ChartAxisBrush}"
+                                                            WarningBrush="{DynamicResource WarningTextBrush}" PanelBrush="{DynamicResource SurfaceBrush}"
+                                                            T0Brush="{DynamicResource SeriesT0Brush}" ABBrush="{DynamicResource SeriesABBrush}"
+                                                            CDBrush="{DynamicResource SeriesCDBrush}" EFBrush="{DynamicResource SeriesEFBrush}"
+                                                            GHBrush="{DynamicResource SeriesGHBrush}"
+                                                            AutomationProperties.Name="{Binding Instrument.Name, StringFormat='Timing diagram of {0}'}" />
+                                </Border>
+                            </StackPanel>
+                        </HeaderedContentControl>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
