@@ -35,7 +35,7 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:ChannelOverviewGroup">
                         <HeaderedContentControl Theme="{StaticResource Section}" Header="{Binding Instrument.Name}" IsVisible="{Binding IsVisible}"
-                                                AutomationProperties.HelpText="The delay channels of this connected instrument, with the labels you have given them and their current delays. Type in a label to change it.">
+                                                AutomationProperties.HelpText="The delay channels of this connected instrument, with the labels you have given them and their current delays, and its timing diagram. Type in a label to change it; hover the diagram for exact edges with their labels.">
                             <HeaderedContentControl.Tag>
                                 <StackPanel Orientation="Horizontal" Spacing="12">
                                     <TextBlock Classes="caption" Text="{Binding Details}" VerticalAlignment="Center" />
@@ -75,6 +75,18 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
+
+                                <!-- The same timing diagram as on the instrument's Delays page. -->
+                                <Border Classes="framed" Margin="0,10,0,0">
+                                    <controls:TimingDiagram Pulses="{Binding Session.Timing}" Burst="{Binding Session.TimingBurst}" Height="230"
+                                                            TextBrush="{DynamicResource TextBrush}" MutedBrush="{DynamicResource TextMutedBrush}"
+                                                            GridBrush="{DynamicResource ChartGridBrush}" AxisBrush="{DynamicResource ChartAxisBrush}"
+                                                            WarningBrush="{DynamicResource WarningTextBrush}" PanelBrush="{DynamicResource SurfaceBrush}"
+                                                            T0Brush="{DynamicResource SeriesT0Brush}" ABBrush="{DynamicResource SeriesABBrush}"
+                                                            CDBrush="{DynamicResource SeriesCDBrush}" EFBrush="{DynamicResource SeriesEFBrush}"
+                                                            GHBrush="{DynamicResource SeriesGHBrush}"
+                                                            AutomationProperties.Name="{Binding Instrument.Name, StringFormat='Timing diagram of {0}'}" />
+                                </Border>
                             </StackPanel>
                         </HeaderedContentControl>
                     </DataTemplate>

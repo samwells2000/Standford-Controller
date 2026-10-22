@@ -321,8 +321,8 @@ public sealed class TimingDiagram : Control
 
                 if (pulse.IsValid)
                 {
-                    lines.Add(($"{pulse.Output}: {pulse.StartChannel} = T0 + {EngineeringUnits.Format(pulse.Start!.Value, Quantity.Time)}", text));
-                    lines.Add(($"{pulse.EndChannel} = T0 + {EngineeringUnits.Format(pulse.End!.Value, Quantity.Time)}", text));
+                    lines.Add(($"{pulse.Output}: {Labelled(pulse.StartChannel, pulse.StartLabel)} = T0 + {EngineeringUnits.Format(pulse.Start!.Value, Quantity.Time)}", text));
+                    lines.Add(($"{Labelled(pulse.EndChannel, pulse.EndLabel)} = T0 + {EngineeringUnits.Format(pulse.End!.Value, Quantity.Time)}", text));
                     lines.Add(($"width {EngineeringUnits.Format(pulse.Width, Quantity.Time)} · {(pulse.Positive ? "positive" : "negative")}", muted));
                 }
             }
@@ -365,6 +365,9 @@ public sealed class TimingDiagram : Control
         var nice = fraction <= 1 ? 1 : fraction <= 2 ? 2 : fraction <= 5 ? 5 : 10;
         return nice * magnitude;
     }
+
+    /// <summary>e.g. "A (Flash lamp)", or just "A" for a channel without a label.</summary>
+    private static string Labelled(string channel, string label) => label.Length == 0 ? channel : $"{channel} ({label})";
 
     private static FormattedText Text(string value, Typeface face, double size, IBrush brush) =>
         new(value, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, face, size, brush);

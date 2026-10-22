@@ -516,7 +516,23 @@ internal sealed class SmokeTest
             Capture(_window, "94-all-channels" + (theme == AppTheme.Dark ? "-dark" : string.Empty));
         }
 
+        // Each instrument's timing diagram under its channels, with the hover read-out naming the labelled edges.
         _viewModel.Theme = AppTheme.Light;
+        await IdleAsync();
+        var overviewPage = tabs.SelectedContent as Control ?? throw new InvalidOperationException("The All channels page is not on show.");
+        var diagrams = overviewPage.GetVisualDescendants().OfType<TimingDiagram>().ToList();
+        Check(diagrams.Count == 2, $"All channels should show a timing diagram for each of the 2 instruments, not {diagrams.Count}.");
+        if (overviewPage.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault() is { } viewer && diagrams.Count == 2)
+        {
+            viewer.Offset = new Vector(0, viewer.Extent.Height);
+            await IdleAsync();
+            diagrams[1].SimulateHover(new Point(diagrams[1].Bounds.Width * 0.5, diagrams[1].Bounds.Height * 0.32));
+            await IdleAsync();
+            Capture(_window, "94-all-channels-timing");
+            diagrams[1].SimulateHover(null);
+            viewer.Offset = default;
+        }
+
         overview.Filter = "camera";
         await IdleAsync();
         Check(!overview.Groups[0].IsVisible && overview.Groups[1].VisibleChannels.Count == 2,

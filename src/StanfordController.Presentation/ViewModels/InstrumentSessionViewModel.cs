@@ -16,6 +16,11 @@ namespace StanfordController.Presentation.ViewModels;
 /// <summary>One pulse for the timing diagram, in seconds from T0.</summary>
 public sealed record PulseTiming(string Output, string StartChannel, string EndChannel, double? Start, double? End, bool Positive)
 {
+    /// <summary>The labels of the start and end channels, for the hover read-out; empty if they have none.</summary>
+    public string StartLabel { get; init; } = string.Empty;
+
+    public string EndLabel { get; init; } = string.Empty;
+
     public bool IsValid => Start is not null && End is not null && End >= Start;
 
     public double Width => IsValid ? End!.Value - Start!.Value : 0;
@@ -491,6 +496,7 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         }
 
         Owner?.SaveProfile();
+        RecomputeTiming();
         Audit(AuditActions.ChannelLabelled, $"Channel {channel.Channel} label", Blank(change.Before), Blank(change.After),
             "Saved in the configuration");
         SetStatus(change.After.Length == 0
@@ -585,7 +591,11 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
             var name = output.Output.ToString();
             var start = Enum.Parse<Dg645Channel>(name[..1]);
             var end = Enum.Parse<Dg645Channel>(name[1..]);
-            pulses.Add(new PulseTiming(name, start.ToString(), end.ToString(), absolute[start], absolute[end], output.IsPositive));
+            pulses.Add(new PulseTiming(name, start.ToString(), end.ToString(), absolute[start], absolute[end], output.IsPositive)
+            {
+                StartLabel = Channels.First(c => c.Channel == start).ChannelLabel,
+                EndLabel = Channels.First(c => c.Channel == end).ChannelLabel,
+            });
         }
 
         Timing = pulses;

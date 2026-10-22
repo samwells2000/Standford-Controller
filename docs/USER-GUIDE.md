@@ -430,6 +430,7 @@ Commands sent from the Terminal can change settings shown on other pages; when t
 The **All channels** page lists the eight delay channels of every connected instrument, grouped by instrument in the order of the instrument list, with each channel's label, the pulse it belongs to, its delay and its time from T0. It is the same page whichever instrument is selected, and it follows the instruments as they connect, disconnect and change. Use it to find which unit and channel drives a piece of equipment before changing anything.
 
 - Type in the search box to show only matching channels. Tempo looks in the labels, the channel letter (`A`), the output (`AB`) and the instrument's name and location; several words must all match, so `probe gh` finds channels G and H of the instrument called Probe. Esc clears the search.
+- Under each instrument's channels is its [timing diagram](#timing-diagram), the same as on its Delays page, so the pulses of every unit can be compared on one page. Hovering a pulse shows its edges with their labels, here and on the Delays page.
 - Labels can be typed here as well as on the Delays page.
 - **Show** beside an instrument selects it in the instrument list.
 

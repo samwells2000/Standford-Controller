@@ -57,6 +57,20 @@ public sealed class ChannelLabelTests : IDisposable
     }
 
     [Fact]
+    public async Task TheTimingDiagramNamesLabelledEdges()
+    {
+        var main = await CreateMainAsync();
+        var item = main.AddProfile(new InstrumentProfile { Name = "Pump", IsSimulator = true });
+        await item.ConnectAsync();
+
+        Label(item.Session!, Dg645Channel.A, "Flash lamp");
+
+        var ab = item.Session!.Timing.Single(p => p.Output == "AB");
+        Assert.Equal("Flash lamp", ab.StartLabel);
+        Assert.Equal(string.Empty, ab.EndLabel);
+    }
+
+    [Fact]
     public async Task ClearingALabelRemovesItAndEscapePutsTheOldOneBack()
     {
         var main = await CreateMainAsync();
