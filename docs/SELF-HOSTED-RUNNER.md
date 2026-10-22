@@ -2,9 +2,8 @@
 
 GitHub Actions can run a job on a machine you own (a *self-hosted runner*) instead of one of GitHub's.
 The **Linux** job of `build-and-release.yml` (build, unit tests, UI smoke test, `.deb`, tarball and
-PKGBUILD) can run on an Ubuntu server this way. The Windows and macOS jobs stay on GitHub, because the
-smoke test has to run on each real system and the Mac app is put together with Apple-only tools
-(`codesign`, `iconutil`, `ditto`).
+PKGBUILD) can run on an Ubuntu server this way. The Windows job stays on GitHub, because the
+smoke test has to run on a real Windows system.
 
 Nothing changes until you set the repository variable in step 5, and deleting it moves the job back to
 GitHub, so you can try this safely.
@@ -110,9 +109,8 @@ because it downloads .NET and the NuGet packages; later runs reuse them.
 
 ## What this saves
 
-GitHub bills private-repository minutes with multipliers: Linux 1×, Windows 2×, macOS 10×. The Linux job
-is the cheapest of the four, so moving it saves the least; the Mac jobs are where most minutes go. Two other
-changes in the workflow save more:
+GitHub bills private-repository minutes with multipliers: Linux 1×, Windows 2×. Moving the Linux job
+saves its minutes; two other changes in the workflow save more:
 
 - A branch with a pull request is built once for the pull request, not a second time for the push.
 - Build outputs are kept for 3 days and smoke test screenshots for 7, instead of 30 and 14. Releases are
@@ -121,6 +119,5 @@ changes in the workflow save more:
 GitHub announced a $0.002 per minute charge for self-hosted runners on private repositories from March 2026,
 then postponed it. Check GitHub's Actions billing page for the current position.
 
-To move the Windows or macOS jobs off GitHub too, you would need a Windows PC and a Mac (a Mac can host all
-three systems: macOS natively, Linux in Docker and Windows for Arm in a virtual machine), each with its own
-runner registered the same way.
+To move the Windows job off GitHub too, you would need a Windows PC with its own runner registered the
+same way.

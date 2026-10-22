@@ -22,8 +22,6 @@ Every release on the GitHub releases page has these files:
 | `PKGBUILD` | Arch Linux and its derivatives. |
 | `Tempo-<version>-linux-x64.tar.gz` | Any 64-bit Linux desktop: the program, a menu entry and an install script. |
 | `Tempo-linux-x64`, `Tempo-Portable-linux-x64` | The bare Linux program, normal and portable. |
-| `Tempo-<version>-macos-arm64.zip` | Macs with Apple Silicon (M1 or later), macOS 12 or later. |
-| `Tempo-<version>-macos-x64.zip` | Intel Macs, macOS 12 or later. |
 | `Tempo-Quick-Reference.pdf` | The quick reference card, to print. |
 | `SHA256SUMS.txt` | Checksums, to confirm a download is complete and unaltered. |
 
@@ -41,7 +39,6 @@ Nothing else needs installing: the .NET runtime, the user interface library and 
 
 Tempo on Linux needs an X11 or XWayland desktop session, which every desktop distribution provides.
 
-**macOS.** Download the zip for your Mac (**Apple menu ▸ About This Mac** shows *Apple M…* for Apple Silicon or *Intel* for Intel), open it, and drag **Tempo** into **Applications**. The program is not notarized by Apple, so the first time macOS refuses to open it; see [macOS will not open Tempo](#macos-will-not-open-tempo). The first time you connect, macOS may also ask whether Tempo may find devices on your local network: choose **Allow**, or Tempo cannot reach the DG645.
 
 ### First connection
 
@@ -478,8 +475,6 @@ Tempo remembers the theme, the alert sound setting, the window's size and positi
 
 ## Keyboard shortcuts
 
-On a Mac, *Ctrl* means the **Control** key, not Command.
-
 | Keys | Action |
 | --- | --- |
 | F1 | Open this guide at the page you are on |
@@ -538,17 +533,6 @@ The DG645 locks its front panel while it is controlled remotely. Disconnecting r
 
 The program is not code-signed. In the *Windows protected your PC* box choose **More info ▸ Run anyway**. If the file was downloaded through a browser that marked it as blocked, right-click it, choose **Properties** and tick **Unblock**.
 
-### macOS will not open Tempo
-
-Tempo is not notarized by Apple, so the first time you open it macOS says it *cannot be opened* or *could not verify* it. Allow it once:
-
-1. Double-click **Tempo** in Applications and close the message (choose **Done** or **OK**, not **Move to Bin**).
-2. Open **System Settings ▸ Privacy & Security**, scroll down to *Tempo was blocked*, and choose **Open Anyway**. Confirm with your password.
-
-On macOS 14 or earlier you can instead Control-click **Tempo** in Applications, choose **Open**, and **Open** again. After that it opens normally. If you are comfortable with Terminal, `xattr -dr com.apple.quarantine /Applications/Tempo.app` does the same.
-
-If Tempo opens but cannot reach any instrument, check **System Settings ▸ Privacy & Security ▸ Local Network** and switch Tempo on.
-
 ### Linux will not start Tempo
 
 - *Permission denied*: make the file executable with `chmod +x`.
@@ -578,7 +562,6 @@ The data folder is:
 | --- | --- |
 | `Tempo.exe` on Windows | `%APPDATA%\Tempo` |
 | Tempo on Linux | `~/.config/Tempo` |
-| Tempo on macOS | `~/Library/Application Support/Tempo` |
 | `Tempo-Portable.exe`, `Tempo-Portable-linux-x64` | A `Tempo-data` folder beside the program |
 
 **Help ▸ About Tempo** shows the data folder and has a button to open it.
