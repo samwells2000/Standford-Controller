@@ -47,6 +47,7 @@ public sealed class MainViewModel : ObservableObject
         _settingsStore = settingsStore;
         Audit = new AuditLog(Path.Combine(Path.GetDirectoryName(_defaultConfigurationPath) ?? ".", "Audit trail"), $"{AppName} {Help.AppInfo.Version}");
         Alerts.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasAlerts));
+        ChannelOverview = new ChannelOverviewViewModel(Instruments, item => SelectedInstrument = item);
         Instruments.CollectionChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(HasInstruments));
@@ -103,6 +104,9 @@ public sealed class MainViewModel : ObservableObject
     public ObservableCollection<InstrumentItemViewModel> Instruments { get; } = [];
 
     public bool HasInstruments => Instruments.Count > 0;
+
+    /// <summary>The All channels page: the channels and labels of every connected instrument.</summary>
+    public ChannelOverviewViewModel ChannelOverview { get; }
 
     public InstrumentItemViewModel? SelectedInstrument
     {

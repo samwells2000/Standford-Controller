@@ -173,6 +173,7 @@ internal sealed class SmokeTest
             await CheckAuditTrailAsync(session);
             await CheckAlertsAsync(item);
             await CheckOlderFirmwareAsync(item);
+            await CheckChannelLabelsAsync(item);
 
             await item.DisconnectAsync();
             await IdleAsync();
@@ -428,6 +429,119 @@ internal sealed class SmokeTest
         Check(Math.Abs(await session.Client.GetTriggerRateAsync() - 5000) < 1e-6, "The instrument did not receive the edited rate.");
         tabs.SelectedIndex = 0;
         await IdleAsync();
+    }
+
+    /// <summary>
+    /// Channel labels typed on the Delays page are saved in the configuration, and the All channels page lists the
+    /// labelled channels of every connected instrument, here two simulated ones.
+    /// </summary>
+    private async Task CheckChannelLabelsAsync(InstrumentItemViewModel item)
+    {
+        if (item.Session is not { } session)
+        {
+            Check(false, "No session for the channel label check.");
+            return;
+        }
+
+        // The earlier checks leave the delays at their defaults; put the realistic ones back for the screenshots.
+        using (session.BeginChange())
+        {
+            await session.Client.SetDelayAsync(Dg645Channel.A, Dg645Channel.T0, 1e-6);
+            await session.Client.SetDelayAsync(Dg645Channel.B, Dg645Channel.A, 2.5e-6);
+            await session.Client.SetDelayAsync(Dg645Channel.C, Dg645Channel.A, 1.5e-6);
+            await session.Client.SetDelayAsync(Dg645Channel.D, Dg645Channel.C, 500e-9);
+            await session.Client.SetDelayAsync(Dg645Channel.E, Dg645Channel.T0, 4e-6);
+            await session.Client.SetDelayAsync(Dg645Channel.F, Dg645Channel.E, 1e-6);
+            await session.Client.SetDelayAsync(Dg645Channel.G, Dg645Channel.T0, 6e-6);
+            await session.Client.SetDelayAsync(Dg645Channel.H, Dg645Channel.G, 250e-9);
+        }
+
+        await session.RefreshAllAsync();
+        var tabs = Tabs();
+        tabs.SelectedIndex = 0;
+        await IdleAsync();
+
+        // Typed into the Label column like a user would, then applied by clicking away.
+        var page = tabs.SelectedContent as Control ?? throw new InvalidOperationException("The Delays page is not on show.");
+        var field = page.GetVisualDescendants().OfType<TextBox>().First(t => AutomationProperties.GetName(t) == "Label for channel A");
+        field.Focus();
+        field.Text = "Flash lamp";
+        await IdleAsync();
+        Click(page.GetVisualDescendants().OfType<TextBlock>().First(t => t.Classes.Contains("caption") && t.IsEffectivelyVisible));
+        Check(await WaitAsync(() => session.Channels[0].ChannelLabel == "Flash lamp"), "Typing a label on the Delays page did not apply it.");
+        foreach (var (channel, label) in new[] { (Dg645Channel.C, "Q-switch"), (Dg645Channel.E, "Spectrometer gate"), (Dg645Channel.G, "Shutter") })
+        {
+            SetLabel(session, channel, label);
+        }
+
+        await IdleAsync();
+        Capture(_window, "94-delays-labels");
+
+        // A second instrument, so the All channels page has more than one to show.
+        var probe = _viewModel.AddProfile(new InstrumentProfile { Name = "Probe laser DG645", IsSimulator = true, Location = "Bench 2" });
+        await probe.ConnectAsync();
+        if (probe.Session is not { } probeSession)
+        {
+            Check(false, $"Could not connect a second simulated instrument: {probe.LastError}");
+            return;
+        }
+
+        using (probeSession.BeginChange())
+        {
+            await probeSession.Client.SetDelayAsync(Dg645Channel.A, Dg645Channel.T0, 12e-6);
+            await probeSession.Client.SetDelayAsync(Dg645Channel.B, Dg645Channel.A, 5e-6);
+            await probeSession.Client.SetDelayAsync(Dg645Channel.C, Dg645Channel.T0, 20e-6);
+            await probeSession.Client.SetDelayAsync(Dg645Channel.D, Dg645Channel.C, 100e-9);
+        }
+
+        await probeSession.RefreshAllAsync();
+        foreach (var (channel, label) in new[] { (Dg645Channel.A, "OPO pump"), (Dg645Channel.B, "OPO pump end"), (Dg645Channel.C, "Camera trigger"), (Dg645Channel.D, "Camera trigger end") })
+        {
+            SetLabel(probeSession, channel, label);
+        }
+
+        _viewModel.SelectedInstrument = item;
+        _viewModel.ShowLog = false;
+        await IdleAsync();
+        tabs = Tabs();
+        var allChannels = Enumerable.Range(0, tabs.ItemCount).First(i => (tabs.Items[i] as TabItem)?.Header?.ToString() == "All channels");
+        var overview = _viewModel.ChannelOverview;
+        Check(overview.Groups.Count == 2 && overview.Groups.All(g => g.VisibleChannels.Count == 8),
+            $"All channels should list 8 channels of each of the 2 connected instruments, not {overview.Groups.Count} groups.");
+        foreach (var theme in new[] { AppTheme.Light, AppTheme.Dark })
+        {
+            _viewModel.Theme = theme;
+            tabs.SelectedIndex = allChannels;
+            await IdleAsync();
+            Capture(_window, "94-all-channels" + (theme == AppTheme.Dark ? "-dark" : string.Empty));
+        }
+
+        _viewModel.Theme = AppTheme.Light;
+        overview.Filter = "camera";
+        await IdleAsync();
+        Check(!overview.Groups[0].IsVisible && overview.Groups[1].VisibleChannels.Count == 2,
+            "Searching All channels for \"camera\" should leave channels C and D of the second instrument.");
+        Capture(_window, "94-all-channels-search");
+        overview.Filter = string.Empty;
+
+        var saved = new ConfigurationStore(_viewModel.ConfigurationPath).Load();
+        Check(saved.Single(p => p.Id == item.Profile.Id).LabelOf(Dg645Channel.A) == "Flash lamp"
+              && saved.Single(p => p.Id == probe.Profile.Id).LabelOf(Dg645Channel.C) == "Camera trigger",
+            "The channel labels were not saved in the configuration.");
+
+        _viewModel.ShowLog = true;
+        await probe.DisconnectAsync();
+        await IdleAsync();
+        Check(overview.Groups.Count == 1, "Disconnecting an instrument did not take it off the All channels page.");
+        tabs.SelectedIndex = 0;
+        await IdleAsync();
+
+        static void SetLabel(InstrumentSessionViewModel session, Dg645Channel channel, string label)
+        {
+            var vm = session.Channels.Single(c => c.Channel == channel);
+            vm.LabelText = label;
+            vm.CommitLabelCommand.Execute(null);
+        }
     }
 
     private async Task SetTriggerSourceAsync(InstrumentSessionViewModel session, TriggerSource source)

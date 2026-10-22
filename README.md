@@ -94,6 +94,10 @@ Rendered by the CI smoke test against the built-in simulated DG645.
 | ![Setup check on connect](docs/screenshots/setup-question.jpg) | ![User guide](docs/screenshots/help.jpg) |
 | The question asked when an instrument differs from its saved setup | The built-in user guide |
 
+![All channels page listing the labelled channels of two connected instruments](docs/screenshots/all-channels.jpg)
+
+The All channels page: every delay channel of every connected instrument with the label you gave it, and a search box to find one.
+
 ![Audit trail window with the integrity check](docs/screenshots/audit-trail.jpg)
 
 The audit trail: every change with its old and new values, the reason given, and a check that no record has been altered.

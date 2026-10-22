@@ -177,6 +177,9 @@ public sealed class InstrumentItemViewModel : ObservableObject
     /// <summary>Writes the setup stored in the configuration back to the instrument (asks first).</summary>
     public ICommand RestoreSetupCommand { get; }
 
+    /// <summary>Saves the configuration after something in <see cref="Profile"/> changed, such as a channel label.</summary>
+    internal void SaveProfile() => _profileChanged(this);
+
     public void UpdateProfile(InstrumentProfile profile)
     {
         _profile = profile;
