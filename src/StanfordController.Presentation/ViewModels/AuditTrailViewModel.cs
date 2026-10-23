@@ -33,9 +33,9 @@ public sealed class AuditTrailViewModel : ObservableObject
         _dialogs = dialogs;
         _folderChosen = folderChosen;
         RefreshCommand = new RelayCommand(Reload);
-        CheckIntegrityCommand = new RelayCommand(CheckIntegrity, () => _selectedMonth is not null);
+        CheckIntegrityCommand = new RelayCommand(CheckIntegrity, () => _selectedMonth is not null, () => "Choose a month to check first.");
         ChangeFolderCommand = new AsyncRelayCommand(ChangeFolderAsync);
-        UseDefaultFolderCommand = new RelayCommand(() => UseFolder(null), () => !_log.UsesDefaultFolder);
+        UseDefaultFolderCommand = new RelayCommand(() => UseFolder(null), () => !_log.UsesDefaultFolder, () => "The audit trail is already in the default folder.");
         OpenFolderCommand = new AsyncRelayCommand(() => _dialogs.OpenFolderAsync(_log.Folder));
         _log.Written += OnWritten;
         _log.PropertyChanged += OnLogPropertyChanged;

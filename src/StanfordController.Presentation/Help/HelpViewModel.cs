@@ -28,8 +28,8 @@ public sealed class HelpViewModel : ObservableObject
     public HelpViewModel(HelpGuide guide)
     {
         Guide = guide;
-        BackCommand = new RelayCommand(() => Step(-1), () => _historyIndex > 0);
-        ForwardCommand = new RelayCommand(() => Step(1), () => _historyIndex < _history.Count - 1);
+        BackCommand = new RelayCommand(() => Step(-1), () => _historyIndex > 0, () => "This is the first page you opened; there is nothing to go back to.");
+        ForwardCommand = new RelayCommand(() => Step(1), () => _historyIndex < _history.Count - 1, () => "There is no later page. Go back first to go forward again.");
         RebuildContents();
         if (guide.Topics.Count > 0)
         {

@@ -32,7 +32,8 @@
             <MenuItem Header="_File">
                 <MenuItem Header="_New configuration…" Command="{Binding NewConfigurationCommand}" />
                 <MenuItem Header="_Open configuration…" Command="{Binding OpenConfigurationCommand}" InputGesture="Ctrl+O" />
-                <MenuItem Header="Open _recent" ItemsSource="{Binding RecentConfigurations}" IsEnabled="{Binding HasRecentConfigurations}">
+                <MenuItem Header="Open _recent" ItemsSource="{Binding RecentConfigurations}" IsEnabled="{Binding HasRecentConfigurations}"
+                          inf:DisabledToolTip.Reason="No configurations have been opened or saved yet.">
                     <MenuItem.Styles>
                         <Style Selector="MenuItem > MenuItem" x:DataType="vm:RecentConfiguration">
                             <Setter Property="Header" Value="{Binding Name}" />

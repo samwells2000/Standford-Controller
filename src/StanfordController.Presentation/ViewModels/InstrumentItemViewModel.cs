@@ -37,11 +37,19 @@ public sealed class InstrumentItemViewModel : ObservableObject
         _profileChanged = profileChanged;
         _audit = audit;
         _configurationName = configurationName;
-        ConnectCommand = new AsyncRelayCommand(ConnectAsync, () => _state is ConnectionState.Disconnected or ConnectionState.Failed);
-        DisconnectCommand = new AsyncRelayCommand(() => DisconnectAsync(), () => _state == ConnectionState.Connected);
-        SaveSetupCommand = new AsyncRelayCommand(SaveSetupAsync, () => _session is { IsBusy: false });
-        RestoreSetupCommand = new AsyncRelayCommand(RestoreSetupAsync, () => _session is { IsBusy: false } && _profile.StoredSetup is not null);
+        ConnectCommand = new AsyncRelayCommand(ConnectAsync, () => _state is ConnectionState.Disconnected or ConnectionState.Failed,
+            unavailableReason: () => _state == ConnectionState.Connecting ? "Already connecting to this instrument." : "Already connected to this instrument.");
+        DisconnectCommand = new AsyncRelayCommand(() => DisconnectAsync(), () => _state == ConnectionState.Connected,
+            unavailableReason: () => _state == ConnectionState.Connecting ? "Still connecting. Wait for the connection to finish." : NotConnectedReason);
+        SaveSetupCommand = new AsyncRelayCommand(SaveSetupAsync, () => _session is { IsBusy: false },
+            unavailableReason: () => _session is null ? NotConnectedReason : _session.BusyReason);
+        RestoreSetupCommand = new AsyncRelayCommand(RestoreSetupAsync, () => _session is { IsBusy: false } && _profile.StoredSetup is not null,
+            unavailableReason: () => _profile.StoredSetup is null ? "No setup has been saved for this instrument yet. Use Save setup first."
+                : _session is null ? NotConnectedReason : _session.BusyReason);
     }
+
+    /// <summary>Shown on controls that are greyed out until the instrument is connected.</summary>
+    public const string NotConnectedReason = "Not connected. Connect to the instrument first (Ctrl+K).";
 
     public InstrumentProfile Profile => _profile;
 

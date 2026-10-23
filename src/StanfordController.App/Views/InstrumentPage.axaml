@@ -49,11 +49,13 @@
                             ToolTip.Tip="Name, address and connection options (F2)" />
                     <Border Classes="vrule" />
                     <Button Classes="tool" Content="Refresh" Command="{Binding Session?.RefreshAllCommand, FallbackValue={x:Null}}" IsEnabled="{Binding IsConnected}"
+                            inf:DisabledToolTip.Reason="{x:Static vm:InstrumentItemViewModel.NotConnectedReason}"
                             ToolTip.Tip="Read every setting from the instrument again (F5)" />
                     <!-- Trigger, or Arm and then Ready in the single-shot external modes; on show from every page. -->
                     <Button Classes="tool" Classes.ready="{Binding Session?.IsArmed, FallbackValue=False, TargetNullValue=False}" MinWidth="70"
                             Command="{Binding Session?.TriggerCommand, FallbackValue={x:Null}}" IsEnabled="{Binding IsConnected}"
-                            ToolTip.Tip="{Binding Session?.TriggerActionHint, FallbackValue='Available when the trigger source is a single-shot mode.', TargetNullValue='Available when the trigger source is a single-shot mode.'}">
+                            inf:DisabledToolTip.Reason="{x:Static vm:InstrumentItemViewModel.NotConnectedReason}"
+                            ToolTip.Tip="{Binding Session?.TriggerActionHint, FallbackValue='In single-shot mode, starts one delay cycle; in the single-shot external modes, arms the instrument (*TRG, Ctrl+T).', TargetNullValue='In single-shot mode, starts one delay cycle; in the single-shot external modes, arms the instrument (*TRG, Ctrl+T).'}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <Ellipse Classes="led on" IsVisible="{Binding Session?.IsArmed, FallbackValue=False, TargetNullValue=False}" />
                             <TextBlock Text="{Binding Session?.TriggerActionText, FallbackValue=Trigger, TargetNullValue=Trigger}" />

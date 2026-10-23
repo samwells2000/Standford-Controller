@@ -68,6 +68,7 @@ internal sealed class SmokeTest
             var item = _viewModel.SelectedInstrument ?? throw new InvalidOperationException("Adding the demo instrument did not select it.");
             await IdleAsync();
             Capture(_window, "02-not-connected");
+            await CheckDisabledReasonAsync("Refresh", InstrumentItemViewModel.NotConnectedReason, "02-not-connected-reason");
 
             await item.ConnectAsync();
             if (item.Session is not { } session)
@@ -92,6 +93,9 @@ internal sealed class SmokeTest
             }
 
             await session.RefreshAllAsync();
+            await IdleAsync();
+            await CheckDisabledReasonAsync("Trigger", "Only available when the trigger source is a single-shot mode", "02-trigger-reason");
+
             session.Terminal.Input = "*IDN?";
             await session.Terminal.SendAsync();
             session.Terminal.Input = "DLAY?3";
@@ -185,6 +189,27 @@ internal sealed class SmokeTest
         }
 
         Finish();
+    }
+
+    /// <summary>Hovering over the greyed-out button labelled <paramref name="label"/> says why it is unavailable.</summary>
+    private async Task CheckDisabledReasonAsync(string label, string reason, string screenshot)
+    {
+        var button = _window.GetVisualDescendants().OfType<Button>()
+            .FirstOrDefault(b => b.IsEffectivelyVisible && (Equals(b.Content, label)
+                || b.GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text == label)));
+        if (button is null)
+        {
+            Check(false, $"There is no '{label}' button to check.");
+            return;
+        }
+
+        Check(!button.IsEffectivelyEnabled, $"The '{label}' button should be greyed out here.");
+        Check(ToolTip.GetShowOnDisabled(button) && ToolTip.GetTip(button) is string tip && tip.StartsWith(reason, StringComparison.Ordinal),
+            $"Hovering the greyed-out '{label}' button does not say why (it shows '{ToolTip.GetTip(button)}').");
+        ToolTip.SetIsOpen(button, true);
+        await IdleAsync();
+        Capture(_window, screenshot);
+        ToolTip.SetIsOpen(button, false);
     }
 
     /// <summary>

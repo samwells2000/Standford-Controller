@@ -38,7 +38,8 @@ public sealed class ProfileEditorViewModel : ObservableObject
         _returnToLocal = profile.ReturnToLocalOnDisconnect;
         _connectOnStartup = profile.ConnectOnStartup;
         _setupOnConnect = SetupOnConnectOptions.First(o => o.Value == (int)profile.SetupOnConnect);
-        TestConnectionCommand = new AsyncRelayCommand(TestConnectionAsync, () => IsSimulator || !string.IsNullOrWhiteSpace(_host));
+        TestConnectionCommand = new AsyncRelayCommand(TestConnectionAsync, () => IsSimulator || !string.IsNullOrWhiteSpace(_host),
+            unavailableReason: () => "Enter the instrument's address first.");
     }
 
     public bool IsNew { get; }

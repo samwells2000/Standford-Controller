@@ -37,20 +37,20 @@
 
                                         <ContentControl Grid.Column="1" Content="{Binding Amplitude}" />
                                         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="3" Margin="6,1,0,0" VerticalAlignment="Top">
-                                            <Button Classes="step" Command="{Binding AmplitudeUpCommand}" IsEnabled="{Binding !AmplitudeStep.IsUnsupported}" ToolTip.Tip="Step up (SPLA b,1)" AutomationProperties.Name="Increase amplitude by one step">
+                                            <Button Classes="step" Command="{Binding AmplitudeUpCommand}" IsEnabled="{Binding !AmplitudeStep.IsUnsupported}" inf:DisabledToolTip.Reason="{x:Static vm:ParameterViewModel.UnsupportedText}" ToolTip.Tip="Step up (SPLA b,1)" AutomationProperties.Name="Increase amplitude by one step">
                                                 <Path Classes="glyph" Data="{StaticResource GlyphUp}" />
                                             </Button>
-                                            <Button Classes="step" Command="{Binding AmplitudeDownCommand}" IsEnabled="{Binding !AmplitudeStep.IsUnsupported}" ToolTip.Tip="Step down (SPLA b,0)" AutomationProperties.Name="Decrease amplitude by one step">
+                                            <Button Classes="step" Command="{Binding AmplitudeDownCommand}" IsEnabled="{Binding !AmplitudeStep.IsUnsupported}" inf:DisabledToolTip.Reason="{x:Static vm:ParameterViewModel.UnsupportedText}" ToolTip.Tip="Step down (SPLA b,0)" AutomationProperties.Name="Decrease amplitude by one step">
                                                 <Path Classes="glyph" Data="{StaticResource GlyphDown}" />
                                             </Button>
                                         </StackPanel>
 
                                         <ContentControl Grid.Column="3" Content="{Binding Offset}" />
                                         <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="3" Margin="6,1,0,0" VerticalAlignment="Top">
-                                            <Button Classes="step" Command="{Binding OffsetUpCommand}" IsEnabled="{Binding !OffsetStep.IsUnsupported}" ToolTip.Tip="Step up (SPLO b,1)" AutomationProperties.Name="Increase offset by one step">
+                                            <Button Classes="step" Command="{Binding OffsetUpCommand}" IsEnabled="{Binding !OffsetStep.IsUnsupported}" inf:DisabledToolTip.Reason="{x:Static vm:ParameterViewModel.UnsupportedText}" ToolTip.Tip="Step up (SPLO b,1)" AutomationProperties.Name="Increase offset by one step">
                                                 <Path Classes="glyph" Data="{StaticResource GlyphUp}" />
                                             </Button>
-                                            <Button Classes="step" Command="{Binding OffsetDownCommand}" IsEnabled="{Binding !OffsetStep.IsUnsupported}" ToolTip.Tip="Step down (SPLO b,0)" AutomationProperties.Name="Decrease offset by one step">
+                                            <Button Classes="step" Command="{Binding OffsetDownCommand}" IsEnabled="{Binding !OffsetStep.IsUnsupported}" inf:DisabledToolTip.Reason="{x:Static vm:ParameterViewModel.UnsupportedText}" ToolTip.Tip="Step down (SPLO b,0)" AutomationProperties.Name="Decrease offset by one step">
                                                 <Path Classes="glyph" Data="{StaticResource GlyphDown}" />
                                             </Button>
                                         </StackPanel>

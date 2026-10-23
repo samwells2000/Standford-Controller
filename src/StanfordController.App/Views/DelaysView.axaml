@@ -47,11 +47,11 @@
                                                  inf:FieldBehavior.CommitCommand="{Binding CommitCommand}"
                                                  inf:FieldBehavior.RevertCommand="{Binding RevertCommand}" />
                                         <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="3" Margin="6,0,0,0" VerticalAlignment="Center">
-                                            <Button Classes="step" Command="{Binding StepUpCommand}" IsEnabled="{Binding !StepSize.IsUnsupported}" ToolTip.Tip="Increase by the step size (SPDL c,1)"
+                                            <Button Classes="step" Command="{Binding StepUpCommand}" IsEnabled="{Binding !StepSize.IsUnsupported}" inf:DisabledToolTip.Reason="{x:Static vm:ParameterViewModel.UnsupportedText}" ToolTip.Tip="Increase by the step size (SPDL c,1)"
                                                     AutomationProperties.Name="Increase delay by one step">
                                                 <Path Classes="glyph" Data="{StaticResource GlyphUp}" />
                                             </Button>
-                                            <Button Classes="step" Command="{Binding StepDownCommand}" IsEnabled="{Binding !StepSize.IsUnsupported}" ToolTip.Tip="Decrease by the step size (SPDL c,0)"
+                                            <Button Classes="step" Command="{Binding StepDownCommand}" IsEnabled="{Binding !StepSize.IsUnsupported}" inf:DisabledToolTip.Reason="{x:Static vm:ParameterViewModel.UnsupportedText}" ToolTip.Tip="Decrease by the step size (SPDL c,0)"
                                                     AutomationProperties.Name="Decrease delay by one step">
                                                 <Path Classes="glyph" Data="{StaticResource GlyphDown}" />
                                             </Button>

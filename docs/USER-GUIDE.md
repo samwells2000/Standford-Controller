@@ -71,6 +71,8 @@ Easiest of all is **Find on network…**, which looks for DG645s on this compute
 9. **Communication log.** Every command sent and reply received, with the time; see [Communication log](#communication-log).
 10. **Status bar.** The connection state, the trigger source and rate (with a green **Ready** while a single shot is armed), whether burst mode is on, **Setup not saved** when the instrument's settings have changed since its setup was last saved, the latest message, and the name of the open configuration. **Portable** appears when you are running the portable program.
 
+A button, menu item or field that is greyed out cannot be used at the moment. Hover over it to see why, for example *Not connected* or *Only available when the trigger source is a single-shot mode*, and what to do about it.
+
 When something is wrong, an **alert bar** appears across the top of the window; see [Heartbeat and alerts](#heartbeat-and-alerts).
 
 If commands typed in the [Terminal](#terminal) may have changed settings shown on the other pages, an amber **Pages may be out of date** button appears at the right of the command bar; press it (or F5) to read everything again.
