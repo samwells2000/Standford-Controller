@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:StanfordController.Presentation.ViewModels;assembly=StanfordController.Presentation"
         xmlns:disc="clr-namespace:StanfordController.Core.Discovery;assembly=StanfordController.Core"
+        xmlns:inf="clr-namespace:StanfordController.App.Infrastructure"
         x:Class="StanfordController.App.Dialogs.DiscoveryWindow"
         x:DataType="vm:DiscoveryViewModel"
         Title="Find instruments on the network"
@@ -11,7 +12,8 @@
         <Border DockPanel.Dock="Bottom" Classes="chrome" BorderThickness="0,1,0,0" Padding="16,10">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
                 <Button Content="Add selected…" Classes="accent" MinWidth="110" Click="OnAdd"
-                        IsEnabled="{Binding Selected, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        IsEnabled="{Binding Selected, Converter={x:Static ObjectConverters.IsNotNull}}"
+                        inf:DisabledToolTip.Reason="Select an instrument in the list first. Scan, or check one address, to find some." />
                 <Button Content="Close" IsCancel="True" MinWidth="88" Click="OnClose" />
             </StackPanel>
         </Border>

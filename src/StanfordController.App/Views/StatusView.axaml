@@ -16,7 +16,8 @@
                     <TextBlock Grid.Column="2" Text="{Binding Name}" Classes="mono" FontSize="12" />
                     <TextBlock Grid.Column="3" Text="{Binding Description}" Classes="secondary" FontSize="12" VerticalAlignment="Center"
                                TextTrimming="CharacterEllipsis" Margin="0,0,8,0" />
-                    <CheckBox Grid.Column="4" IsChecked="{Binding IsEnabled}" IsEnabled="{Binding IsUsed}" Content="Enable" FontSize="12" />
+                    <CheckBox Grid.Column="4" IsChecked="{Binding IsEnabled}" IsEnabled="{Binding IsUsed}" Content="Enable"
+                              inf:DisabledToolTip.Reason="This bit is not used by the DG645, so there is nothing to enable." FontSize="12" />
                 </Grid>
             </Border>
         </DataTemplate>

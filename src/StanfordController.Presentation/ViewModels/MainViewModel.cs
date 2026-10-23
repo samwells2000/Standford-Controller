@@ -58,14 +58,17 @@ public sealed class MainViewModel : ObservableObject
         // Instruments
         AddInstrumentCommand = new AsyncRelayCommand(() => AddFromEditorAsync(new InstrumentProfile()));
         ConnectInstrumentCommand = new RelayCommand<InstrumentItemViewModel>(item => item?.ConnectCommand.Execute(null));
-        EditInstrumentCommand = new AsyncRelayCommand<InstrumentItemViewModel>(item => EditInstrumentAsync(item ?? _selected), item => (item ?? _selected) is not null);
-        RemoveInstrumentCommand = new AsyncRelayCommand(RemoveSelectedAsync, () => _selected is not null);
-        DuplicateInstrumentCommand = new AsyncRelayCommand(DuplicateSelectedAsync, () => _selected is not null);
+        EditInstrumentCommand = new AsyncRelayCommand<InstrumentItemViewModel>(item => EditInstrumentAsync(item ?? _selected), item => (item ?? _selected) is not null,
+            unavailableReason: () => SelectInstrumentReason);
+        RemoveInstrumentCommand = new AsyncRelayCommand(RemoveSelectedAsync, () => _selected is not null, unavailableReason: () => SelectInstrumentReason);
+        DuplicateInstrumentCommand = new AsyncRelayCommand(DuplicateSelectedAsync, () => _selected is not null, unavailableReason: () => SelectInstrumentReason);
         DiscoverCommand = new AsyncRelayCommand(DiscoverAsync);
         AddDemoInstrumentCommand = new RelayCommand(AddDemoInstrument);
         ImportInstrumentsCommand = new AsyncRelayCommand(ImportInstrumentsAsync);
-        MoveUpCommand = new RelayCommand(() => MoveSelected(-1), () => _selected is not null && Instruments.IndexOf(_selected) > 0);
-        MoveDownCommand = new RelayCommand(() => MoveSelected(1), () => _selected is not null && Instruments.IndexOf(_selected) < Instruments.Count - 1);
+        MoveUpCommand = new RelayCommand(() => MoveSelected(-1), () => _selected is not null && Instruments.IndexOf(_selected) > 0,
+            () => _selected is null ? SelectInstrumentReason : "This instrument is already at the top of the list.");
+        MoveDownCommand = new RelayCommand(() => MoveSelected(1), () => _selected is not null && Instruments.IndexOf(_selected) < Instruments.Count - 1,
+            () => _selected is null ? SelectInstrumentReason : "This instrument is already at the bottom of the list.");
 
         // Configuration files
         NewConfigurationCommand = new AsyncRelayCommand(NewConfigurationAsync);
@@ -97,6 +100,8 @@ public sealed class MainViewModel : ObservableObject
         AboutCommand = new AsyncRelayCommand(_dialogs.ShowAboutAsync);
         AuditTrailCommand = new RelayCommand(() => _dialogs.ShowAuditTrail(new AuditTrailViewModel(Audit, _dialogs, SetAuditFolder)));
     }
+
+    private const string SelectInstrumentReason = "No instrument is selected. Select one in the Instruments list first.";
 
     /// <summary>The audit trail: every change made to an instrument or to the saved instruments.</summary>
     public AuditLog Audit { get; }

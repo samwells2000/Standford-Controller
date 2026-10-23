@@ -96,8 +96,9 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
             .ToList();
         _recallSlot = RecallSlots[1];
 
-        RefreshAllCommand = new AsyncRelayCommand(RefreshAllAsync, () => !IsBusy);
-        TriggerCommand = new AsyncRelayCommand(TriggerOrArmAsync, () => Trigger.IsSingleShot);
+        RefreshAllCommand = new AsyncRelayCommand(RefreshAllAsync, () => !IsBusy, unavailableReason: () => BusyReason);
+        TriggerCommand = new AsyncRelayCommand(TriggerOrArmAsync, () => Trigger.IsSingleShot,
+            unavailableReason: () => "Only available when the trigger source is a single-shot mode. Change the source on the Trigger page.");
         Trigger.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(TriggerViewModel.IsSingleShot))
@@ -105,11 +106,11 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
                 (TriggerCommand as IRaiseCanExecuteChanged)?.RaiseCanExecuteChanged();
             }
         };
-        SaveToSlotCommand = new AsyncRelayCommand(SaveToSlotAsync, () => !IsBusy);
-        RecallSlotCommand = new AsyncRelayCommand(RecallSlotAsync, () => !IsBusy);
-        ExportSettingsCommand = new AsyncRelayCommand(ExportSettingsAsync, () => !IsBusy);
-        ImportSettingsCommand = new AsyncRelayCommand(ImportSettingsAsync, () => !IsBusy);
-        ResetCommand = new AsyncRelayCommand(ResetAsync, () => !IsBusy);
+        SaveToSlotCommand = new AsyncRelayCommand(SaveToSlotAsync, () => !IsBusy, unavailableReason: () => BusyReason);
+        RecallSlotCommand = new AsyncRelayCommand(RecallSlotAsync, () => !IsBusy, unavailableReason: () => BusyReason);
+        ExportSettingsCommand = new AsyncRelayCommand(ExportSettingsAsync, () => !IsBusy, unavailableReason: () => BusyReason);
+        ImportSettingsCommand = new AsyncRelayCommand(ImportSettingsAsync, () => !IsBusy, unavailableReason: () => BusyReason);
+        ResetCommand = new AsyncRelayCommand(ResetAsync, () => !IsBusy, unavailableReason: () => BusyReason);
         CopyLogCommand = new AsyncRelayCommand(() => Dialogs.CopyToClipboardAsync(_log.ExportText()));
         SaveLogCommand = new AsyncRelayCommand(SaveLogAsync);
 
@@ -206,6 +207,11 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         }
     }
 
+    /// <summary>Why commands that need the instrument to themselves are greyed out, e.g. "Wait until Tempo finishes reading settings."</summary>
+    public string? BusyReason => !IsBusy ? null
+        : BusyText is { Length: > 0 } text ? $"Wait until Tempo finishes {char.ToLowerInvariant(text[0])}{text[1..].TrimEnd('…')}."
+        : "Wait until Tempo finishes talking to the instrument.";
+
     public string? BusyText
     {
         get => _busyText;
@@ -273,7 +279,7 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
             $"Ready: the next {TriggerEdge} edge at the trigger input starts one delay cycle. Click to arm again (*TRG, Ctrl+T).",
         (int)TriggerSource.SingleShotExternalRising or (int)TriggerSource.SingleShotExternalFalling =>
             $"Arms the instrument, so that the next {TriggerEdge} edge at the trigger input starts one delay cycle (*TRG, Ctrl+T).",
-        _ => "Available when the trigger source is a single-shot mode.",
+        _ => "In single-shot mode, starts one delay cycle; in the single-shot external modes, arms the instrument (*TRG, Ctrl+T).",
     };
 
     private string TriggerEdge => Trigger.Source.SelectedValue == (int)TriggerSource.SingleShotExternalFalling ? "falling" : "rising";

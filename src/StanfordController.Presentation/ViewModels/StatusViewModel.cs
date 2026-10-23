@@ -83,7 +83,8 @@ public sealed class StatusViewModel : ParameterViewModel
         ClearErrorListCommand = new RelayCommand(Errors.Clear);
         SelfTestCommand = new AsyncRelayCommand(() => RunAsync(SelfTestAsync));
         AutoCalibrateCommand = new AsyncRelayCommand(() => RunAsync(AutoCalibrateAsync));
-        ApplyDisplayCommand = new AsyncRelayCommand(() => RunAsync(ApplyDisplayAsync), () => _displayMode is not null && _displayChannel is not null);
+        ApplyDisplayCommand = new AsyncRelayCommand(() => RunAsync(ApplyDisplayAsync), () => _displayMode is not null && _displayChannel is not null,
+            unavailableReason: () => _displayMode is null ? "Choose what to show first." : "Choose which channel to show first.");
     }
 
     public IReadOnlyList<StatusBitViewModel> InstrumentBits { get; }

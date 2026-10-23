@@ -39,7 +39,8 @@ public sealed class TerminalViewModel : ParameterViewModel
     public TerminalViewModel(IInstrumentContext context)
         : base(context, "Terminal")
     {
-        SendCommand = new AsyncRelayCommand(SendAsync, () => !string.IsNullOrWhiteSpace(_input));
+        SendCommand = new AsyncRelayCommand(SendAsync, () => !string.IsNullOrWhiteSpace(_input),
+            unavailableReason: () => "Type a command to send first, for example *IDN?");
         ClearCommand = new RelayCommand(Lines.Clear);
         HistoryUpCommand = new RelayCommand(() => MoveHistory(-1));
         HistoryDownCommand = new RelayCommand(() => MoveHistory(1));

@@ -25,10 +25,14 @@ public sealed class DiscoveryViewModel : ObservableObject
         _statusText = Networks.Count == 0
             ? "No active IPv4 network adapters were found."
             : "Scan the networks below for instruments, or enter an address to check.";
-        ScanCommand = new AsyncRelayCommand(ScanAsync, () => !_isScanning && Networks.Count > 0);
-        ProbeCommand = new AsyncRelayCommand(ProbeAsync, () => !_isScanning && !string.IsNullOrWhiteSpace(_probeAddress));
-        CancelCommand = new RelayCommand(() => _cancellation?.Cancel(), () => _isScanning);
+        ScanCommand = new AsyncRelayCommand(ScanAsync, () => !_isScanning && Networks.Count > 0,
+            unavailableReason: () => _isScanning ? ScanningReason : "This computer has no network connection to scan. Check one address below instead.");
+        ProbeCommand = new AsyncRelayCommand(ProbeAsync, () => !_isScanning && !string.IsNullOrWhiteSpace(_probeAddress),
+            unavailableReason: () => _isScanning ? ScanningReason : "Type the instrument's IP address or host name first.");
+        CancelCommand = new RelayCommand(() => _cancellation?.Cancel(), () => _isScanning, () => "No scan is running.");
     }
+
+    private const string ScanningReason = "A scan is running. Wait for it to finish, or click Stop.";
 
     public IReadOnlyList<LocalNetwork> Networks { get; }
 
