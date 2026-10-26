@@ -20,17 +20,19 @@
     --page: #ffffff; --panel: #f9f9f9; --rule: #dcdcdc; --guide: #c4c4c4;
     --ink: #1a1a1a; --ink-2: #4d4d4d; --muted: #616161;
     --accent: #005fb8; --button: #ffffff; --button-rule: #8a8a8a;
-    --t0: #6b6b6b; --ab: #2a78d6; --ab-soft: rgba(42, 120, 214, 0.14); --cd: #eb6834; --cd-soft: rgba(235, 104, 52, 0.14);
+    --t0: #6b6b6b; --ab: #2a78d6; --ab-soft: rgba(42, 120, 214, 0.14); --cd: #eb6834; --cd-soft: rgba(235, 104, 52, 0.14); --ef: #1baf7a; --gh: #eda100;
     --ok: #0f7b0f; --ok-soft: #dff6dd; --warn: #9d5d00; --warn-soft: #fff4ce; --warn-rule: #e3c46a;
     --bad: #c42b1c; --bad-soft: #fde7e9; --bad-rule: #eba7ae; --band: #f0f0f0;
+    --field: #ffffff; --field-rule: #8a8a8a; --dirty: #fff8e1; --dirty-rule: #8a5100; --rejected: #fde7e9;
   }
   body.dark {
     --page: #272727; --panel: #2c2c2c; --rule: #3a3a3a; --guide: #555555;
     --ink: #f2f2f2; --ink-2: #c8c8c8; --muted: #ababab;
     --accent: #60cdff; --button: #333333; --button-rule: #858585;
-    --t0: #a3a3a3; --ab: #3987e5; --ab-soft: rgba(57, 135, 229, 0.22); --cd: #d95926; --cd-soft: rgba(217, 89, 38, 0.24);
+    --t0: #a3a3a3; --ab: #3987e5; --ab-soft: rgba(57, 135, 229, 0.22); --cd: #d95926; --cd-soft: rgba(217, 89, 38, 0.24); --ef: #199e70; --gh: #c98500;
     --ok: #6ccb5f; --ok-soft: #393d1b; --warn: #fce100; --warn-soft: #433519; --warn-rule: #6b5a1e;
     --bad: #ff99a4; --bad-soft: #442726; --bad-rule: #7a3a40; --band: #333333;
+    --field: #1e1e1e; --field-rule: #858585; --dirty: #3a3220; --dirty-rule: #fce100; --rejected: #3f2326;
   }
 
   html, body { margin: 0; background: var(--page); }
@@ -59,6 +61,7 @@
          background: #005fb8; color: #fff; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .45);
          display: grid; place-items: center; font: 600 11px/1 "Plex", sans-serif; }
   body.dark .pin { background: #60cdff; color: #000; border-color: #272727; }
+  .shot.plain { border-radius: 4px; }
 </style>
 </head>
 <body>
@@ -85,7 +88,7 @@
     <span class="pin" style="left:62.8%;top:6.2%">4</span>
     <span class="pin" style="left:97.2%;top:1.9%">5</span>
     <span class="pin" style="left:64%;top:10.9%">6</span>
-    <span class="pin" style="left:59%;top:14.9%">7</span>
+    <span class="pin" style="left:67.4%;top:14.9%">7</span>
     <span class="pin" style="left:43%;top:23%">8</span>
     <span class="pin" style="left:69.4%;top:87%">9</span>
     <span class="pin" style="left:48.6%;top:98.5%">10</span>
@@ -347,6 +350,236 @@
     <text class="label" x="574" y="162" text-anchor="middle">DG645</text>
     <text class="small" x="574" y="178" text-anchor="middle">the instrument</text>
   </svg>
+</figure>
+
+<!-- ========================= Entering values ========================= -->
+<figure id="value-field">
+  <svg width="676" height="214" viewBox="0 0 676 214">
+    <!-- 1: the instrument's value -->
+    <text class="title" x="0" y="14">Instrument's value</text>
+    <rect x="0" y="28" width="132" height="30" rx="3" style="fill: var(--field); stroke: var(--field-rule)" />
+    <text class="value" x="10" y="48" style="font-size: 12.5px; fill: var(--ink)">1 µs</text>
+    <text class="small" x="0" y="80">What the DG645 holds now.</text>
+    <path class="arrow" d="M136,43 H226" marker-end="url(#head)" />
+    <text x="181" y="36" text-anchor="middle" style="font-size: 11px">type</text>
+
+    <!-- 2: typing -->
+    <text class="title" x="230" y="14">Typing</text>
+    <rect x="230" y="28" width="132" height="30" rx="3" style="fill: var(--dirty); stroke: var(--dirty-rule); stroke-width: 1.4" />
+    <text class="value" x="240" y="48" style="font-size: 12.5px; fill: var(--ink)">2.5 us</text>
+    <text class="small" x="230" y="80">Amber: not sent yet.</text>
+    <text class="small" x="230" y="96">Esc puts 1 µs back.</text>
+    <path class="arrow" d="M366,43 H456" marker-end="url(#head)" />
+    <text x="411" y="36" text-anchor="middle" style="font-size: 11px">Enter</text>
+
+    <!-- 3: sent and read back -->
+    <text class="title" x="460" y="14">Sent and read back</text>
+    <rect x="460" y="28" width="132" height="30" rx="3" style="fill: var(--field); stroke: var(--field-rule)" />
+    <text class="value" x="470" y="48" style="font-size: 12.5px; fill: var(--ink)">2.5 µs</text>
+    <text class="small" x="460" y="80">Shows what the instrument</text>
+    <text class="small" x="460" y="96">accepted, with any rounding.</text>
+
+    <!-- 4: rejected -->
+    <path class="arrow" style="stroke-dasharray: 4 3" d="M411,46 V143 H456" marker-end="url(#head)" />
+    <text x="403" y="138" text-anchor="end" style="font-size: 11px">if the instrument refuses it</text>
+    <rect x="460" y="128" width="132" height="30" rx="3" style="fill: var(--rejected); stroke: var(--bad); stroke-width: 1.4" />
+    <text class="value" x="470" y="148" style="font-size: 12.5px; fill: var(--ink)">3000 s</text>
+    <text class="title" x="604" y="148">Rejected</text>
+    <text x="460" y="176" style="font-size: 11.5px; fill: var(--bad)">Illegal delay (error 12)</text>
+    <text class="small" x="460" y="194">Red, with the reason under it.</text>
+    <text class="small" x="460" y="210">The instrument keeps 1 µs.</text>
+  </svg>
+</figure>
+
+<!-- ========================= Channel references ========================= -->
+<figure id="references">
+  <svg width="676" height="262" viewBox="0 0 676 262">
+    <text class="small" x="0" y="12">Each channel = its reference + its delay. From T0 (below each channel) adds up the chain.</text>
+    <!-- links -->
+    <g class="arrow">
+      <path d="M62,138 C100,138 100,48 138,48" marker-end="url(#head)" />
+      <path d="M62,138 C100,138 100,178 138,178" marker-end="url(#head)" />
+      <path d="M62,138 C100,138 100,232 138,232" marker-end="url(#head)" />
+      <path d="M278,48 H318" marker-end="url(#head)" />
+      <path d="M278,48 C300,48 298,108 318,108" marker-end="url(#head)" />
+      <path d="M458,108 H498" marker-end="url(#head)" />
+      <path d="M278,178 H318" marker-end="url(#head)" />
+      <path d="M278,232 H318" marker-end="url(#head)" />
+    </g>
+    <!-- T0 -->
+    <rect x="0" y="118" width="62" height="40" rx="5" style="fill: var(--page); stroke: var(--t0); stroke-width: 1.4" />
+    <text class="label" x="31" y="143" text-anchor="middle">T0</text>
+    <!-- node helper layout: rect 140x40; letter at x+12; delay at x+30; from T0 under -->
+    <g>
+      <rect x="140" y="28" width="138" height="40" rx="5" style="fill: var(--page); stroke: var(--ab)" />
+      <rect x="140" y="28" width="5" height="40" rx="2" style="fill: var(--ab)" />
+      <text class="label" x="154" y="53">A</text><text class="value" x="172" y="53">T0 + 1 µs</text>
+      <text class="small" x="146" y="84">from T0: 1 µs</text>
+    </g>
+    <g>
+      <rect x="320" y="28" width="138" height="40" rx="5" style="fill: var(--page); stroke: var(--ab)" />
+      <rect x="320" y="28" width="5" height="40" rx="2" style="fill: var(--ab)" />
+      <text class="label" x="334" y="53">B</text><text class="value" x="352" y="53">A + 2.5 µs</text>
+      <text class="small" x="326" y="84">from T0: 3.5 µs</text>
+    </g>
+    <g>
+      <rect x="320" y="88" width="138" height="40" rx="5" style="fill: var(--page); stroke: var(--cd)" />
+      <rect x="320" y="88" width="5" height="40" rx="2" style="fill: var(--cd)" />
+      <text class="label" x="334" y="113">C</text><text class="value" x="352" y="113">A + 1.5 µs</text>
+      <text class="small" x="326" y="144">from T0: 2.5 µs</text>
+    </g>
+    <g>
+      <rect x="500" y="88" width="138" height="40" rx="5" style="fill: var(--page); stroke: var(--cd)" />
+      <rect x="500" y="88" width="5" height="40" rx="2" style="fill: var(--cd)" />
+      <text class="label" x="514" y="113">D</text><text class="value" x="532" y="113">C + 500 ns</text>
+      <text class="small" x="506" y="144">from T0: 3 µs</text>
+    </g>
+    <g>
+      <rect x="140" y="158" width="138" height="40" rx="5" style="fill: var(--page); stroke: var(--ef)" />
+      <rect x="140" y="158" width="5" height="40" rx="2" style="fill: var(--ef)" />
+      <text class="label" x="154" y="183">E</text><text class="value" x="172" y="183">T0 + 4 µs</text>
+    </g>
+    <g>
+      <rect x="320" y="158" width="138" height="40" rx="5" style="fill: var(--page); stroke: var(--ef)" />
+      <rect x="320" y="158" width="5" height="40" rx="2" style="fill: var(--ef)" />
+      <text class="label" x="334" y="183">F</text><text class="value" x="352" y="183">E + 1 µs</text>
+      <text class="small" x="466" y="183">from T0: 5 µs</text>
+    </g>
+    <g>
+      <rect x="140" y="212" width="138" height="40" rx="5" style="fill: var(--page); stroke: var(--gh)" />
+      <rect x="140" y="212" width="5" height="40" rx="2" style="fill: var(--gh)" />
+      <text class="label" x="154" y="237">G</text><text class="value" x="172" y="237">T0 + 6 µs</text>
+    </g>
+    <g>
+      <rect x="320" y="212" width="138" height="40" rx="5" style="fill: var(--page); stroke: var(--gh)" />
+      <rect x="320" y="212" width="5" height="40" rx="2" style="fill: var(--gh)" />
+      <text class="label" x="334" y="237">H</text><text class="value" x="352" y="237">G + 250 ns</text>
+      <text class="small" x="466" y="237">from T0: 6.25 µs</text>
+    </g>
+    <!-- the point -->
+    <rect x="500" y="20" width="176" height="56" rx="5" style="fill: var(--ab-soft)" />
+    <text x="512" y="40" style="fill: var(--ink)">Change A's delay and</text>
+    <text x="512" y="56" style="fill: var(--ink)">B, C and D move with it;</text>
+    <text x="512" y="72" style="fill: var(--ink)">widths AB and CD stay.</text>
+  </svg>
+</figure>
+
+<!-- ========================= Trigger path ========================= -->
+<figure id="trigger-path">
+  <svg width="676" height="226" viewBox="0 0 676 226">
+    <!-- source -->
+    <rect x="0" y="66" width="150" height="96" rx="6" style="fill: var(--page); stroke: var(--rule)" />
+    <text class="title" x="12" y="86">Trigger source</text>
+    <text class="small" x="12" y="104">Internal rate</text>
+    <text class="small" x="12" y="119">External edge (threshold)</text>
+    <text class="small" x="12" y="134">Single shot (Trigger / Arm)</text>
+    <text class="small" x="12" y="149">Line (mains)</text>
+    <path class="arrow" d="M152,114 H186" marker-end="url(#head)" />
+    <!-- advanced -->
+    <rect x="190" y="66" width="150" height="96" rx="6" style="fill: var(--page); stroke: var(--rule); stroke-dasharray: 4 3" />
+    <text class="title" x="202" y="86">Advanced triggering</text>
+    <text class="small" x="202" y="104">Holdoff: ignore triggers</text>
+    <text class="small" x="202" y="119">closer together than this</text>
+    <text class="small" x="202" y="139">Trigger prescaler: start a</text>
+    <text class="small" x="202" y="154">cycle on every Nth trigger</text>
+    <path class="arrow" d="M342,114 H376" marker-end="url(#head)" />
+    <!-- delay cycle -->
+    <rect x="380" y="66" width="120" height="96" rx="6" style="fill: var(--page); stroke: var(--rule)" />
+    <text class="title" x="392" y="86">Delay cycle</text>
+    <path class="wave" style="stroke: var(--t0); stroke-width: 1.6" d="M392,112 H398 V96 H402 V112 H488" />
+    <path class="wave" style="stroke: var(--ab); stroke-width: 1.6" d="M392,136 H420 V122 H456 V136 H488" />
+    <text class="small" x="392" y="154">T0, then A–H</text>
+    <!-- output prescalers -->
+    <g class="arrow">
+      <path d="M502,114 C520,114 520,58 536,58" marker-end="url(#head)" />
+      <path d="M502,114 C520,114 520,96 536,96" marker-end="url(#head)" />
+      <path d="M502,114 C520,114 520,134 536,134" marker-end="url(#head)" />
+      <path d="M502,114 C520,114 520,172 536,172" marker-end="url(#head)" />
+    </g>
+    <g>
+      <rect x="540" y="44" width="136" height="28" rx="4" style="fill: var(--page); stroke: var(--ab)" />
+      <text class="label" x="552" y="63" style="fill: var(--ab)">AB</text><text class="small" x="580" y="63">÷N, phase</text>
+      <rect x="540" y="82" width="136" height="28" rx="4" style="fill: var(--page); stroke: var(--cd)" />
+      <text class="label" x="552" y="101" style="fill: var(--cd)">CD</text><text class="small" x="580" y="101">÷N, phase</text>
+      <rect x="540" y="120" width="136" height="28" rx="4" style="fill: var(--page); stroke: var(--ef)" />
+      <text class="label" x="552" y="139" style="fill: var(--ef)">EF</text><text class="small" x="580" y="139">÷N, phase</text>
+      <rect x="540" y="158" width="136" height="28" rx="4" style="fill: var(--page); stroke: var(--gh)" />
+      <text class="label" x="552" y="177" style="fill: var(--gh)">GH</text><text class="small" x="580" y="177">÷N, phase</text>
+    </g>
+    <text class="small" x="540" y="30">Output prescalers</text>
+    <!-- inhibit -->
+    <rect x="190" y="0" width="150" height="40" rx="6" style="fill: var(--warn-soft); stroke: var(--warn-rule)" />
+    <text class="title" x="202" y="17">INHIBIT input</text>
+    <text class="small" x="202" y="32">rear panel, while high</text>
+    <path class="arrow" style="stroke-dasharray: 4 3" d="M170,40 V108" marker-end="url(#head)" />
+    <text class="small" x="166" y="56" text-anchor="end">blocks</text>
+    <text class="small" x="166" y="70" text-anchor="end">triggers</text>
+    <path class="arrow" style="stroke-dasharray: 4 3" d="M342,20 H520 V40" marker-end="url(#head)" />
+    <text class="small" x="430" y="14" text-anchor="middle">or blocks outputs (AB; AB, CD; …)</text>
+    <!-- footnote -->
+    <text class="small" x="0" y="212">The dashed parts act only when they are turned on: advanced triggering on the Trigger page, and Inhibit input not Off.</text>
+  </svg>
+</figure>
+
+<!-- ========================= When an instrument connects ========================= -->
+<figure id="connecting">
+  <svg width="676" height="318" viewBox="0 0 676 318">
+    <!-- row 1: the steps -->
+    <g>
+      <rect x="0" y="0" width="150" height="56" rx="6" style="fill: var(--page); stroke: var(--rule)" />
+      <text class="label" x="12" y="24">1  Open connection</text>
+      <text class="small" x="12" y="44">TCP port 5025</text>
+      <rect x="175" y="0" width="150" height="56" rx="6" style="fill: var(--page); stroke: var(--rule)" />
+      <text class="label" x="187" y="24">2  Identify</text>
+      <text class="small" x="187" y="44">reads its serial number</text>
+      <rect x="350" y="0" width="150" height="56" rx="6" style="fill: var(--page); stroke: var(--rule)" />
+      <text class="label" x="362" y="24">3  Read every setting</text>
+      <text class="small" x="362" y="44">fills in every page</text>
+      <rect x="525" y="0" width="151" height="56" rx="6" style="fill: var(--ok-soft); stroke: var(--ok)" />
+      <text class="label" x="537" y="24">4  Heartbeat starts</text>
+      <text class="small" x="537" y="44">checked every second</text>
+    </g>
+    <g class="arrow">
+      <path d="M152,28 H171" marker-end="url(#head)" />
+      <path d="M327,28 H346" marker-end="url(#head)" />
+      <path d="M502,28 H521" marker-end="url(#head)" />
+    </g>
+    <!-- a different unit -->
+    <path class="arrow" style="stroke-dasharray: 4 3" d="M250,58 V86" marker-end="url(#head)" />
+    <text class="small" x="242" y="78" text-anchor="end">only if another serial number answers</text>
+    <rect x="175" y="90" width="300" height="50" rx="6" style="fill: var(--warn-soft); stroke: var(--warn-rule)" />
+    <text class="label" x="187" y="111">A different unit at this address</text>
+    <text class="small" x="187" y="129">Use new unit, or Cancel (stays disconnected)</text>
+    <path class="arrow" d="M477,112 H500 V74 H425 V60" marker-end="url(#head)" />
+    <text class="small" x="506" y="100">Use new unit</text>
+    <!-- compare -->
+    <path class="arrow" d="M600,58 V162 H110 V182" marker-end="url(#head)" />
+    <text class="small" x="608" y="150">if it has a</text>
+    <text class="small" x="608" y="164">saved setup</text>
+    <rect x="0" y="186" width="220" height="56" rx="6" style="fill: var(--page); stroke: var(--accent); stroke-width: 1.4" />
+    <text class="label" x="12" y="210">5  Compare with saved setup</text>
+    <text class="small" x="12" y="230">every setting, one by one</text>
+    <!-- outcomes -->
+    <path class="arrow" d="M222,199 H256" marker-end="url(#head)" />
+    <text class="small" x="226" y="192">same</text>
+    <rect x="260" y="184" width="416" height="30" rx="6" style="fill: var(--ok-soft); stroke: var(--ok)" />
+    <text x="272" y="204" style="fill: var(--ink)">Nothing to do; the status bar says the setup matches.</text>
+    <path class="arrow" d="M222,228 H240 V256 H256" marker-end="url(#head)" />
+    <text class="small" x="234" y="270" text-anchor="end">differs</text>
+    <rect x="260" y="226" width="416" height="92" rx="6" style="fill: var(--page); stroke: var(--rule)" />
+    <text class="label" x="272" y="246">Depends on the instrument's Saved setup choice (F2)</text>
+    <text x="272" y="266" style="fill: var(--ink)"><tspan class="label">Ask</tspan><tspan dx="6">(default): lists what differs; you pick</tspan></text>
+    <text x="272" y="286" style="fill: var(--ink)"><tspan class="label">Load</tspan><tspan dx="6">the setup saved in Tempo, without asking</tspan></text>
+    <text x="272" y="306" style="fill: var(--ink)"><tspan class="label">Keep</tspan><tspan dx="6">the instrument's settings: Setup not saved</tspan></text>
+  </svg>
+</figure>
+
+<!-- ========================= All channels ========================= -->
+<figure id="all-channels">
+  <div class="shot">
+    <img class="light" src="src/all-channels-light.png" alt="">
+    <img class="dark" src="src/all-channels-dark.png" alt="">
+  </div>
 </figure>
 
 </body>
