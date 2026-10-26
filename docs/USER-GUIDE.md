@@ -60,7 +60,7 @@ Easiest of all is **Find on network…**, which looks for DG645s on this compute
 
 ![The main window with a DG645 connected and the Delays page open. The numbers match the list below.](images/main-window.png)
 
-1. **Menu bar.** *File* opens and saves configurations and setups. *Edit* undoes and redoes changes (see [Undo and redo](#undo-and-redo)). *Instrument* acts on the instrument selected in the list. *View* shows the communication log and the audit trail, and sets the alert sound and the theme. *Help* opens this guide and the quick reference card.
+1. **Menu bar.** *File* opens and saves configurations and setups. *Edit* undoes and redoes changes (see [Undo and redo](#undo-and-redo)). *Instrument* acts on the instrument selected in the list. *View* shows the communication log and the audit trail, and sets the alert sound and the theme. *Help* opens this guide, the quick reference card, the keyboard shortcuts and troubleshooting topics, and the list of releases.
 2. **Instrument list.** Every instrument in the open configuration, with its address and location. The dot shows the connection: hollow when not connected, green when connected, amber while connecting or not responding, and red when the connection failed or was lost. Double-click to connect; right-click for the other actions.
 3. **Header.** The instrument's name, address, model, serial number and firmware.
 4. **Reason for changes.** Optional; recorded with each change in the [audit trail](#reason-for-changes).
@@ -68,7 +68,7 @@ Easiest of all is **Find on network…**, which looks for DG645s on this compute
 6. **Command bar.** **Connect / Disconnect**, **Edit…**, **Refresh**, **Trigger** (which reads **Arm** or **Ready** in the [single-shot external modes](#single-shot-and-arming)), **Undo** and **Redo**, **Save setup**, **Restore saved…** and the **Log** check box.
 7. **Pages.** Delays, Outputs, Trigger, Burst, Scan, Setups, Status, Interfaces and Terminal, one tab each, described below, and **All channels**, which lists the channels of every connected instrument.
 8. **Value fields.** Type a value and press Enter; see [Entering values](#entering-values).
-9. **Communication log.** Every command sent and reply received, with the time; see [Communication log](#communication-log).
+9. **Communication log.** Every command sent and reply received, with the time; see [Communication log](#communication-log). The × at its right hides it.
 10. **Status bar.** The connection state, the trigger source and rate (with a green **Ready** while a single shot is armed), whether burst mode is on, **Setup not saved** when the instrument's settings have changed since its setup was last saved, the latest message, and the name of the open configuration. **Portable** appears when you are running the portable program.
 
 A button, menu item or field that is greyed out cannot be used at the moment. Hover over it to see why, for example *Not connected* or *Only available when the trigger source is a single-shot mode*, and what to do about it.
@@ -202,8 +202,10 @@ Double-click an instrument, press **Connect** or press Ctrl+K. Tempo:
 1. opens a TCP connection to the instrument (port 5025),
 2. asks it to identify itself and clears any old errors,
 3. reads every setting and fills in all the pages,
-4. compares the instrument with its saved setup, if it has one (see [When an instrument connects](#when-an-instrument-connects)),
-5. starts the [heartbeat](#heartbeat-and-alerts), which checks the instrument every second.
+4. starts the [heartbeat](#heartbeat-and-alerts), which checks the instrument every second,
+5. compares the instrument with its saved setup, if it has one (see [When an instrument connects](#when-an-instrument-connects)).
+
+![Connecting, step by step: open the connection, identify the instrument, read every setting and start the heartbeat. If a different serial number answers, Tempo first asks whether to use the new unit. Then, if the instrument has a saved setup, Tempo compares the two: if they are the same nothing more happens; if they differ, the instrument's Saved setup choice decides whether Tempo asks, loads the saved setup, or keeps the instrument's settings.](images/connecting.png)
 
 While Tempo is connected the DG645 is in remote mode and its front panel is locked. **Disconnect** (Ctrl+Shift+K) closes the connection and, unless you untick the option in the instrument editor, returns the front panel to local control. Closing Tempo disconnects every instrument.
 
@@ -242,6 +244,8 @@ Every value field works the same way:
 - After sending, Tempo reads the value back, so the field always shows what the instrument actually holds, including any rounding it applied.
 - If the instrument rejects the value, the field turns red and the reason appears under it, for example *Illegal delay (error 12)*.
 
+![A value field in its four states: showing the instrument's value; amber while you type and before it is sent; showing the value read back after Enter; and red with the reason under it when the instrument refuses the value, which it keeps unchanged.](images/value-field.png)
+
 Numbers take the usual SI prefixes, with or without the unit and with or without a space:
 
 | Kind | Examples | Prefixes |
@@ -273,6 +277,8 @@ The DG645 has eight delay channels, A to H, plus T0, which marks the start of ea
 > *channel time = reference time + delay*
 
 The **From T0** column works out each channel's time after T0 through the whole chain of references.
+
+![The demo instrument's references: A, E and G follow T0; B and C follow A; D follows C; F follows E; and H follows G. Each channel's time from T0 adds up the delays along its chain, so B is at 3.5 µs and D at 3 µs. Changing A's delay moves B, C and D with it.](images/references.png)
 
 Pairs of channels make the four front-panel output pulses:
 
@@ -358,6 +364,8 @@ The source decides what starts each delay cycle:
 
 **External threshold** sets the trigger input level, between −3.5 V and +3.5 V. **Inhibit input** chooses what the rear-panel INHIBIT input blocks while it is high: nothing, all triggers, or one or more outputs.
 
+![The path from trigger to outputs: the trigger source starts things; with advanced triggering on, holdoff and the trigger prescaler decide which triggers start a delay cycle; each output's prescaler then decides on which cycles that output fires. The INHIBIT input can block either the triggers or some of the outputs.](images/trigger-path.png)
+
 ### Single shot and arming
 
 The trigger button on the command bar, the button under **Single shot** on this page and Ctrl+T all send `*TRG`. They are available only when the source is a single-shot mode, and what they do depends on which:
@@ -416,7 +424,7 @@ The audit trail records the scan's start, with every setting above, and its end,
 The Setups page gathers every way of keeping and restoring settings:
 
 - **Saved setup on this computer**: when the setup was last saved in the configuration, with **Save setup** and **Restore saved setup…** (see [Configurations and saved setups](#configurations-and-saved-setups)).
-- **Setup files**: export this instrument's setup to a `.dg645.json` file, or import one and apply it. Before applying, Tempo lists each setting the file would change, with its value now and in the file.
+- **Setup files**: export this instrument's setup to a `.dg645.json` file, or import one and apply it. **Instrument ▸ Export setup to file…** and **Import setup from file…** do the same. Before applying, Tempo lists each setting the file would change, with its value now and in the file.
 - **Instrument memory**: the DG645 stores nine setups in its own memory. **Save current to** a location 1 to 9, or **Recall** one; location 0 recalls the factory defaults. These setups stay in the instrument and can also be recalled from its front panel.
 - **Reset to defaults…** returns the instrument to its default settings (`*RST`).
 
@@ -428,11 +436,11 @@ Recall, import and reset ask before replacing the current settings, and all thre
 
 The **Instrument status** table shows the DG645's events since the lamps were last cleared: a trigger received, a trigger arriving while a cycle was in progress (*RATE*), the end of a delay or burst cycle, inhibited triggers, aborted cycles, and loss of lock of the internal PLL or an optional rubidium timebase. The heartbeat reads it every second while connected; **Read now** reads it at once. **Clear lamps** resets them.
 
-The **Standard event status** and **Status byte** tables are the IEEE-488.2 registers. The **Enable** boxes choose which bits feed the summary bits and the service request; **Apply enable masks** writes them to the instrument. Most users never need them.
+The **Standard event status** and **Status byte** tables are the IEEE-488.2 registers. The **Enable** boxes choose which bits feed the summary bits and the service request; **Apply enable masks** writes them to the instrument. **Clear enable registers at power on** (`*PSC`) chooses whether the instrument forgets them when it is switched off. Most users never need them.
 
 ### Errors
 
-Commands the instrument rejected appear in **Errors**, newest first, with the time, the error code, its meaning and the command that caused it. **Read error queue** collects any errors still waiting in the instrument; **Clear status** (`*CLS`) clears the instrument's registers and queue.
+Commands the instrument rejected appear in **Errors**, newest first, with the time, the error code, its meaning and the command that caused it. **Read error queue** collects any errors still waiting in the instrument; **Clear status** (`*CLS`) clears the instrument's registers and queue; **Clear list** empties the list in Tempo only.
 
 ### Diagnostics
 
@@ -477,9 +485,11 @@ The **All channels** page lists the eight delay channels of every connected inst
 
 Instruments that are not connected are not listed; the line at the top says how many there are.
 
+![The All channels page: a search box, then each connected instrument's channels with their labels, pulses, delays and times from T0, and below them that instrument's timing diagram.](images/all-channels.png)
+
 ## Communication log
 
-The log under the pages records every command sent (→), reply received (←), error (✕) and connection event, with the time to the millisecond. Untick **Commands and replies** to show only connection events and errors. **Copy** puts the whole log on the clipboard and **Save…** writes it to a text file, which is the most useful thing to include when reporting a problem.
+The log under the pages records every command sent (→), reply received (←), error (✕) and connection event, with the time to the millisecond. Untick **Commands and replies** to show only connection events and errors. **Copy** puts the whole log on the clipboard and **Save…** writes it to a text file, which is the most useful thing to include when reporting a problem. **Clear** empties the log on screen.
 
 Show or hide the log with the **Log** check box, **View ▸ Communication log** or Ctrl+L. The heartbeat's status register reads are not logged, to keep the log readable; only a missed reply is.
 
@@ -565,6 +575,7 @@ Tempo remembers the theme, the alert sound setting, the window's size and positi
 | Alt+Left / Alt+Right | In this guide: back / forward |
 | Ctrl+F | In this guide: search |
 | F5 / Ctrl+F | In the audit trail: read the files again / search |
+| Esc | In this guide or the audit trail: close the window |
 
 ## Troubleshooting
 
