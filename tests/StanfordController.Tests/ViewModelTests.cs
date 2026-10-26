@@ -36,6 +36,15 @@ internal sealed class FakeDialogs : IDialogService
 
     public Task<bool> ConfirmAsync(string title, string message, string confirmText = "OK") => Task.FromResult(ConfirmResult);
 
+    /// <summary>The changes shown by each <see cref="ConfirmChangesAsync"/>, in order.</summary>
+    public List<IReadOnlyList<StanfordController.Core.SettingChange>> ChangesShown { get; } = [];
+
+    public Task<bool> ConfirmChangesAsync(string title, string message, IReadOnlyList<StanfordController.Core.SettingChange> changes, string confirmText)
+    {
+        ChangesShown.Add(changes);
+        return Task.FromResult(ConfirmResult);
+    }
+
     public Task<DialogAnswer> AskAsync(string title, string message, string yesText, string noText, string? rememberText = null, bool showCancel = true)
     {
         Questions.Add(message);

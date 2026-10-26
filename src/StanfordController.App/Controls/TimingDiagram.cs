@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Media.Immutable;
 using StanfordController.Core.Units;
 using StanfordController.Presentation.ViewModels;
@@ -15,6 +16,11 @@ namespace StanfordController.App.Controls;
 /// set from DynamicResource, so the diagram follows the theme. With <see cref="Burst"/> set, the time axis
 /// starts at the trigger and the pulses repeat for each delay cycle of the burst, as many as fit at
 /// <see cref="MinCycleSpacing"/> apart.
+/// <para>
+/// Ctrl + mouse wheel (or + and −) zooms around the pointer, dragging or Shift + wheel pans, and Fit shows everything
+/// again. Clicking places measurement cursors, which snap to nearby edges: the first click sets cursor 1, the second
+/// cursor 2, and the time between them is shown; Esc clears them.
+/// </para>
 /// </summary>
 public sealed class TimingDiagram : Control
 {
@@ -45,6 +51,21 @@ public sealed class TimingDiagram : Control
     public static readonly StyledProperty<IBrush?> GHBrushProperty =
         AvaloniaProperty.Register<TimingDiagram, IBrush?>(nameof(GHBrush));
 
+    public static readonly DirectProperty<TimingDiagram, string> ReadoutProperty =
+        AvaloniaProperty.RegisterDirect<TimingDiagram, string>(nameof(Readout), d => d.Readout);
+    public static readonly DirectProperty<TimingDiagram, bool> IsZoomedProperty =
+        AvaloniaProperty.RegisterDirect<TimingDiagram, bool>(nameof(IsZoomed), d => d.IsZoomed);
+    public static readonly DirectProperty<TimingDiagram, bool> HasCursorsProperty =
+        AvaloniaProperty.RegisterDirect<TimingDiagram, bool>(nameof(HasCursors), d => d.HasCursors);
+
+    /// <summary>Narrowest time window the diagram zooms to.</summary>
+    internal const double MinViewSpan = 10e-12;
+
+    /// <summary>How close, in pixels, a click must be to an edge for a cursor to snap to it.</summary>
+    internal const double SnapDistance = 6;
+
+    private const double ZoomStep = 1.5;
+    private const double DragThreshold = 4;
     private const double LabelWidth = 64;
     private const double AxisHeight = 28;
     private const double TopPadding = 10;
@@ -58,6 +79,25 @@ public sealed class TimingDiagram : Control
 
     private Point? _pointer;
 
+    // The visible time window when zoomed (null: fit everything), and the layout of the last drawing for pointer maths.
+    private double _viewStart;
+    private double? _viewSpan;
+    private double _fullSpan = 1e-6;
+    private double _drawnStart;
+    private double _drawnSpan = 1e-6;
+    private double _plotLeft = LabelWidth;
+    private double _plotWidth = 1;
+    private List<double> _edges = [];
+
+    // Measurement cursors, as times on the axis.
+    private double? _cursor1;
+    private double? _cursor2;
+    private string _readout = string.Empty;
+
+    private Point? _pressed;
+    private double _pressedViewStart;
+    private bool _dragging;
+
     static TimingDiagram()
     {
         AffectsRender<TimingDiagram>(PulsesProperty, BurstProperty, TextBrushProperty, MutedBrushProperty, GridBrushProperty, AxisBrushProperty,
@@ -68,6 +108,7 @@ public sealed class TimingDiagram : Control
     {
         Cursor = new Cursor(StandardCursorType.Cross);
         ClipToBounds = true;
+        Focusable = true;
     }
 
     public IReadOnlyList<PulseTiming>? Pulses { get => GetValue(PulsesProperty); set => SetValue(PulsesProperty, value); }
@@ -98,11 +139,248 @@ public sealed class TimingDiagram : Control
 
     public IBrush? GHBrush { get => GetValue(GHBrushProperty); set => SetValue(GHBrushProperty, value); }
 
+    /// <summary>The measurement cursors in words, e.g. "Cursor 1 T0 + 1 µs · cursor 2 T0 + 3.5 µs · Δt 2.5 µs"; empty without cursors.</summary>
+    public string Readout
+    {
+        get => _readout;
+        private set => SetAndRaise(ReadoutProperty, ref _readout, value);
+    }
+
+    /// <summary>True while zoomed in on part of the time axis.</summary>
+    public bool IsZoomed => _viewSpan is not null;
+
+    public bool HasCursors => _cursor1 is not null;
+
+    /// <summary>The time window shown: (start, span) from T0, or from the trigger in burst mode.</summary>
+    internal (double Start, double Span) View => (_drawnStart, _drawnSpan);
+
+    internal (double? First, double? Second) Cursors => (_cursor1, _cursor2);
+
     /// <summary>Shows the hover read-out at a point without a pointer (used by the smoke test).</summary>
     internal void SimulateHover(Point? point)
     {
         _pointer = point;
         InvalidateVisual();
+    }
+
+    /// <summary>Places a cursor at a time (used by the smoke test); see <see cref="PlaceCursor"/>.</summary>
+    internal void SimulateClick(double time) => PlaceCursor(time);
+
+    public void ZoomIn() => ZoomAround(_drawnStart + _drawnSpan / 2, 1 / ZoomStep);
+
+    public void ZoomOut() => ZoomAround(_drawnStart + _drawnSpan / 2, ZoomStep);
+
+    /// <summary>Shows the whole time range again.</summary>
+    public void Fit()
+    {
+        _viewSpan = null;
+        _viewStart = 0;
+        RaiseViewChanged();
+    }
+
+    /// <summary>Shows the window from <paramref name="start"/>, <paramref name="span"/> long.</summary>
+    public void ZoomTo(double start, double span)
+    {
+        _viewSpan = Math.Max(span, MinViewSpan);
+        _viewStart = start;
+        RaiseViewChanged();
+    }
+
+    public void ClearCursors()
+    {
+        _cursor1 = _cursor2 = null;
+        UpdateReadout();
+        InvalidateVisual();
+    }
+
+    /// <summary>Saves the diagram as it is shown (without the pointer read-out) to a PNG image at twice the screen resolution.</summary>
+    public void SaveImage(Stream stream)
+    {
+        var pointer = _pointer;
+        _pointer = null;
+        try
+        {
+            var size = new PixelSize(Math.Max(1, (int)Math.Ceiling(Bounds.Width * 2)), Math.Max(1, (int)Math.Ceiling(Bounds.Height * 2)));
+            using var bitmap = new RenderTargetBitmap(size, new Vector(192, 192));
+            bitmap.Render(this);
+            bitmap.Save(stream, new PngBitmapEncoderOptions());
+        }
+        finally
+        {
+            _pointer = pointer;
+        }
+    }
+
+    private void ZoomAround(double time, double factor)
+    {
+        var (start, span) = (_drawnStart, _drawnSpan);
+        var newSpan = Math.Clamp(span * factor, MinViewSpan, _fullSpan);
+        if (newSpan >= _fullSpan * 0.999)
+        {
+            Fit();
+            return;
+        }
+
+        // Keep the time under the pointer where it is.
+        var fraction = span > 0 ? (time - start) / span : 0.5;
+        ZoomTo(time - fraction * newSpan, newSpan);
+    }
+
+    private void RaiseViewChanged()
+    {
+        RaisePropertyChanged(IsZoomedProperty, !IsZoomed, IsZoomed);
+        InvalidateVisual();
+    }
+
+    /// <summary>Puts cursor 1, then cursor 2, at <paramref name="time"/>; a third click starts again from cursor 1.</summary>
+    private void PlaceCursor(double time)
+    {
+        var hadCursors = HasCursors;
+        if (_cursor1 is null || _cursor2 is not null)
+        {
+            (_cursor1, _cursor2) = (time, null);
+        }
+        else
+        {
+            _cursor2 = time;
+        }
+
+        if (hadCursors != HasCursors)
+        {
+            RaisePropertyChanged(HasCursorsProperty, hadCursors, HasCursors);
+        }
+
+        UpdateReadout();
+        InvalidateVisual();
+    }
+
+    private void UpdateReadout()
+    {
+        var origin = Burst is null ? "T0" : "trigger";
+        if (_cursor1 is not { } c1)
+        {
+            Readout = string.Empty;
+            RaisePropertyChanged(HasCursorsProperty, true, false);
+            return;
+        }
+
+        var text = $"Cursor 1: {origin} + {EngineeringUnits.Format(c1, Quantity.Time)}";
+        if (_cursor2 is { } c2)
+        {
+            var delta = Math.Abs(c2 - c1);
+            text += $"   Cursor 2: {origin} + {EngineeringUnits.Format(c2, Quantity.Time)}   Δt = {EngineeringUnits.Format(delta, Quantity.Time)}";
+            if (delta > 0)
+            {
+                text += $" ({EngineeringUnits.Format(1 / delta, Quantity.Frequency)})";
+            }
+        }
+        else
+        {
+            text += "   Click again to place cursor 2.";
+        }
+
+        Readout = text;
+    }
+
+    /// <summary>The time at <paramref name="x"/>, snapped to an edge within <see cref="SnapDistance"/> pixels.</summary>
+    private double SnappedTimeAt(double x)
+    {
+        var time = _drawnStart + (x - _plotLeft) / _plotWidth * _drawnSpan;
+        var perPixel = _drawnSpan / _plotWidth;
+        var nearest = _edges.Count == 0 ? (double?)null : _edges.MinBy(e => Math.Abs(e - time));
+        if (nearest is { } edge && Math.Abs(edge - time) / perPixel <= SnapDistance)
+        {
+            return edge;
+        }
+
+        // Not on an edge: round to what one pixel can resolve.
+        var resolution = Math.Pow(10, Math.Ceiling(Math.Log10(perPixel)));
+        return Math.Round(time / resolution) * resolution;
+    }
+
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
+    {
+        base.OnPointerPressed(e);
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            return;
+        }
+
+        Focus();
+        _pressed = e.GetPosition(this);
+        _pressedViewStart = _drawnStart;
+        _dragging = false;
+        e.Pointer.Capture(this);
+        e.Handled = true;
+    }
+
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
+    {
+        base.OnPointerReleased(e);
+        if (_pressed is not { } pressed)
+        {
+            return;
+        }
+
+        _pressed = null;
+        e.Pointer.Capture(null);
+        if (!_dragging && pressed.X >= _plotLeft && pressed.X <= _plotLeft + _plotWidth)
+        {
+            PlaceCursor(SnappedTimeAt(pressed.X));
+        }
+
+        _dragging = false;
+        Cursor = new Cursor(StandardCursorType.Cross);
+        e.Handled = true;
+    }
+
+    protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
+    {
+        base.OnPointerWheelChanged(e);
+        var x = e.GetPosition(this).X;
+        var time = _drawnStart + (x - _plotLeft) / _plotWidth * _drawnSpan;
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Meta))
+        {
+            ZoomAround(time, Math.Pow(ZoomStep, -Math.Sign(e.Delta.Y)));
+            e.Handled = true;
+        }
+        else if ((e.KeyModifiers.HasFlag(KeyModifiers.Shift) || e.Delta.X != 0) && IsZoomed)
+        {
+            // Plain wheel turns scroll the page; Shift + wheel, or a sideways scroll, pans.
+            var steps = e.Delta.X != 0 ? -e.Delta.X : -e.Delta.Y;
+            ZoomTo(_drawnStart + steps * _drawnSpan * 0.1, _drawnSpan);
+            e.Handled = true;
+        }
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        switch (e.Key)
+        {
+            case Key.Add or Key.OemPlus:
+                ZoomIn();
+                break;
+            case Key.Subtract or Key.OemMinus:
+                ZoomOut();
+                break;
+            case Key.D0 or Key.NumPad0 or Key.Home:
+                Fit();
+                break;
+            case Key.Left when IsZoomed:
+                ZoomTo(_drawnStart - _drawnSpan * 0.1, _drawnSpan);
+                break;
+            case Key.Right when IsZoomed:
+                ZoomTo(_drawnStart + _drawnSpan * 0.1, _drawnSpan);
+                break;
+            case Key.Escape when HasCursors:
+                ClearCursors();
+                break;
+            default:
+                return;
+        }
+
+        e.Handled = true;
     }
 
     protected override Size MeasureOverride(Size availableSize) =>
@@ -112,6 +390,18 @@ public sealed class TimingDiagram : Control
     {
         base.OnPointerMoved(e);
         _pointer = e.GetPosition(this);
+        if (_pressed is { } pressed && (_dragging || Math.Abs(_pointer.Value.X - pressed.X) > DragThreshold))
+        {
+            // Dragging pans the zoomed view.
+            _dragging = true;
+            if (IsZoomed)
+            {
+                Cursor = new Cursor(StandardCursorType.SizeWestEast);
+                ZoomTo(_pressedViewStart - (_pointer.Value.X - pressed.X) / _plotWidth * _drawnSpan, _drawnSpan);
+                return;
+            }
+        }
+
         InvalidateVisual();
     }
 
@@ -156,18 +446,33 @@ public sealed class TimingDiagram : Control
 
         // Time range: from the trigger to a little past the latest edge of the last drawn cycle, rounded to whole ticks.
         var latest = cycleStarts[^1] + pulses.SelectMany(p => new[] { p.Start, p.End }).Where(t => t is not null).Select(t => t!.Value).DefaultIfEmpty(0).Max();
-        var span = latest > 0 ? latest * 1.15 : 1e-6;
-        var tickStep = NiceStep(span / 6);
-        span = Math.Ceiling(span / tickStep) * tickStep;
-        double X(double t) => plotLeft + Math.Clamp(t / span, -0.02, 1.02) * plotWidth;
-        double TimeAt(double x) => (x - plotLeft) / plotWidth * span;
+        var fullSpan = latest > 0 ? latest * 1.15 : 1e-6;
+        var fullStep = NiceStep(fullSpan / 6);
+        fullSpan = Math.Ceiling(fullSpan / fullStep) * fullStep;
 
-        for (var t = 0.0; t <= span * 1.0001; t += tickStep)
+        // The window shown: everything, or the zoomed part of it, kept within the whole range.
+        var span = _viewSpan is { } zoomed ? Math.Min(zoomed, fullSpan) : fullSpan;
+        var viewStart = _viewSpan is null ? 0 : Math.Clamp(_viewStart, 0, Math.Max(0, fullSpan - span));
+        (_fullSpan, _drawnStart, _drawnSpan, _plotLeft, _plotWidth) = (fullSpan, viewStart, span, plotLeft, plotWidth);
+        var tickStep = NiceStep(span / 6);
+        double X(double t) => plotLeft + Math.Clamp((t - viewStart) / span, -0.05, 1.05) * plotWidth;
+        double TimeAt(double x) => viewStart + (x - plotLeft) / plotWidth * span;
+        // Zoomed in, pulses running on past the window are cut at its edges.
+        var plotClip = _viewSpan is null ? new Rect(plotLeft, 0, width - plotLeft, height) : new Rect(plotLeft, 0, plotWidth + 1, height);
+
+        var lastLabelRight = double.NegativeInfinity;
+        for (var k = Math.Ceiling(viewStart / tickStep - 1e-9); k * tickStep <= viewStart + span * 1.0001; k++)
         {
+            var t = k * tickStep;
             var x = Math.Round(X(t)) + 0.5;
             dc.DrawLine(gridPen, new Point(x, rowsTop), new Point(x, rowsBottom));
             var label = Text(EngineeringUnits.Format(t, Quantity.Time), SmallFace, 11, muted);
-            dc.DrawText(label, new Point(Math.Min(x - label.Width / 2, width - label.Width - 2), rowsBottom + 7));
+            var labelLeft = Math.Max(Math.Min(x - label.Width / 2, width - label.Width - 2), plotLeft - label.Width / 2);
+            if (labelLeft > lastLabelRight + 6)
+            {
+                dc.DrawText(label, new Point(labelLeft, rowsBottom + 7));
+                lastLabelRight = labelLeft + label.Width;
+            }
         }
 
         dc.DrawLine(axisPen, new Point(plotLeft, rowsBottom + 0.5), new Point(plotRight, rowsBottom + 0.5));
@@ -175,6 +480,7 @@ public sealed class TimingDiagram : Control
         // Rows: T0 is a short marker at the start of each cycle it fires on; AB…GH are the output pulses.
         var hoveredRow = _pointer is { } m && m.Y >= rowsTop && m.Y < rowsBottom ? (int)((m.Y - rowsTop) / Math.Max(rowHeight, 1)) : -1;
         var t0Starts = burst is { T0EveryCycle: false } ? cycleStarts[..1] : cycleStarts;
+        var edges = new List<double>();
         DrawRow(0, "T0", T0Brush ?? Brushes.Gray, positive: true, start: 0, end: span * 0.012, startLabel: null, endLabel: null, note: null, showWidth: false, t0Starts);
         for (var i = 0; i < pulses.Count; i++)
         {
@@ -204,9 +510,63 @@ public sealed class TimingDiagram : Control
             dc.DrawText(burstText, at);
         }
 
-        if (_pointer is { } pointer && pointer.X >= plotLeft && pointer.X <= plotRight && pointer.Y >= rowsTop && pointer.Y <= rowsBottom)
+        _edges = edges;
+        DrawCursors();
+
+        if (_viewSpan is not null)
+        {
+            var zoomText = Text($"Zoomed: {EngineeringUnits.Format(viewStart, Quantity.Time)} to {EngineeringUnits.Format(viewStart + span, Quantity.Time)} of {EngineeringUnits.Format(fullSpan, Quantity.Time)}",
+                SmallFace, 11, muted);
+            // Above the T0 row, like the burst summary on the right.
+            var at = new Point(plotLeft + 4, Math.Max(0, rowsTop + rowHeight * 0.28 - zoomText.Height - 1));
+            dc.DrawRectangle(PanelBrush ?? Brushes.Transparent, null, new Rect(at, new Size(zoomText.Width, zoomText.Height)));
+            dc.DrawText(zoomText, at);
+        }
+
+        if (_pointer is { } pointer && _pressed is null && pointer.X >= plotLeft && pointer.X <= plotRight && pointer.Y >= rowsTop && pointer.Y <= rowsBottom)
         {
             DrawHover(pointer, TimeAt(pointer.X));
+        }
+
+        void DrawCursors()
+        {
+            if (_cursor1 is not { } c1)
+            {
+                return;
+            }
+
+            var pen = new Pen(text, 1.5);
+            using (dc.PushClip(plotClip))
+            {
+                var placed = new List<(double X, string Name)> { (X(c1), "1") };
+                if (_cursor2 is { } c2)
+                {
+                    placed.Add((X(c2), "2"));
+                }
+
+                foreach (var (cx, name) in placed)
+                {
+                    var x = Math.Round(cx) + 0.5;
+                    dc.DrawLine(pen, new Point(x, rowsTop), new Point(x, rowsBottom));
+                    var tag = Text(name, LabelFace, 10.5, PanelBrush ?? Brushes.White);
+                    var box = new Rect(x - tag.Width / 2 - 4, rowsBottom - tag.Height - 3, tag.Width + 8, tag.Height + 2);
+                    dc.DrawRectangle(text, null, box, 2, 2);
+                    dc.DrawText(tag, new Point(box.X + 4, box.Y + 1));
+                }
+
+                if (_cursor2 is { } second)
+                {
+                    // Δt between the cursors, on a bracket across the top of the plot.
+                    var (a, b) = (Math.Min(X(c1), X(second)), Math.Max(X(c1), X(second)));
+                    var y = rowsTop + 1.5;
+                    dc.DrawLine(pen, new Point(a, y), new Point(b, y));
+                    var delta = Text($"Δt {EngineeringUnits.Format(Math.Abs(second - c1), Quantity.Time)}", LabelFace, 11, text);
+                    var tx = Math.Clamp((a + b - delta.Width) / 2, plotLeft + 2, plotRight - delta.Width - 2);
+                    var label = new Rect(tx - 4, y + 2, delta.Width + 8, delta.Height + 2);
+                    dc.DrawRectangle(PanelBrush ?? Brushes.White, new Pen(AxisBrush ?? Brushes.Gray, 1), label, 3, 3);
+                    dc.DrawText(delta, new Point(tx, y + 3));
+                }
+            }
         }
 
         void DrawRow(int row, string name, IBrush color, bool positive, double? start, double? end, string? startLabel, string? endLabel, string? note, bool showWidth,
@@ -230,6 +590,8 @@ public sealed class TimingDiagram : Control
                 dc.DrawRectangle(Tint(color, 0x14), null, new Rect(plotLeft, top, plotWidth, rowHeight));
             }
 
+            using var clip = dc.PushClip(plotClip);
+
             if (start is not { } s || end is not { } e)
             {
                 dc.DrawLine(pen, new Point(plotLeft, idle), new Point(plotRight, idle));
@@ -246,6 +608,15 @@ public sealed class TimingDiagram : Control
             var spans = new List<(double X1, double X2)>();
             foreach (var offset in offsets)
             {
+                if (showWidth || row == 0)
+                {
+                    edges.Add(offset + s);
+                    if (showWidth)
+                    {
+                        edges.Add(offset + e);
+                    }
+                }
+
                 var a = X(offset + s);
                 var b = Math.Max(X(offset + e), a + 1.5);
                 if (spans.Count > 0 && a <= spans[^1].X2)
@@ -309,6 +680,12 @@ public sealed class TimingDiagram : Control
             var resolution = Math.Pow(10, Math.Ceiling(Math.Log10(perPixel)));
             var rounded = Math.Round(Math.Max(0, time) / resolution) * resolution;
             var lines = new List<(string Text, IBrush Brush)> { ($"t ≈ {origin} + {EngineeringUnits.Format(rounded, Quantity.Time)}", text) };
+            if (_cursor1 is { } c1)
+            {
+                var fromCursor = rounded - c1;
+                lines.Add(($"{(fromCursor < 0 ? "−" : "+")}{EngineeringUnits.Format(Math.Abs(fromCursor), Quantity.Time)} from cursor 1", muted));
+            }
+
             if (hoveredRow >= 1 && hoveredRow <= pulses.Count)
             {
                 var pulse = pulses[hoveredRow - 1];

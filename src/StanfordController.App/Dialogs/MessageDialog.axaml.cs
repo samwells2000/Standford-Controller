@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using StanfordController.Core;
 using StanfordController.Presentation.Services;
 
 namespace StanfordController.App.Dialogs;
@@ -13,7 +14,10 @@ public enum MessageKind
     Error,
 }
 
-/// <summary>A message box: an icon, the message, up to three buttons and an optional "remember" check box.</summary>
+/// <summary>
+/// A message box: an icon, the message, up to three buttons, an optional "remember" check box and an optional table of
+/// the settings an action would change.
+/// </summary>
 public partial class MessageDialog : Window
 {
     private DialogChoice _choice = DialogChoice.Cancel;
@@ -24,9 +28,17 @@ public partial class MessageDialog : Window
     }
 
     public static async Task<DialogAnswer> ShowAsync(Window? owner, MessageKind kind, string title, string message,
-        string yesText, string? noText = null, bool showCancel = false, string? rememberText = null)
+        string yesText, string? noText = null, bool showCancel = false, string? rememberText = null, IReadOnlyList<SettingChange>? changes = null)
     {
         var dialog = new MessageDialog { Title = title };
+        if (changes is { Count: > 0 })
+        {
+            // Wide enough for "Delay A   T0 + 1.000 µs   A + 2.5 µs" without wrapping.
+            dialog.Width = 620;
+            dialog.ChangesList.ItemsSource = changes;
+            dialog.ChangesPanel.IsVisible = true;
+        }
+
         dialog.MessageText.Text = message;
         dialog.YesButton.Content = yesText;
         dialog.NoButton.Content = noText;

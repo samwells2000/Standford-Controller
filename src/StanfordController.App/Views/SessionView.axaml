@@ -55,6 +55,9 @@
             <TabItem Header="Burst">
                 <views:BurstView />
             </TabItem>
+            <TabItem Header="Scan">
+                <views:ScanView />
+            </TabItem>
             <TabItem Header="Setups">
                 <views:SetupsView />
             </TabItem>

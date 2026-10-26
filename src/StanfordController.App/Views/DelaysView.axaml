@@ -73,13 +73,79 @@
                 </StackPanel>
             </HeaderedContentControl>
 
+            <HeaderedContentControl Theme="{StaticResource Section}" Header="Pulses"
+                                    AutomationProperties.HelpText="Sets each output pulse by when it starts and how long it lasts, instead of channel by channel. Tempo sets the two channel delays: the start channel keeps its reference, and the end channel follows the start channel by the width, so moving the start moves the whole pulse.">
+                <HeaderedContentControl.Tag>
+                    <TextBlock Classes="caption" Text="Start is from T0. Tempo sets the channel delays above. Esc undoes typing." />
+                </HeaderedContentControl.Tag>
+                <StackPanel>
+                    <Border Classes="table-header">
+                        <Grid ColumnDefinitions="52,180,40,150,18,150,138,*">
+                            <TextBlock Classes="header" Text="Output" />
+                            <TextBlock Grid.Column="1" Classes="header" Text="Channels" />
+                            <TextBlock Grid.Column="3" Classes="header" Text="Start" />
+                            <TextBlock Grid.Column="5" Classes="header" Text="Width" />
+                            <TextBlock Grid.Column="6" Classes="header" Text="End" Margin="10,0,0,0" />
+                        </Grid>
+                    </Border>
+                    <ItemsControl ItemsSource="{Binding Pulses}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:PulseViewModel">
+                                <Border Classes="table-row">
+                                    <Grid ColumnDefinitions="52,180,40,150,18,150,138,*" RowDefinitions="Auto,Auto">
+                                        <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
+                                            <controls:SeriesSwatch Output="{Binding Output}" Width="4" Height="20" CornerRadius="1" />
+                                            <TextBlock Text="{Binding Name}" Classes="strong" FontSize="14" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="1" Text="{Binding Channels}" Classes="secondary" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                   ToolTip.Tip="{Binding Channels}" />
+                                        <TextBlock Grid.Column="2" Text="T0 +" Classes="muted" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                        <TextBox Grid.Column="3" Classes="param" Classes.dirty="{Binding IsStartDirty}" Classes.rejected="{Binding HasError}"
+                                                 Text="{Binding StartText}" AutomationProperties.Name="{Binding Name, StringFormat='Start of the {0} pulse'}"
+                                                 ToolTip.Tip="When the pulse starts, from T0. The width stays the same."
+                                                 inf:FieldBehavior.CommitCommand="{Binding CommitStartCommand}"
+                                                 inf:FieldBehavior.RevertCommand="{Binding RevertStartCommand}" />
+                                        <TextBox Grid.Column="5" Classes="param" Classes.dirty="{Binding IsWidthDirty}" Classes.rejected="{Binding HasError}"
+                                                 Text="{Binding WidthText}" AutomationProperties.Name="{Binding Name, StringFormat='Width of the {0} pulse'}"
+                                                 ToolTip.Tip="How long the pulse lasts. The start stays the same."
+                                                 inf:FieldBehavior.CommitCommand="{Binding CommitWidthCommand}"
+                                                 inf:FieldBehavior.RevertCommand="{Binding RevertWidthCommand}" />
+                                        <TextBlock Grid.Column="6" Text="{Binding EndText}" Classes="mono secondary" Margin="10,0,8,0" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="7" Text="{Binding Note}" Classes="caption" IsVisible="{Binding HasNote}" TextWrapping="Wrap"
+                                                   VerticalAlignment="Center" Margin="8,0,0,0" />
+                                        <TextBlock Grid.Row="1" Grid.Column="3" Grid.ColumnSpan="5" Classes="error" Text="{Binding Error}" IsVisible="{Binding HasError}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </HeaderedContentControl>
+
             <HeaderedContentControl Theme="{StaticResource Section}" Header="Timing"
                                     AutomationProperties.HelpText="A picture of the output pulses over one cycle, drawn from the delays above, so you can check the pulse order, widths and overlaps at a glance. With burst mode on, it shows the pulses repeated for each delay cycle of the burst.">
                 <HeaderedContentControl.Tag>
                     <TextBlock Classes="caption" Text="{Binding TimingCaption}" />
                 </HeaderedContentControl.Tag>
+                <StackPanel Spacing="4">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                        <Button Classes="tool" Content="Zoom in" Click="OnZoomIn" ToolTip.Tip="Zoom in on the middle (+). Ctrl + mouse wheel zooms around the pointer." />
+                        <Button Classes="tool" Content="Zoom out" Click="OnZoomOut" IsEnabled="{Binding #Diagram.IsZoomed}"
+                                inf:DisabledToolTip.Reason="The whole time range is already shown." ToolTip.Tip="Zoom out (−)" />
+                        <Button Classes="tool" Content="Fit" Click="OnFit" IsEnabled="{Binding #Diagram.IsZoomed}"
+                                inf:DisabledToolTip.Reason="The whole time range is already shown." ToolTip.Tip="Show the whole time range again (0)" />
+                        <Border Classes="vrule" />
+                        <Button Classes="tool" Content="Clear cursors" Click="OnClearCursors" IsEnabled="{Binding #Diagram.HasCursors}"
+                                inf:DisabledToolTip.Reason="No cursors are placed. Click in the diagram to place one."
+                                ToolTip.Tip="Remove the measurement cursors (Esc)" />
+                        <Button Classes="tool" Content="Save image…" Click="OnSaveImage" ToolTip.Tip="Save the diagram as a PNG picture, e.g. for a lab notebook" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding #Diagram.Readout}" Classes="mono secondary" VerticalAlignment="Center" Margin="12,0,0,0" TextTrimming="CharacterEllipsis"
+                               HorizontalAlignment="Right" />
+                </DockPanel>
                 <Border Classes="framed">
-                    <controls:TimingDiagram Pulses="{Binding Timing}" Burst="{Binding TimingBurst}" Height="280"
+                    <controls:TimingDiagram x:Name="Diagram" Pulses="{Binding Timing}" Burst="{Binding TimingBurst}" Height="280"
                                             TextBrush="{DynamicResource TextBrush}" MutedBrush="{DynamicResource TextMutedBrush}"
                                             GridBrush="{DynamicResource ChartGridBrush}" AxisBrush="{DynamicResource ChartAxisBrush}"
                                             WarningBrush="{DynamicResource WarningTextBrush}" PanelBrush="{DynamicResource SurfaceBrush}"
@@ -88,6 +154,7 @@
                                             GHBrush="{DynamicResource SeriesGHBrush}"
                                             AutomationProperties.Name="Timing diagram of the output pulses" />
                 </Border>
+                </StackPanel>
             </HeaderedContentControl>
         </StackPanel>
     </ScrollViewer>

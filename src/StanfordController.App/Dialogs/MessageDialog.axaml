@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:core="clr-namespace:StanfordController.Core;assembly=StanfordController.Core"
         x:Class="StanfordController.App.Dialogs.MessageDialog"
         Width="480" SizeToContent="Height" CanResize="False"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
@@ -15,6 +16,33 @@
             <Path x:Name="IconPath" Classes="glyph" VerticalAlignment="Top" Margin="0,1,12,0" />
             <StackPanel Grid.Column="1" Spacing="12">
                 <SelectableTextBlock x:Name="MessageText" TextWrapping="Wrap" />
+                <!-- What the action would change: setting, value now, value after. -->
+                <Border x:Name="ChangesPanel" Classes="framed" IsVisible="False">
+                    <DockPanel>
+                        <Border DockPanel.Dock="Top" Classes="table-header">
+                            <Grid ColumnDefinitions="2*,3*,3*">
+                                <TextBlock Classes="header" Text="Setting" />
+                                <TextBlock Grid.Column="1" Classes="header" Text="Now" />
+                                <TextBlock Grid.Column="2" Classes="header" Text="After" />
+                            </Grid>
+                        </Border>
+                        <ScrollViewer MaxHeight="300">
+                            <ItemsControl x:Name="ChangesList">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="core:SettingChange">
+                                        <Border Classes="table-row">
+                                            <Grid ColumnDefinitions="2*,3*,3*">
+                                                <TextBlock Text="{Binding Setting}" Classes="strong" TextWrapping="Wrap" Margin="0,0,8,0" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Before}" Classes="mono secondary" TextWrapping="Wrap" Margin="0,0,8,0" />
+                                                <TextBlock Grid.Column="2" Text="{Binding After}" Classes="mono" TextWrapping="Wrap" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Border>
                 <CheckBox x:Name="RememberBox" IsVisible="False" />
             </StackPanel>
         </Grid>

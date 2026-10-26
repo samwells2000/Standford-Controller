@@ -1,0 +1,55 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:StanfordController.Presentation.ViewModels;assembly=StanfordController.Presentation"
+             xmlns:help="clr-namespace:StanfordController.Presentation.Help;assembly=StanfordController.Presentation"
+             xmlns:inf="clr-namespace:StanfordController.App.Infrastructure"
+             x:Class="StanfordController.App.Views.ScanView"
+             x:DataType="vm:InstrumentSessionViewModel"
+             inf:HelpContext.Topic="{x:Static help:HelpTopics.Scan}">
+    <ScrollViewer>
+        <StackPanel Margin="20,16,20,12" HorizontalAlignment="Left" DataContext="{Binding Scan}" x:DataType="vm:DelayScanViewModel">
+            <HeaderedContentControl Theme="{StaticResource Section}" Header="Delay scan"
+                                    AutomationProperties.HelpText="Steps one channel's delay through evenly spaced values, staying at each for a set time, for example to find the timing that gives the best signal. The channel keeps its reference. The scan is recorded in the audit trail.">
+                <HeaderedContentControl.Tag>
+                    <TextBlock Classes="caption" Text="Delays are from the channel's reference, as on the Delays page." />
+                </HeaderedContentControl.Tag>
+                <StackPanel IsEnabled="{Binding IsIdle}" inf:DisabledToolTip.Reason="Stop the scan to change it.">
+                    <HeaderedContentControl Theme="{StaticResource FormRow}" Header="Channel">
+                        <ComboBox ItemsSource="{Binding ChannelOptions}" SelectedItem="{Binding Channel}" Width="90" HorizontalAlignment="Left"
+                                  AutomationProperties.Name="Channel to scan" ToolTip.Tip="The channel whose delay the scan changes" />
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Theme="{StaticResource FormRow}" Header="From">
+                        <TextBox Classes="param" Text="{Binding FromText}" AutomationProperties.Name="First delay"
+                                 ToolTip.Tip="The first delay, e.g. 1 us" />
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Theme="{StaticResource FormRow}" Header="To">
+                        <TextBox Classes="param" Text="{Binding ToText}" AutomationProperties.Name="Last delay"
+                                 ToolTip.Tip="The last delay. It can be smaller than From to scan downwards." />
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Theme="{StaticResource FormRow}" Header="Values">
+                        <TextBox Classes="param" Text="{Binding CountText}" AutomationProperties.Name="Number of values"
+                                 ToolTip.Tip="How many delays to use, From and To included, evenly spaced" />
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Theme="{StaticResource FormRow}" Header="Time at each value">
+                        <TextBox Classes="param" Text="{Binding DwellText}" AutomationProperties.Name="Time at each value"
+                                 ToolTip.Tip="How long to stay at each delay before moving to the next, e.g. 500 ms or 2 s" />
+                    </HeaderedContentControl>
+                    <CheckBox Content="Put the delay back as it was when the scan ends" IsChecked="{Binding ReturnToStart}" Margin="140,0,0,10"
+                              ToolTip.Tip="Also when the scan is stopped. Untick to leave the channel at the last value used." />
+                    <TextBlock Text="{Binding Description}" Classes="secondary" TextWrapping="Wrap" Margin="140,0,0,0" MaxWidth="440" HorizontalAlignment="Left" />
+                </StackPanel>
+            </HeaderedContentControl>
+
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="140,4,0,0">
+                <Button Classes="accent" Content="Start scan" Command="{Binding StartCommand}" MinWidth="100" />
+                <Button Content="Stop" Command="{Binding StopCommand}" MinWidth="88" />
+            </StackPanel>
+            <StackPanel Margin="140,12,0,0" Spacing="6" MaxWidth="440" HorizontalAlignment="Left">
+                <ProgressBar Value="{Binding Progress}" Maximum="1" IsVisible="{Binding IsRunning}" />
+                <TextBlock Text="{Binding ProgressText}" Classes="mono secondary" TextWrapping="Wrap"
+                           IsVisible="{Binding ProgressText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                <TextBlock Text="{Binding Error}" Classes="error" TextWrapping="Wrap" IsVisible="{Binding HasError}" />
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

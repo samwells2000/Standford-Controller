@@ -62,6 +62,13 @@
                         </StackPanel>
                     </Button>
                     <Border Classes="vrule" />
+                    <Button Classes="tool" Content="Undo" Command="{Binding Session?.UndoCommand, FallbackValue={x:Null}}" IsEnabled="{Binding IsConnected}"
+                            inf:DisabledToolTip.Reason="{x:Static vm:InstrumentItemViewModel.NotConnectedReason}"
+                            ToolTip.Tip="{Binding Session?.UndoTip, FallbackValue='Undo the last change (Ctrl+Z)', TargetNullValue='Undo the last change (Ctrl+Z)'}" />
+                    <Button Classes="tool" Content="Redo" Command="{Binding Session?.RedoCommand, FallbackValue={x:Null}}" IsEnabled="{Binding IsConnected}"
+                            inf:DisabledToolTip.Reason="{x:Static vm:InstrumentItemViewModel.NotConnectedReason}"
+                            ToolTip.Tip="{Binding Session?.RedoTip, FallbackValue='Make an undone change again (Ctrl+Y)', TargetNullValue='Make an undone change again (Ctrl+Y)'}" />
+                    <Border Classes="vrule" />
                     <Button Classes="tool" Content="Save setup" Command="{Binding SaveSetupCommand}"
                             ToolTip.Tip="Store this instrument's complete setup in the configuration on this computer" />
                     <Button Classes="tool" Content="Restore saved…" Command="{Binding RestoreSetupCommand}"

@@ -13,6 +13,8 @@ public static class HelpTopics
     public const string Outputs = "outputs";
     public const string Trigger = "trigger";
     public const string Burst = "burst";
+    public const string Scan = "delay-scans";
+    public const string Undo = "undo-and-redo";
     public const string Setups = "setups";
     public const string Status = "status-and-diagnostics";
     public const string Interfaces = "interfaces";
@@ -23,7 +25,7 @@ public static class HelpTopics
     public const string Troubleshooting = "troubleshooting";
 
     public static IReadOnlyList<string> All { get; } =
-        [GettingStarted, Instruments, Configurations, Connecting, Delays, Outputs, Trigger, Burst, Setups, Status, Interfaces, Terminal, AllChannels, AuditTrail, Shortcuts, Troubleshooting];
+        [GettingStarted, Instruments, Configurations, Connecting, Undo, Delays, Outputs, Trigger, Burst, Scan, Setups, Status, Interfaces, Terminal, AllChannels, AuditTrail, Shortcuts, Troubleshooting];
 }
 
 /// <summary>A heading inside a topic (a level-3 heading).</summary>

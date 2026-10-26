@@ -23,6 +23,9 @@
         <KeyBinding Gesture="Ctrl+R" Command="{Binding RestoreSelectedSetupCommand}" />
         <KeyBinding Gesture="F5" Command="{Binding RefreshCommand}" />
         <KeyBinding Gesture="Ctrl+T" Command="{Binding TriggerCommand}" />
+        <KeyBinding Gesture="Ctrl+Z" Command="{Binding UndoCommand}" />
+        <KeyBinding Gesture="Ctrl+Y" Command="{Binding RedoCommand}" />
+        <KeyBinding Gesture="Ctrl+Shift+Z" Command="{Binding RedoCommand}" />
         <KeyBinding Gesture="Ctrl+L" Command="{Binding ToggleLogCommand}" />
     </Window.KeyBindings>
 
@@ -54,6 +57,14 @@
                           ToolTip.Tip="Add the instruments from another configuration file" />
                 <Separator />
                 <MenuItem Header="E_xit" Click="OnExit" InputGesture="Alt+F4" />
+            </MenuItem>
+            <MenuItem Header="_Edit">
+                <MenuItem Header="{Binding SelectedInstrument?.Session?.UndoMenuText, FallbackValue='_Undo', TargetNullValue='_Undo'}"
+                          Command="{Binding UndoCommand}" InputGesture="Ctrl+Z"
+                          IsEnabled="{Binding SelectedInstrument?.Session?.CanUndo, FallbackValue=False, TargetNullValue=False}" />
+                <MenuItem Header="{Binding SelectedInstrument?.Session?.RedoMenuText, FallbackValue='_Redo', TargetNullValue='_Redo'}"
+                          Command="{Binding RedoCommand}" InputGesture="Ctrl+Y"
+                          IsEnabled="{Binding SelectedInstrument?.Session?.CanRedo, FallbackValue=False, TargetNullValue=False}" />
             </MenuItem>
             <MenuItem Header="_Instrument">
                 <MenuItem Header="_Add…" Command="{Binding AddInstrumentCommand}" InputGesture="Ctrl+N" />
