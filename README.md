@@ -24,7 +24,7 @@ Get the program from the [latest release](../../releases/latest):
 | **`PKGBUILD`** | Arch Linux: put it in an empty folder and run `makepkg -si`. |
 | **`Tempo-<version>-linux-x64.tar.gz`** | Any x86-64 Linux desktop: unpack, then `./install.sh` (or just run `./tempo-dg645`). |
 | `Tempo-linux-x64`, `Tempo-Portable-linux-x64` | The bare Linux program, normal and portable (`chmod +x` after downloading). |
-| **`Tempo-Quick-Reference.pdf`** | A two-sided quick reference card for new users, on one sheet of A4. Print it double-sided at actual size. In the program, **Help ▸ Quick reference card** opens it in your web browser. |
+| **`Tempo-Quick-Reference.pdf`** | A two-sided quick reference card for new users, on one sheet of A4. Print it double-sided at actual size. In the program, **Help ▸ Quick reference card (PDF)** opens it in your web browser. |
 
 Each program is a single self-contained file: the .NET runtime, the Avalonia user interface, the
 renderer and the fonts are all inside, so there is nothing else to install. Windows SmartScreen may ask
@@ -47,8 +47,11 @@ A new release is built automatically every time `main` changes (see
   configured on its own.
 * **Find instruments on the network**, or check a single address, and add one with a click.
 * **Delays.** Channels A–H with reference channel and delay, step buttons, time from T0, and a timing
-  diagram of the AB, CD, EF and GH pulses with widths and a hover read-out of exact edge times.
+  diagram of the AB, CD, EF and GH pulses with widths and a hover read-out of exact edge times
+  (repeated per cycle in burst mode). A label per channel, such as *Q-switch*, names what it drives.
   Values take units: `1.5 us`, `250 ns`, `2 ms`, `1e-6`.
+* **All channels page.** Every channel of every connected instrument, with its label, delay and time
+  from T0, a search box, and each instrument's timing diagram.
 * **Outputs.** Amplitude, offset and polarity for T0, AB, CD, EF and GH in one table, with TTL and NIM
   presets and the resulting idle and pulse levels.
 * **Trigger and burst.** Source, rate, threshold, inhibit, single-shot trigger, advanced triggering,
@@ -69,7 +72,8 @@ A new release is built automatically every time `main` changes (see
   when, which instrument (name and serial number), the setting's old and new values and an optional
   reason. Records go in CSV files, one per computer per month, in a folder you choose. A hash chain shows
   any record that has been altered or removed (**View ▸ Audit trail**).
-* **Built-in user guide**: F1 opens it at the page you are on.
+* **Built-in user guide**: F1 opens it at the page you are on, with diagrams in both themes.
+* **Greyed-out controls say why**: hover over one to see the reason, such as *Not connected*.
 * **Demo instrument**: a simulated DG645 for trying everything without hardware.
 * **Light, dark or system theme**, meeting WCAG AA contrast, with output colours validated to stay
   distinguishable with colour blindness. Every value written is read back, so the screen always shows

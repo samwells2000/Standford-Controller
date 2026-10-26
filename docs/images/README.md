@@ -17,3 +17,6 @@ sharp on high-resolution screens.
 `03-delays-dark.png` screenshots (`Tempo --smoke-test <folder> --headless`). If the main window changes, replace
 them, check that the numbered pins in the `main-window` figure still point at the right places, and keep the
 numbered list under *The main window* in the guide in step.
+
+`src/all-channels-light.png` and `src/all-channels-dark.png` are the smoke test's `94-all-channels.png` and
+`94-all-channels-dark.png`, cropped to the page itself (from x 232, y 152 to x 1440, y 790).
