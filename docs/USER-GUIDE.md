@@ -60,13 +60,13 @@ Easiest of all is **Find on network…**, which looks for DG645s on this compute
 
 ![The main window with a DG645 connected and the Delays page open. The numbers match the list below.](images/main-window.png)
 
-1. **Menu bar.** *File* opens and saves configurations and setups. *Instrument* acts on the instrument selected in the list. *View* shows the communication log and the audit trail, and sets the alert sound and the theme. *Help* opens this guide and the quick reference card.
+1. **Menu bar.** *File* opens and saves configurations and setups. *Edit* undoes and redoes changes (see [Undo and redo](#undo-and-redo)). *Instrument* acts on the instrument selected in the list. *View* shows the communication log and the audit trail, and sets the alert sound and the theme. *Help* opens this guide and the quick reference card.
 2. **Instrument list.** Every instrument in the open configuration, with its address and location. The dot shows the connection: hollow when not connected, green when connected, amber while connecting or not responding, and red when the connection failed or was lost. Double-click to connect; right-click for the other actions.
 3. **Header.** The instrument's name, address, model, serial number and firmware.
 4. **Reason for changes.** Optional; recorded with each change in the [audit trail](#reason-for-changes).
 5. **Connection state.** The [heartbeat](#heartbeat-and-alerts): the time the instrument took to answer, or how long it has been silent.
-6. **Command bar.** **Connect / Disconnect**, **Edit…**, **Refresh**, **Trigger** (which reads **Arm** or **Ready** in the [single-shot external modes](#single-shot-and-arming)), **Save setup**, **Restore saved…** and the **Log** check box.
-7. **Pages.** Delays, Outputs, Trigger, Burst, Setups, Status, Interfaces and Terminal, one tab each, described below, and **All channels**, which lists the channels of every connected instrument.
+6. **Command bar.** **Connect / Disconnect**, **Edit…**, **Refresh**, **Trigger** (which reads **Arm** or **Ready** in the [single-shot external modes](#single-shot-and-arming)), **Undo** and **Redo**, **Save setup**, **Restore saved…** and the **Log** check box.
+7. **Pages.** Delays, Outputs, Trigger, Burst, Scan, Setups, Status, Interfaces and Terminal, one tab each, described below, and **All channels**, which lists the channels of every connected instrument.
 8. **Value fields.** Type a value and press Enter; see [Entering values](#entering-values).
 9. **Communication log.** Every command sent and reply received, with the time; see [Communication log](#communication-log).
 10. **Status bar.** The connection state, the trigger source and rate (with a green **Ready** while a single shot is armed), whether burst mode is on, **Setup not saved** when the instrument's settings have changed since its setup was last saved, the latest message, and the name of the open configuration. **Portable** appears when you are running the portable program.
@@ -152,7 +152,7 @@ Tempo reads every setting back from the instrument, so what is saved is exactly 
 
 ### Putting a saved setup back
 
-**Restore saved…** (Ctrl+R) writes the saved setup to the instrument and reads every page back. Tempo applies the settings in an order that avoids temporary conflicts between linked channels, so the instrument ends up with exactly the saved setup.
+**Restore saved…** (Ctrl+R) first reads the instrument and lists each setting that restoring would change, with its value now and in the saved setup; press **Restore** to go ahead. It then writes the saved setup to the instrument and reads every page back. If the instrument already matches the saved setup, Tempo says so and changes nothing. Tempo applies the settings in an order that avoids temporary conflicts between linked channels, so the instrument ends up with exactly the saved setup.
 
 ### When an instrument connects
 
@@ -254,6 +254,16 @@ A number with no prefix is in seconds, hertz or volts. Tempo always uses a full 
 
 The up and down buttons beside some fields step the value by its step size, which the DG645 keeps for each setting.
 
+## Undo and redo
+
+**Edit ▸ Undo** (Ctrl+Z), or **Undo** on the command bar, takes back the last change Tempo made to the selected instrument by writing the old value again. **Edit ▸ Redo** (Ctrl+Y or Ctrl+Shift+Z) makes it again. The menu names the change, for example *Undo Delay A*, and hovering over **Undo** shows the value it goes back to.
+
+Everything you change on the pages can be undone: values, step buttons, choices and check boxes, output presets, [pulses](#pulses) (both channels at once), and a [delay scan](#delay-scans) that left a channel at its last value. Restoring or importing a setup, recalling from the instrument's memory and resetting are undone in one step too: Tempo puts back every setting as it was read just before.
+
+Each instrument keeps its own list of the last 100 changes while it is connected; disconnecting clears it. Commands typed in the [Terminal](#terminal) and changes made at the front panel are not on the list. An undone change is recorded in the [audit trail](#audit-trail) as *Undone*, and a redone one as *Redone*, with the old and new values.
+
+While the cursor is in a value field, Ctrl+Z undoes your typing in that field instead; Esc puts the instrument's value back.
+
 ## Delays and timing
 
 ### Channel delays
@@ -287,11 +297,27 @@ The **Label** column at the right of the table names each channel after what it 
 
 Labels belong to the instrument, not to its setup: they are written to the open configuration straight away, without **Save setup**, come back whenever the instrument connects, and are not changed by restoring, importing or recalling a setup. Each change is recorded in the [audit trail](#audit-trail). Resting the pointer on a channel's letter shows its label with its role, and the [All channels](#all-channels) page lists the labels of every connected instrument.
 
+### Pulses
+
+The **Pulses** table under the channel delays sets each output by when its pulse starts and how long it lasts, which is often simpler than working out two channel delays. Type a **Start** (from T0) or a **Width** and press Enter; **End** shows where the pulse then finishes.
+
+Tempo sets the two channels for you: the end channel (B, D, F or H) follows the start channel by the width, and the start channel keeps its reference and gets the delay that puts it at the start time. Typing a new start moves the whole pulse and keeps its width; typing a new width keeps the start. If the start channel's reference itself follows the end channel, Tempo references it to T0 instead, so the two can never form a loop. The **Channel delays** table above shows the result, and a note beside a pulse says when its end channel does not yet follow its start.
+
+**Example:** to make AB a 2.5 µs pulse starting 1 µs after T0, type `1 us` in AB's **Start** and `2.5 us` in its **Width**. Tempo sets A to T0 + 1 µs and B to A + 2.5 µs.
+
+A pulse change is one step for [Undo](#undo-and-redo), and each channel it changes is recorded in the audit trail.
+
 ### Timing diagram
 
 Below the table, the diagram draws T0 and the four outputs on one time axis, from T0 to just after the last edge, with each pulse's start and end channel above it and its width beside it. Outputs set to negative polarity are drawn upside down, as they appear on an oscilloscope.
 
-Hover over the diagram to see the time under the pointer and, for the row you are on, the exact times of both edges, the pulse width and the polarity. If an output has its end before its start, the diagram says so instead of drawing a pulse.
+Hover over the diagram to see the time under the pointer and, for the row you are on, the exact times of both edges, the pulse width and the polarity.
+
+To look closely at part of the diagram, zoom in: hold Ctrl and turn the mouse wheel over the diagram (it zooms around the pointer), or use **Zoom in** and **Zoom out** above it, or press + and − after clicking the diagram. While zoomed in, drag the diagram sideways (or hold Shift and turn the wheel, or press the arrow keys) to move along the time axis, and the axis says which part of the whole range is shown. **Fit** (or 0) shows everything again. Turning the wheel without Ctrl scrolls the page as usual.
+
+To measure, click in the diagram: the first click places cursor 1 and the second cursor 2. A click within a few pixels of an edge snaps to it exactly. The time between the cursors (Δt) is shown across the top of the diagram, and the line above it gives both cursor times and the matching frequency. While cursor 1 is placed, the hover read-out also gives the time from it. A third click starts again from cursor 1; **Clear cursors** or Esc removes them.
+
+**Save image…** saves the diagram as it is shown, cursors included, as a PNG picture, for example for a lab notebook or a report. If an output has its end before its start, the diagram says so instead of drawing a pulse.
 
 With [burst mode](#burst) on, the time axis starts at the trigger instead and the diagram repeats every output once per delay cycle: the first cycle starts after the burst delay, and each next one a burst period later. T0 is drawn on every cycle or only the first, following the burst's T0 setting. Every cycle of the burst is drawn, and the top right of the diagram gives the count. Only a very long burst, with more cycles than fit side by side, is cut short; the diagram then says how many of them it shows. Hovering also shows which cycle the pointer is in and when that cycle starts.
 
@@ -369,16 +395,32 @@ In burst mode, each trigger starts a train of delay cycles instead of one:
 
 Below the settings, Tempo describes the burst in words, including when its last cycle starts. The status bar shows *Burst* followed by the count and period while burst mode is on.
 
+## Delay scans
+
+The **Scan** page steps one channel's delay through evenly spaced values, staying at each for a set time, for example to find the timing that gives the best signal:
+
+| Setting | Meaning |
+| --- | --- |
+| Channel | The channel whose delay changes. It keeps its reference, as set on the Delays page. |
+| From, To | The first and last delay, from the channel's reference. **To** can be smaller than **From** to scan downwards. |
+| Values | How many delays to use, **From** and **To** included (2 to 10,000). |
+| Time at each value | How long to stay at each delay before moving on, from 50 ms to an hour. |
+| Put the delay back as it was when the scan ends | Ticked, the channel returns to its delay from before the scan when the scan finishes or is stopped. Unticked, it stays at the last value used, and [Undo](#undo-and-redo) can take it back. |
+
+Below the settings, Tempo describes the scan in words, including how long it will take. **Start scan** begins; the progress bar and the line under it show which value the channel is at, and the Delays page and timing diagram follow along. **Stop** ends the scan early. Disconnecting also stops it.
+
+The audit trail records the scan's start, with every setting above, and its end, with how many values were used and the channel's delay afterwards. The individual steps are not recorded one by one.
+
 ## Setups
 
 The Setups page gathers every way of keeping and restoring settings:
 
 - **Saved setup on this computer**: when the setup was last saved in the configuration, with **Save setup** and **Restore saved setup…** (see [Configurations and saved setups](#configurations-and-saved-setups)).
-- **Setup files**: export this instrument's setup to a `.dg645.json` file, or import one and apply it.
+- **Setup files**: export this instrument's setup to a `.dg645.json` file, or import one and apply it. Before applying, Tempo lists each setting the file would change, with its value now and in the file.
 - **Instrument memory**: the DG645 stores nine setups in its own memory. **Save current to** a location 1 to 9, or **Recall** one; location 0 recalls the factory defaults. These setups stay in the instrument and can also be recalled from its front panel.
 - **Reset to defaults…** returns the instrument to its default settings (`*RST`).
 
-Recall, import and reset ask before replacing the current settings.
+Recall, import and reset ask before replacing the current settings, and all three can be undone afterwards with **Edit ▸ Undo** (Ctrl+Z). Tempo cannot read what an instrument memory location holds without recalling it, so recalling shows no list of changes; undo it if it was not what you wanted.
 
 ## Status and diagnostics
 
@@ -458,7 +500,9 @@ ISO 9001 certifies an organisation's quality management system rather than any p
 
 | Recorded | How |
 | --- | --- |
-| A value changed on any page | One record with the old and new value, for example *Delay C: A + 1.5 µs → A + 2 µs*. This covers delays, step buttons, output levels and presets, trigger, burst, prescalers, interfaces, the front-panel display and the status enable registers. |
+| A value changed on any page | One record with the old and new value, for example *Delay C: A + 1.5 µs → A + 2 µs*. This covers delays, pulses (one record per channel), step buttons, output levels and presets, trigger, burst, prescalers, interfaces, the front-panel display and the status enable registers. |
+| Undo and redo | The setting put back, with the old and new values, recorded as *Undone* or *Redone*. |
+| Delay scans | The start of the scan, with its channel, values and time at each, and its end, with how many values were used and the delay afterwards. |
 | Many settings changed at once | Restoring or importing a setup, recalling from the instrument's memory and resetting give one record per setting that changed. Tempo reads the setup before and after, so the record shows what really changed, even if the operation fails part-way. |
 | Actions on the instrument | Triggering and arming, saving to the instrument's memory, clearing status, self test and auto calibration (with the result), interface resets, local and remote control, and the interface lock. |
 | Commands typed in the Terminal | Every command that can change something, as typed, with any error the instrument reported. Queries are not recorded. |
@@ -508,6 +552,12 @@ Tempo remembers the theme, the alert sound setting, the window's size and positi
 | Ctrl+Shift+S | Save the configuration under a new name |
 | F5 | Read every setting from the instrument again |
 | Ctrl+T | Trigger a single shot, or arm a single shot on the next external edge (`*TRG`) |
+| Ctrl+Z | Undo the last change to the selected instrument |
+| Ctrl+Y or Ctrl+Shift+Z | Redo the last undone change |
+| Ctrl + mouse wheel | Over the timing diagram: zoom in or out around the pointer |
+| + / − / 0 | In the timing diagram (after clicking it): zoom in / zoom out / show everything |
+| Left / Right | In the zoomed timing diagram: move along the time axis |
+| Esc | In the timing diagram: remove the measurement cursors |
 | Ctrl+L | Show or hide the communication log |
 | Enter / Delete | In the instrument list: connect / remove the selected instrument |
 | Enter / Esc | In a value field: send the value / put the instrument's value back |

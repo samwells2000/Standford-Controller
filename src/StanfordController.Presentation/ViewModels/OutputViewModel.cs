@@ -133,27 +133,56 @@ public sealed class OutputViewModel : ParameterViewModel
         OnPropertyChanged(nameof(LevelSummary));
     }
 
-    private Task StepAsync(Func<Task> step, EditableParameterViewModel<double> readBack) =>
-        ChangeAsync(readBack.ValueText, step, readBack.RefreshAsync, () => readBack.ValueText, readBack.Label);
+    private async Task StepAsync(Func<Task> step, EditableParameterViewModel<double> readBack)
+    {
+        var (before, oldValue) = (readBack.ValueText, readBack.Value);
+        if (await ChangeAsync(before, step, readBack.RefreshAsync, () => readBack.ValueText, readBack.Label)
+            && readBack.HasValue && readBack.ValueText != before)
+        {
+            var newValue = readBack.Value;
+            Context.RecordUndo(new UndoStep(readBack.Label, before, readBack.ValueText,
+                () => readBack.WriteValueAsync(oldValue), () => readBack.WriteValueAsync(newValue)));
+        }
+    }
 
-    private Task ApplyPresetAsync(string preset, double amplitude, double offset, OutputPolarity polarity) =>
-        ChangeAsync(LevelsText,
-            async () =>
-            {
-                // Lower the amplitude before moving the offset so the combined swing stays within limits.
-                await Client.SetAmplitudeAsync(Output, Math.Min(amplitude, Amplitude.HasValue ? Amplitude.Value : amplitude));
-                await Client.SetOffsetAsync(Output, offset);
-                await Client.SetAmplitudeAsync(Output, amplitude);
-                await Client.SetPolarityAsync(Output, polarity);
-            },
-            async () =>
-            {
-                await Amplitude.RefreshAsync();
-                await Offset.RefreshAsync();
-                await Polarity.RefreshAsync();
-            },
-            () => LevelsText,
-            $"{Output} levels ({preset} preset)");
+    private Task<bool> ApplyPresetAsync(string preset, double amplitude, double offset, OutputPolarity polarity) =>
+        ApplyLevelsAsync($"{Output} levels ({preset} preset)", amplitude, offset, polarity);
+
+    private async Task<bool> ApplyLevelsAsync(string setting, double amplitude, double offset, OutputPolarity polarity)
+    {
+        var before = LevelsText;
+        var old = (Amplitude.Value, Offset.Value, Polarity: (OutputPolarity)(Polarity.SelectedValue ?? 0));
+        var hadValues = Amplitude.HasValue && Offset.HasValue && Polarity.SelectedValue is not null;
+        if (!await ChangeAsync(before,
+                async () =>
+                {
+                    // Lower the amplitude before moving the offset so the combined swing stays within limits.
+                    await Client.SetAmplitudeAsync(Output, Math.Min(amplitude, Amplitude.HasValue ? Amplitude.Value : amplitude));
+                    await Client.SetOffsetAsync(Output, offset);
+                    await Client.SetAmplitudeAsync(Output, amplitude);
+                    await Client.SetPolarityAsync(Output, polarity);
+                },
+                async () =>
+                {
+                    await Amplitude.RefreshAsync();
+                    await Offset.RefreshAsync();
+                    await Polarity.RefreshAsync();
+                },
+                () => LevelsText,
+                setting))
+        {
+            return false;
+        }
+
+        if (hadValues && LevelsText != before)
+        {
+            Context.RecordUndo(new UndoStep($"{Output} levels", before, LevelsText,
+                () => ApplyLevelsAsync($"{Output} levels", old.Item1, old.Item2, old.Polarity),
+                () => ApplyLevelsAsync($"{Output} levels", amplitude, offset, polarity)));
+        }
+
+        return true;
+    }
 
     /// <summary>e.g. "2.50 V, offset 0.00 V, Positive", for the audit trail.</summary>
     private string LevelsText => $"{Amplitude.ValueText}, offset {Offset.ValueText}, {Polarity.Selected?.Label}";

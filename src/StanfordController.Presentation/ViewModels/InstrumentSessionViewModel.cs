@@ -65,6 +65,15 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
     private bool _isArmed;
     private int? _armedSource;
     private string _changeReason = string.Empty;
+    private readonly List<UndoStep> _undo = [];
+    private readonly List<UndoStep> _redo = [];
+    private bool _historyRunning;
+
+    /// <summary>Set while a change is being undone or redone (to the audit action), on that change's async flow only.</summary>
+    private readonly AsyncLocal<string?> _historyAction = new();
+
+    /// <summary>Changes kept for Edit ▸ Undo.</summary>
+    public const int MaxUndoSteps = 100;
 
     public InstrumentSessionViewModel(InstrumentProfile profile, Dg645Client client, IDialogService dialogs, LogViewModel log, AuditLog? audit = null)
     {
@@ -85,11 +94,13 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         }
 
         Outputs = Dg645Names.Outputs.Select(o => new OutputViewModel(this, o)).ToList();
+        Pulses = Outputs.Where(o => o.Output != Dg645Output.T0).Select(o => new PulseViewModel(this, o.Output)).ToList();
         Trigger = new TriggerViewModel(this);
         Burst = new BurstViewModel(this);
         Status = new StatusViewModel(this);
         Interface = new InterfaceViewModel(this);
         Terminal = new TerminalViewModel(this);
+        Scan = new DelayScanViewModel(this);
 
         RecallSlots = new[] { new ChoiceOption(0, "0 — factory defaults") }
             .Concat(Enumerable.Range(1, 9).Select(i => new ChoiceOption(i, $"Location {i}")))
@@ -111,6 +122,10 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         ExportSettingsCommand = new AsyncRelayCommand(ExportSettingsAsync, () => !IsBusy, unavailableReason: () => BusyReason);
         ImportSettingsCommand = new AsyncRelayCommand(ImportSettingsAsync, () => !IsBusy, unavailableReason: () => BusyReason);
         ResetCommand = new AsyncRelayCommand(ResetAsync, () => !IsBusy, unavailableReason: () => BusyReason);
+        UndoCommand = new AsyncRelayCommand(() => StepHistoryAsync(undo: true), () => _undo.Count > 0 && CanStepHistory,
+            unavailableReason: () => HistoryUnavailableReason(_undo, "Nothing to undo: no change has been made since connecting."));
+        RedoCommand = new AsyncRelayCommand(() => StepHistoryAsync(undo: false), () => _redo.Count > 0 && CanStepHistory,
+            unavailableReason: () => HistoryUnavailableReason(_redo, "Nothing to redo: use this after Undo to make the change again."));
         CopyLogCommand = new AsyncRelayCommand(() => Dialogs.CopyToClipboardAsync(_log.ExportText()));
         SaveLogCommand = new AsyncRelayCommand(SaveLogAsync);
 
@@ -169,6 +184,11 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
 
     public TerminalViewModel Terminal { get; }
 
+    /// <summary>The AB, CD, EF and GH pulses, edited as a start time and a width.</summary>
+    public IReadOnlyList<PulseViewModel> Pulses { get; }
+
+    public DelayScanViewModel Scan { get; }
+
     public IReadOnlyList<PulseTiming> Timing
     {
         get => _timing;
@@ -189,8 +209,8 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
     }
 
     public string TimingCaption => TimingBurst is null
-        ? "Outputs relative to T0. Negative-polarity outputs are drawn inverted. Hover for exact edges."
-        : "Burst mode: outputs relative to the trigger, repeated for each delay cycle. Negative-polarity outputs are drawn inverted. Hover for exact edges.";
+        ? "Outputs relative to T0. Negative-polarity outputs are drawn inverted. Hover for exact edges; click to measure."
+        : "Burst mode: outputs relative to the trigger, repeated for each delay cycle. Negative-polarity outputs are drawn inverted. Hover for exact edges; click to measure.";
 
     public bool IsBusy
     {
@@ -203,6 +223,9 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
                 {
                     (command as IRaiseCanExecuteChanged)?.RaiseCanExecuteChanged();
                 }
+
+                RaiseHistoryChanged();
+                Scan.RaiseCanStartChanged();
             }
         }
     }
@@ -377,6 +400,24 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
 
     public ICommand ResetCommand { get; }
 
+    public ICommand UndoCommand { get; }
+
+    public ICommand RedoCommand { get; }
+
+    public bool CanUndo => _undo.Count > 0;
+
+    public bool CanRedo => _redo.Count > 0;
+
+    /// <summary>The Edit menu entry, e.g. "_Undo Delay A".</summary>
+    public string UndoMenuText => _undo.Count > 0 ? $"_Undo {_undo[^1].Setting}" : "_Undo";
+
+    public string RedoMenuText => _redo.Count > 0 ? $"_Redo {_redo[^1].Setting}" : "_Redo";
+
+    /// <summary>What Undo would do, e.g. "Undo Delay A: back to T0 + 1 µs (Ctrl+Z)".</summary>
+    public string UndoTip => _undo.Count > 0 ? $"Undo {_undo[^1].Setting}: back to {_undo[^1].Before ?? "its previous value"} (Ctrl+Z)" : "Undo the last change (Ctrl+Z)";
+
+    public string RedoTip => _redo.Count > 0 ? $"Redo {_redo[^1].Setting}: {_redo[^1].After ?? "its new value"} again (Ctrl+Y)" : "Make an undone change again (Ctrl+Y)";
+
     public ICommand CopyLogCommand { get; }
 
     public ICommand SaveLogCommand { get; }
@@ -442,6 +483,7 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
     /// <summary>Stops all background reading, e.g. on disconnecting.</summary>
     public void StopHeartbeat()
     {
+        Scan.Stop();
         _heartbeatOn = false;
         IsArmed = false;
         StopHeartbeatLoop();
@@ -481,8 +523,201 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
 
     public IDisposable BeginChange() => Client.BeginAuditedChange();
 
-    public void Audit(string action, string? setting = null, string? oldValue = null, string? newValue = null, string? details = null) =>
+    public void Audit(string action, string? setting = null, string? oldValue = null, string? newValue = null, string? details = null)
+    {
+        // A change made by Undo or Redo is recorded as such.
+        if (_historyAction.Value is { } history && action is AuditActions.Changed or AuditActions.SetupApplied)
+        {
+            action = history;
+        }
+
         _audit?.Record(Profile, SerialNumber.Length > 0 ? SerialNumber : null, action, setting, oldValue, newValue, _changeReason, details);
+    }
+
+    public void RecordUndo(UndoStep step)
+    {
+        if (_historyAction.Value is not null)
+        {
+            return;
+        }
+
+        _undo.Add(step);
+        if (_undo.Count > MaxUndoSteps)
+        {
+            _undo.RemoveAt(0);
+        }
+
+        _redo.Clear();
+        RaiseHistoryChanged();
+    }
+
+    // ---- Undo and redo ----
+
+    private bool CanStepHistory => !_historyRunning && !IsBusy && !Scan.IsRunning;
+
+    private string? HistoryUnavailableReason(List<UndoStep> steps, string empty) =>
+        steps.Count == 0 ? empty
+        : _historyRunning ? "Wait until the change being undone or redone has been made."
+        : Scan.IsRunning ? "Not while a delay scan is running. Stop the scan on the Scan page first."
+        : BusyReason;
+
+    /// <summary>Undoes the last change (or redoes the last undone one) by writing its old (or new) value again.</summary>
+    private async Task StepHistoryAsync(bool undo)
+    {
+        var (from, to) = undo ? (_undo, _redo) : (_redo, _undo);
+        if (from.Count == 0 || _historyRunning)
+        {
+            return;
+        }
+
+        var step = from[^1];
+        from.RemoveAt(from.Count - 1);
+        _historyRunning = true;
+        RaiseHistoryChanged();
+        bool done;
+        try
+        {
+            _historyAction.Value = undo ? AuditActions.Undone : AuditActions.Redone;
+            done = await (undo ? step.Undo() : step.Redo());
+        }
+        finally
+        {
+            _historyAction.Value = null;
+            _historyRunning = false;
+        }
+
+        if (done)
+        {
+            to.Add(step);
+            SetStatus(undo
+                ? $"Undone {step.Setting}: back to {step.Before ?? "its previous value"}."
+                : $"Redone {step.Setting}: {step.After ?? "its new value"} again.");
+        }
+        else
+        {
+            // Keep it, so it can be tried again once the problem is fixed.
+            from.Add(step);
+        }
+
+        RaiseHistoryChanged();
+    }
+
+    private void RaiseHistoryChanged()
+    {
+        OnPropertyChanged(nameof(CanUndo));
+        OnPropertyChanged(nameof(CanRedo));
+        OnPropertyChanged(nameof(UndoMenuText));
+        OnPropertyChanged(nameof(RedoMenuText));
+        OnPropertyChanged(nameof(UndoTip));
+        OnPropertyChanged(nameof(RedoTip));
+        (UndoCommand as IRaiseCanExecuteChanged)?.RaiseCanExecuteChanged();
+        (RedoCommand as IRaiseCanExecuteChanged)?.RaiseCanExecuteChanged();
+    }
+
+    /// <summary>Called by the scan when it starts or stops, as it holds back Undo and Redo.</summary>
+    internal void OnScanRunningChanged() => RaiseHistoryChanged();
+
+    /// <summary>
+    /// Sets several channel delays as one change that Edit ▸ Undo can take back, in an order that never links a channel
+    /// to itself through the others. Each channel that changes is recorded in the audit trail with
+    /// <paramref name="details"/>. Returns null on success, or what went wrong.
+    /// </summary>
+    internal async Task<string?> SetDelaysAsync(string setting, IReadOnlyList<ChannelDelaySettings> targets, string details)
+    {
+        var channels = targets.Select(t => Channels.Single(c => c.Channel == t.Channel)).ToList();
+        var before = channels.Select(c => new ChannelDelaySettings { Channel = c.Channel, Reference = c.ReadReference, DelaySeconds = c.DelaySeconds }).ToList();
+        var beforeText = channels.ToDictionary(c => c.Channel, c => c.ReadingText);
+        Exception? failure = null;
+        using (BeginChange())
+        {
+            try
+            {
+                var references = Channels.ToDictionary(c => c.Channel, c => c.ReadReference);
+                foreach (var target in OrderWithoutLoops(targets, references))
+                {
+                    await Client.SetDelayAsync(target.Channel, target.Reference, target.DelaySeconds);
+                }
+            }
+            catch (Exception ex)
+            {
+                failure = ex;
+            }
+            finally
+            {
+                foreach (var channel in channels)
+                {
+                    await channel.TryReadBackAsync();
+                }
+            }
+        }
+
+        var changed = channels.Where(c => c.ReadingText != beforeText[c.Channel]).ToList();
+        foreach (var channel in changed)
+        {
+            Audit(AuditActions.Changed, $"Delay {channel.Channel}", beforeText[channel.Channel], channel.ReadingText,
+                failure is null ? details : $"{details}. Failed part-way: {ParameterViewModel.DescribeError(failure)}");
+        }
+
+        if (changed.Count > 0)
+        {
+            NotifySettingsChanged();
+        }
+
+        if (failure is not null)
+        {
+            ReportError(setting, failure);
+            return ParameterViewModel.DescribeError(failure);
+        }
+
+        if (changed.Count > 0)
+        {
+            var after = channels.Select(c => new ChannelDelaySettings { Channel = c.Channel, Reference = c.ReadReference, DelaySeconds = c.DelaySeconds }).ToList();
+            RecordUndo(new UndoStep(setting,
+                string.Join(", ", changed.Select(c => $"{c.Channel} = {beforeText[c.Channel]}")),
+                string.Join(", ", changed.Select(c => $"{c.Channel} = {c.ReadingText}")),
+                async () => await SetDelaysAsync(setting, before, setting) is null,
+                async () => await SetDelaysAsync(setting, after, setting) is null));
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Orders delay changes so that no channel is ever referenced, directly or through others, to itself on the way:
+    /// each one goes when its new reference does not lead back to it, given <paramref name="references"/> as they are now.
+    /// </summary>
+    internal static IEnumerable<ChannelDelaySettings> OrderWithoutLoops(IEnumerable<ChannelDelaySettings> targets, IDictionary<Dg645Channel, Dg645Channel> references)
+    {
+        var current = new Dictionary<Dg645Channel, Dg645Channel>(references);
+        var pending = targets.ToList();
+        while (pending.Count > 0)
+        {
+            var next = pending.FirstOrDefault(t => !Leads(t.Reference, t.Channel)) ?? pending[0]; // a loop in the targets; let the instrument report it
+            pending.Remove(next);
+            current[next.Channel] = next.Reference;
+            yield return next;
+        }
+
+        bool Leads(Dg645Channel from, Dg645Channel to)
+        {
+            for (var (channel, hops) = (from, 0); hops <= current.Count; hops++)
+            {
+                if (channel == to)
+                {
+                    return true;
+                }
+
+                if (!current.TryGetValue(channel, out var next))
+                {
+                    return false;
+                }
+
+                channel = next;
+            }
+
+            return true;
+        }
+    }
 
     // ---- Channel labels ----
 
@@ -536,7 +771,7 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         IsArmed = false;
         var applied = await ReplaceSettingsAsync("Applying setup…", AuditActions.SetupApplied, $"Applied {description}",
             () => Client.ApplySettingsAsync(settings, new Progress<string>(step => BusyText = $"Applying {step.ToLowerInvariant()}…")),
-            before);
+            before, undoName: "Apply setup");
 
         await RefreshAllAsync();
         if (applied)
@@ -605,6 +840,10 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
         }
 
         Timing = pulses;
+        foreach (var pulse in Pulses)
+        {
+            pulse.Update();
+        }
 
         foreach (var output in Outputs)
         {
@@ -750,14 +989,14 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
 
         var question = slot.Value == 0
             ? "Recall the factory default settings? All current settings will be replaced."
-            : $"Recall settings from location {slot.Value}? All current settings will be replaced.";
+            : $"Recall settings from location {slot.Value}? All current settings will be replaced.\n\nTempo cannot see what a location holds before it is recalled. If it is not what you wanted, Edit ▸ Undo (Ctrl+Z) puts the current settings back.";
         if (!await Dialogs.ConfirmAsync("Recall settings", question, "Recall"))
         {
             return;
         }
 
         if (await ReplaceSettingsAsync("Recalling settings…", AuditActions.Recalled, $"Recalled {slot.Label.ToLowerInvariant()} (*RCL {slot.Value})",
-                () => Client.RecallSettingsAsync(slot.Value)))
+                () => Client.RecallSettingsAsync(slot.Value), undoName: "Recall"))
         {
             IsArmed = false;
             await RefreshAllAsync();
@@ -768,12 +1007,12 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
 
     private async Task ResetAsync()
     {
-        if (!await Dialogs.ConfirmAsync("Reset instrument", "Reset the DG645 to its default settings (*RST)? All current delays, levels and trigger settings will be lost.", "Reset"))
+        if (!await Dialogs.ConfirmAsync("Reset instrument", "Reset the DG645 to its default settings (*RST)? All current delays, levels and trigger settings will be replaced.\n\nEdit ▸ Undo (Ctrl+Z) puts them back afterwards.", "Reset"))
         {
             return;
         }
 
-        if (await ReplaceSettingsAsync("Resetting…", AuditActions.Reset, "Reset to the default settings (*RST)", () => Client.ResetAsync()))
+        if (await ReplaceSettingsAsync("Resetting…", AuditActions.Reset, "Reset to the default settings (*RST)", () => Client.ResetAsync(), undoName: "Reset"))
         {
             IsArmed = false;
             await RefreshAllAsync();
@@ -819,13 +1058,28 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
             return;
         }
 
-        var source = settings.SourceIdentity is null ? string.Empty : $"\n\nSaved from: {settings.SourceIdentity}\nSaved: {settings.SavedUtc.ToLocalTime():yyyy-MM-dd HH:mm}";
-        if (!await Dialogs.ConfirmAsync("Import setup", $"Apply the setup in {Path.GetFileName(path)} to {Profile.Name}? Current delays, levels, trigger and burst settings will be replaced.{source}", "Apply"))
+        // Show what importing would change, from the instrument's settings as they are now.
+        if (await CaptureSetupAsync() is not { } current)
         {
             return;
         }
 
-        if (await ApplySetupAsync(settings, Path.GetFileName(path)))
+        var changes = current.Compare(settings);
+        if (changes.Count == 0)
+        {
+            await Dialogs.ShowInfoAsync("Import setup", $"{Profile.Name} already has the settings in {Path.GetFileName(path)}. There is nothing to apply.");
+            return;
+        }
+
+        var source = settings.SourceIdentity is null ? string.Empty : $" It was saved from {settings.SourceIdentity} on {settings.SavedUtc.ToLocalTime():yyyy-MM-dd HH:mm}.";
+        if (!await Dialogs.ConfirmChangesAsync("Import setup",
+                $"Applying the setup in {Path.GetFileName(path)} changes {InstrumentItemViewModel.Settings(changes.Count)} on {Profile.Name}.{source}",
+                changes, "Apply"))
+        {
+            return;
+        }
+
+        if (await ApplySetupAsync(settings, Path.GetFileName(path), before: current))
         {
             // The imported setup is not yet the one stored in the configuration.
             HasUnsavedChanges = true;
@@ -857,7 +1111,8 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
     /// before and after, and each setting that changed is recorded in the audit trail, also when the operation fails
     /// part-way. Returns true if the operation succeeded.
     /// </summary>
-    private async Task<bool> ReplaceSettingsAsync(string busyText, string action, string details, Func<Task> operation, Dg645Settings? before = null)
+    private async Task<bool> ReplaceSettingsAsync(string busyText, string action, string details, Func<Task> operation, Dg645Settings? before = null,
+        string? undoName = null)
     {
         Exception? failure = null;
         Dg645Settings? after = null;
@@ -906,9 +1161,30 @@ public sealed class InstrumentSessionViewModel : ObservableObject, IInstrumentCo
             {
                 Audit(action, change.Setting, change.Before, change.After, details);
             }
+
+            // Undo puts back every setting the operation changed, as it was read beforehand.
+            if (undoName is not null && after is not null && changes.Count > 0)
+            {
+                var (was, now) = (before, after);
+                var count = changes.Count == 1 ? changes[0].Setting : $"{changes.Count} settings";
+                RecordUndo(new UndoStep(undoName, $"the settings before ({count})", $"the settings after ({count})",
+                    () => RestoreSnapshotAsync(was, $"the settings before {undoName.ToLowerInvariant()}"),
+                    () => RestoreSnapshotAsync(now, $"the settings after {undoName.ToLowerInvariant()}")));
+            }
         }
 
         return failure is null && before is not null;
+    }
+
+    /// <summary>Writes a setup read earlier back to the instrument, for Undo and Redo. Returns true if it was applied.</summary>
+    private async Task<bool> RestoreSnapshotAsync(Dg645Settings settings, string description)
+    {
+        IsArmed = false;
+        var applied = await ReplaceSettingsAsync("Putting settings back…", AuditActions.SetupApplied, $"Applied {description}",
+            () => Client.ApplySettingsAsync(settings, new Progress<string>(step => BusyText = $"Putting back {step.ToLowerInvariant()}…")));
+        await RefreshAllAsync();
+        HasUnsavedChanges = true;
+        return applied;
     }
 
     private async Task<bool> RunAsync(string what, Func<Task> action)

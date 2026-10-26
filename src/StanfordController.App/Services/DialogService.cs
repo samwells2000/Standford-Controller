@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Input.Platform;
 using Avalonia.Platform.Storage;
 using StanfordController.App.Dialogs;
+using StanfordController.Core;
 using StanfordController.Presentation.Help;
 using StanfordController.Presentation.Services;
 using StanfordController.Presentation.ViewModels;
@@ -39,6 +40,9 @@ public sealed class DialogService : IDialogService
 
     public Task<DialogAnswer> AskAsync(string title, string message, string yesText, string noText, string? rememberText = null, bool showCancel = true) =>
         MessageDialog.ShowAsync(Owner, MessageKind.Question, title, message, yesText, noText, showCancel, rememberText);
+
+    public async Task<bool> ConfirmChangesAsync(string title, string message, IReadOnlyList<SettingChange> changes, string confirmText) =>
+        (await MessageDialog.ShowAsync(Owner, MessageKind.Question, title, message, confirmText, showCancel: true, changes: changes)).Choice == DialogChoice.Yes;
 
     public Task ShowErrorAsync(string title, string message) =>
         MessageDialog.ShowAsync(Owner, MessageKind.Error, title, message, "OK");

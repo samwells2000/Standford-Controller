@@ -34,6 +34,10 @@ public static class AuditActions
     public const string InstrumentEdited = "Instrument edited";
     public const string InstrumentRemoved = "Instrument removed";
     public const string ChannelLabelled = "Channel labelled";
+    public const string Undone = "Undone";
+    public const string Redone = "Redone";
+    public const string ScanStarted = "Delay scan started";
+    public const string ScanEnded = "Delay scan ended";
 }
 
 /// <summary>One entry in the audit trail: who did what to which instrument, when, and why.</summary>

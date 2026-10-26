@@ -237,16 +237,38 @@ public sealed class ChannelDelayViewModel : ParameterViewModel
         await WriteAsync(reference, _delaySeconds);
     }
 
-    private Task WriteAsync(Dg645Channel reference, double seconds) =>
-        ChangeAsync(ReadingText, () => Client.SetDelayAsync(Channel, reference, seconds), TryReadBackAsync, () => ReadingText, $"Delay {Channel}");
+    /// <summary>Sets the channel to <paramref name="reference"/> + <paramref name="seconds"/> as one change that Edit ▸ Undo can take back.</summary>
+    public Task<bool> WriteAsync(Dg645Channel reference, double seconds) =>
+        ChangeWithUndoAsync(() => Client.SetDelayAsync(Channel, reference, seconds));
 
-    private Task StepAsync(bool up) =>
-        ChangeAsync(ReadingText, () => Client.StepDelayAsync(Channel, up), TryReadBackAsync, () => ReadingText, $"Delay {Channel}");
+    private Task<bool> StepAsync(bool up) => ChangeWithUndoAsync(() => Client.StepDelayAsync(Channel, up));
+
+    private async Task<bool> ChangeWithUndoAsync(Func<Task> write)
+    {
+        var (oldReference, oldSeconds, before) = (_readReference, _delaySeconds, ReadingText);
+        if (!await ChangeAsync(before, write, TryReadBackAsync, () => ReadingText, $"Delay {Channel}"))
+        {
+            return false;
+        }
+
+        var (newReference, newSeconds) = (_readReference, _delaySeconds);
+        if (ReadingText != before)
+        {
+            Context.RecordUndo(new UndoStep($"Delay {Channel}", before, ReadingText,
+                () => WriteAsync(oldReference, oldSeconds), () => WriteAsync(newReference, newSeconds)));
+        }
+
+        return true;
+    }
 
     /// <summary>The delay last read from the instrument, e.g. "A + 1.5 µs", for the audit trail.</summary>
-    private string ReadingText => Dg645Settings.DescribeDelay(_readReference, _delaySeconds);
+    public string ReadingText => Dg645Settings.DescribeDelay(_readReference, _delaySeconds);
 
-    private async Task TryReadBackAsync()
+    /// <summary>The reference last read from the instrument (the Reference box may show a choice still being sent).</summary>
+    public Dg645Channel ReadReference => _readReference;
+
+    /// <summary>Reads the delay again (not the step size), keeping any earlier error.</summary>
+    internal async Task TryReadBackAsync()
     {
         try
         {

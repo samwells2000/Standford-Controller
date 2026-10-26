@@ -36,7 +36,17 @@ public interface IInstrumentContext
 
     /// <summary>Adds a record about this instrument to the audit trail, with the user's reason for changes.</summary>
     void Audit(string action, string? setting = null, string? oldValue = null, string? newValue = null, string? details = null);
+
+    /// <summary>Offers a change that has just been made for Edit ▸ Undo. Ignored while a change is being undone or redone.</summary>
+    void RecordUndo(UndoStep step);
 }
+
+/// <summary>
+/// A change that Edit ▸ Undo can take back: <paramref name="Setting"/> went from <paramref name="Before"/> to
+/// <paramref name="After"/>. <paramref name="Undo"/> and <paramref name="Redo"/> write the old and new values again and
+/// return true if the instrument accepted them.
+/// </summary>
+public sealed record UndoStep(string Setting, string? Before, string? After, Func<Task<bool>> Undo, Func<Task<bool>> Redo);
 
 public sealed record ChoiceOption(int Value, string Label)
 {
@@ -323,9 +333,30 @@ public sealed class EditableParameterViewModel<T> : TextParameterViewModel
             return;
         }
 
+        await WriteValueAsync(value);
+    }
+
+    /// <summary>Writes <paramref name="value"/> as one audited change that Edit ▸ Undo can take back. Returns true on success.</summary>
+    public async Task<bool> WriteValueAsync(T value)
+    {
+        if (_write is null)
+        {
+            return false;
+        }
+
         // Show what the instrument really holds afterwards, even if it rejected or rounded the value.
-        var before = _hasValue ? _committedText : null;
-        await ChangeAsync(before, () => _write(value, CancellationToken.None), TryReadBackAsync, () => _committedText);
+        var (hadValue, oldValue, before) = (_hasValue, _value, _hasValue ? _committedText : null);
+        if (!await ChangeAsync(before, () => _write(value, CancellationToken.None), TryReadBackAsync, () => _committedText))
+        {
+            return false;
+        }
+
+        if (hadValue && _value is { } newValue)
+        {
+            Context.RecordUndo(new UndoStep(Label, before, _committedText, () => WriteValueAsync(oldValue!), () => WriteValueAsync(newValue)));
+        }
+
+        return true;
     }
 
     public void Revert()
@@ -389,7 +420,7 @@ public sealed class ChoiceParameterViewModel(
             OnPropertyChanged(nameof(SelectedValue));
             if (!_updating)
             {
-                _ = ApplyAsync(value.Value, previous?.Label);
+                _ = ApplyAsync(value.Value, previous);
             }
         }
     }
@@ -420,15 +451,28 @@ public sealed class ChoiceParameterViewModel(
         }
     }
 
-    private async Task ApplyAsync(int value, string? before)
+    /// <summary>Writes <paramref name="value"/> as one audited change that Edit ▸ Undo can take back.</summary>
+    public Task<bool> WriteValueAsync(int value) => ApplyAsync(value, _selected);
+
+    private async Task<bool> ApplyAsync(int value, ChoiceOption? before)
     {
         // Let the combo box finish its own selection change before we possibly revert it.
         await Task.Yield();
-        await ChangeAsync(before,
-            () => write(value, CancellationToken.None),
-            async () => SetValue(await read(CancellationToken.None)),
-            () => _selected?.Label,
-            written: () => ValueChanged?.Invoke(this, EventArgs.Empty));
+        if (!await ChangeAsync(before?.Label,
+                () => write(value, CancellationToken.None),
+                async () => SetValue(await read(CancellationToken.None)),
+                () => _selected?.Label,
+                written: () => ValueChanged?.Invoke(this, EventArgs.Empty)))
+        {
+            return false;
+        }
+
+        if (before is not null && _selected is { } after && after.Value != before.Value)
+        {
+            Context.RecordUndo(new UndoStep(Label, before.Label, after.Label, () => WriteValueAsync(before.Value), () => WriteValueAsync(after.Value)));
+        }
+
+        return true;
     }
 }
 
@@ -492,11 +536,31 @@ public sealed class ToggleParameterViewModel(
             return;
         }
 
-        await ChangeAsync(OnOff(!value),
-            () => write(value, CancellationToken.None),
-            async () => SetValue(await read(CancellationToken.None)),
-            () => OnOff(_isChecked));
+        await WriteValueAsync(value);
     }
+
+    /// <summary>Writes <paramref name="value"/> as one audited change that Edit ▸ Undo can take back.</summary>
+    public async Task<bool> WriteValueAsync(bool value)
+    {
+        if (!await ChangeAsync(OnOff(!value),
+                () => write(value, CancellationToken.None),
+                async () => SetValue(await read(CancellationToken.None)),
+                () => OnOff(_isChecked)))
+        {
+            return false;
+        }
+
+        if (_isChecked == value)
+        {
+            Context.RecordUndo(new UndoStep(Label, OnOff(!value), OnOff(value), () => ConfirmAndWriteAsync(!value), () => ConfirmAndWriteAsync(value)));
+        }
+
+        return true;
+    }
+
+    // Undo and redo ask the same question as ticking the box would.
+    private async Task<bool> ConfirmAndWriteAsync(bool value) =>
+        (ConfirmChange is null || await ConfirmChange(value)) && await WriteValueAsync(value);
 
     private static string OnOff(bool on) => on ? "On" : "Off";
 }

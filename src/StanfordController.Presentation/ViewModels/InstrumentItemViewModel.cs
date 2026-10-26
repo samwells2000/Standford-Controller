@@ -359,15 +359,32 @@ public sealed class InstrumentItemViewModel : ObservableObject
             return;
         }
 
-        if (!await _dialogs.ConfirmAsync("Restore saved setup",
-                $"Replace the current settings of {Name} with the setup saved {setup.SavedUtc.ToLocalTime():yyyy-MM-dd HH:mm}?",
-                "Restore"))
+        // Show what restoring would change, from the instrument's settings as they are now.
+        var saved = $"the setup saved {setup.SavedUtc.ToLocalTime():yyyy-MM-dd HH:mm}";
+        if (await session.CaptureSetupAsync() is not { } current || _session != session)
         {
             return;
         }
 
-        await session.ApplySetupAsync(setup, $"the setup saved {setup.SavedUtc.ToLocalTime():yyyy-MM-dd HH:mm}");
+        var changes = current.Compare(setup);
+        if (changes.Count == 0)
+        {
+            await _dialogs.ShowInfoAsync("Restore saved setup", $"{Name} already has the settings of {saved}. There is nothing to restore.");
+            return;
+        }
+
+        if (!await _dialogs.ConfirmChangesAsync("Restore saved setup",
+                $"Restoring {saved} changes {Settings(changes.Count)} on {Name}:",
+                changes, "Restore"))
+        {
+            return;
+        }
+
+        await session.ApplySetupAsync(setup, saved, before: current);
     }
+
+    /// <summary>e.g. "1 setting" or "12 settings".</summary>
+    internal static string Settings(int count) => count == 1 ? "1 setting" : $"{count} settings";
 
     /// <summary>
     /// After connecting: if a setup is saved for this instrument and the instrument's settings differ from it,

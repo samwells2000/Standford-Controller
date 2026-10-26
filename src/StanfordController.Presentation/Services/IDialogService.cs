@@ -1,3 +1,4 @@
+using StanfordController.Core;
 using StanfordController.Presentation.ViewModels;
 
 namespace StanfordController.Presentation.Services;
@@ -36,6 +37,12 @@ public interface IDialogService
     /// Closing the window answers Cancel. <paramref name="rememberText"/>, when given, adds a "remember my choice" check box.
     /// </summary>
     Task<DialogAnswer> AskAsync(string title, string message, string yesText, string noText, string? rememberText = null, bool showCancel = true);
+
+    /// <summary>
+    /// Asks an OK/Cancel question under a table of the settings it would change, each with its value now and after.
+    /// <paramref name="confirmText"/> labels the OK button.
+    /// </summary>
+    Task<bool> ConfirmChangesAsync(string title, string message, IReadOnlyList<SettingChange> changes, string confirmText);
 
     Task ShowErrorAsync(string title, string message);
 

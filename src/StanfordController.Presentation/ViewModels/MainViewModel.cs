@@ -84,6 +84,8 @@ public sealed class MainViewModel : ObservableObject
         RestoreSelectedSetupCommand = ItemCommand(i => i.RestoreSetupCommand);
         RefreshCommand = SessionCommand(s => s.RefreshAllCommand);
         TriggerCommand = SessionCommand(s => s.TriggerCommand);
+        UndoCommand = SessionCommand(s => s.UndoCommand);
+        RedoCommand = SessionCommand(s => s.RedoCommand);
         ExportSetupCommand = SessionCommand(s => s.ExportSettingsCommand);
         ImportSetupCommand = SessionCommand(s => s.ImportSettingsCommand);
 
@@ -309,6 +311,11 @@ public sealed class MainViewModel : ObservableObject
     public ICommand RefreshCommand { get; }
 
     public ICommand TriggerCommand { get; }
+
+    /// <summary>Edit ▸ Undo: takes back the selected instrument's last change.</summary>
+    public ICommand UndoCommand { get; }
+
+    public ICommand RedoCommand { get; }
 
     public ICommand ExportSetupCommand { get; }
 

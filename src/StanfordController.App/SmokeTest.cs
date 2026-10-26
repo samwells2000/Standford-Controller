@@ -178,6 +178,7 @@ internal sealed class SmokeTest
             await CheckAlertsAsync(item);
             await CheckOlderFirmwareAsync(item);
             await CheckChannelLabelsAsync(item);
+            await CheckEditingToolsAsync(item);
 
             await item.DisconnectAsync();
             await IdleAsync();
@@ -583,6 +584,148 @@ internal sealed class SmokeTest
             vm.LabelText = label;
             vm.CommitLabelCommand.Execute(null);
         }
+    }
+
+    /// <summary>
+    /// Pulses set by start and width, Undo and Redo, zooming and measuring on the timing diagram, the list of changes
+    /// shown before a setup is applied, and a delay scan.
+    /// </summary>
+    private async Task CheckEditingToolsAsync(InstrumentItemViewModel item)
+    {
+        if (item.Session is not { } session)
+        {
+            Check(false, "No session for the editing tools check.");
+            return;
+        }
+
+        _viewModel.SelectedInstrument = item;
+        var tabs = Tabs();
+        tabs.SelectedIndex = 0;
+        await IdleAsync();
+
+        // A pulse typed as a start and a width sets both of its channels.
+        var ef = session.Pulses.Single(p => p.Output == Dg645Output.EF);
+        ef.StartText = "3 us";
+        await ((AsyncRelayCommand)ef.CommitStartCommand).ExecuteAsync();
+        ef.WidthText = "1.5 us";
+        await ((AsyncRelayCommand)ef.CommitWidthCommand).ExecuteAsync();
+        var e = session.Channels.Single(c => c.Channel == Dg645Channel.E);
+        var f = session.Channels.Single(c => c.Channel == Dg645Channel.F);
+        Check(e.ReadingText == "T0 + 3 µs" && f.ReadingText == "E + 1.5 µs" && ef.EndText == "T0 + 4.5 µs",
+            $"Setting the EF pulse to start at 3 µs, 1.5 µs wide gave E = {e.ReadingText}, F = {f.ReadingText}.");
+
+        var page = (Control)tabs.SelectedContent!;
+        var viewer = page.GetVisualDescendants().OfType<ScrollViewer>().First();
+        var pulsesHeader = page.GetVisualDescendants().OfType<HeaderedContentControl>().First(h => h.Header as string == "Pulses");
+        foreach (var theme in new[] { AppTheme.Light, AppTheme.Dark })
+        {
+            _viewModel.Theme = theme;
+            await IdleAsync();
+            viewer.Offset = new Vector(0, Math.Max(0, pulsesHeader.TranslatePoint(default, viewer.Content as Visual ?? viewer)?.Y - 8 ?? 0));
+            await IdleAsync();
+            Capture(_window, "100-delays-pulses" + (theme == AppTheme.Dark ? "-dark" : string.Empty));
+        }
+
+        _viewModel.Theme = AppTheme.Light;
+
+        // Edit ▸ Undo takes the width back, and Redo makes it again.
+        Check(session.UndoMenuText == "_Undo EF pulse", $"The Edit menu should offer to undo the EF pulse, not \"{session.UndoMenuText}\".");
+        _viewModel.UndoCommand.Execute(null);
+        Check(await WaitAsync(() => f.ReadingText == "E + 1 µs"), $"Undo did not put F back to E + 1 µs (it is {f.ReadingText}).");
+        _viewModel.RedoCommand.Execute(null);
+        Check(await WaitAsync(() => f.ReadingText == "E + 1.5 µs"), $"Redo did not set F to E + 1.5 µs again (it is {f.ReadingText}).");
+
+        // Zoomed in on the AB pulse, with cursors on both of its edges.
+        var diagram = page.GetVisualDescendants().OfType<TimingDiagram>().First();
+        viewer.Offset = new Vector(0, viewer.Extent.Height);
+        diagram.ZoomTo(0.5e-6, 4e-6);
+        await IdleAsync();
+        Check(diagram.IsZoomed && Math.Abs(diagram.View.Start - 0.5e-6) < 1e-12, "The timing diagram did not zoom in.");
+        diagram.SimulateClick(1e-6);
+        diagram.SimulateClick(3.5e-6);
+        await IdleAsync();
+        Check(diagram.Readout.Contains("Δt = 2.5 µs", StringComparison.Ordinal), $"The cursors should measure 2.5 µs, not \"{diagram.Readout}\".");
+        foreach (var theme in new[] { AppTheme.Light, AppTheme.Dark })
+        {
+            _viewModel.Theme = theme;
+            await IdleAsync();
+            diagram.SimulateHover(new Point(diagram.Bounds.Width * 0.62, diagram.Bounds.Height * 0.32));
+            await IdleAsync();
+            Capture(_window, "101-timing-zoom-cursors" + (theme == AppTheme.Dark ? "-dark" : string.Empty));
+            diagram.SimulateHover(null);
+        }
+
+        _viewModel.Theme = AppTheme.Light;
+        await IdleAsync();
+        var image = Path.Combine(_output, "101-timing-saved-image.png");
+        await using (var stream = File.Create(image))
+        {
+            diagram.SaveImage(stream);
+        }
+
+        Check(new FileInfo(image).Length > 1000, "Save image… wrote an empty picture.");
+        diagram.ClearCursors();
+        diagram.Fit();
+        Check(!diagram.IsZoomed && !diagram.HasCursors && diagram.Readout.Length == 0, "Fit and Clear cursors did not reset the diagram.");
+        viewer.Offset = default;
+
+        // The list of changes shown before a setup is applied.
+        var current = await session.Client.ReadSettingsAsync();
+        var other = await session.Client.ReadSettingsAsync();
+        other.Trigger.RateHz = 2000;
+        other.Delays.Single(d => d.Channel == Dg645Channel.C).DelaySeconds = 2e-6;
+        other.Outputs.Single(o => o.Output == Dg645Output.CD).AmplitudeVolts = 4;
+        foreach (var theme in new[] { AppTheme.Light, AppTheme.Dark })
+        {
+            _viewModel.Theme = theme;
+            await IdleAsync();
+            var question = MessageDialog.ShowAsync(_window, MessageKind.Question, "Restore saved setup",
+                $"Restoring the setup saved 2026-10-06 14:02 changes 3 settings on {item.Name}:", "Restore", showCancel: true,
+                changes: current.Compare(other));
+            await IdleAsync();
+            if (_lifetime.Windows.OfType<MessageDialog>().LastOrDefault() is { } message)
+            {
+                Capture(message, "96-setup-changes" + (theme == AppTheme.Dark ? "-dark" : string.Empty));
+                message.Close();
+            }
+
+            await question;
+        }
+
+        _viewModel.Theme = AppTheme.Light;
+
+        // A delay scan, part-way through and then stopped, putting the delay back.
+        var scanTab = Enumerable.Range(0, tabs.ItemCount).First(i => (tabs.Items[i] as TabItem)?.Header?.ToString() == "Scan");
+        tabs.SelectedIndex = scanTab;
+        var scan = session.Scan;
+        scan.Channel = scan.ChannelOptions.Single(o => o.Value == (int)Dg645Channel.C);
+        scan.FromText = "1 us";
+        scan.ToText = "2 us";
+        scan.CountText = "21";
+        scan.DwellText = "100 ms";
+        await IdleAsync();
+        Capture(_window, "102-scan");
+        var c = session.Channels.Single(ch => ch.Channel == Dg645Channel.C);
+        var before = c.ReadingText;
+        var running = ((AsyncRelayCommand)scan.StartCommand).ExecuteAsync();
+        Check(await WaitAsync(() => scan.Progress >= 0.2), "The delay scan did not get going.");
+        foreach (var theme in new[] { AppTheme.Light, AppTheme.Dark })
+        {
+            _viewModel.Theme = theme;
+            await IdleAsync();
+            Capture(_window, "102-scan-running" + (theme == AppTheme.Dark ? "-dark" : string.Empty));
+        }
+
+        _viewModel.Theme = AppTheme.Light;
+        scan.Stop();
+        await running;
+        await IdleAsync();
+        Check(!scan.IsRunning && c.ReadingText == before && scan.ProgressText.StartsWith("Stopped after", StringComparison.Ordinal),
+            $"Stopping the scan should put C back to {before} (it is {c.ReadingText}; \"{scan.ProgressText}\").");
+        Capture(_window, "102-scan-stopped");
+        Check(!session.StatusIsError, $"The session reported an error: {session.StatusMessage}");
+        tabs.SelectedIndex = 0;
+        await IdleAsync();
     }
 
     private async Task SetTriggerSourceAsync(InstrumentSessionViewModel session, TriggerSource source)
